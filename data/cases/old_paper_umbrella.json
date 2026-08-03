@@ -1,0 +1,173 @@
+{
+  "case_id": "old_paper_umbrella",
+  "title": "旧纸伞与失约书生",
+  "synopsis": "一名书生连续梦见窗外有人呼名，影子渐淡，并开始遗忘亲人的面容。此病例仅用于验证确定性调查与教学闭环。",
+  "difficulty": 2,
+  "patient": {
+    "patient_id": "scholar_lu",
+    "display_name": "陆砚生",
+    "public_profile": "寄居镇中备考的年轻书生，自称近日只是睡眠不安。",
+    "hidden_information": [
+      "他曾在雨夜借伞脱险，并向伞中寄居的雨契灵承诺替它送还一枚旧木牌。",
+      "他害怕被当作失心之人，因此起初隐瞒承诺和旧木牌仍在书箱中的事实。"
+    ]
+  },
+  "root_cause": "unfulfilled_rain_vow_contract",
+  "causal_chain": [
+    "书生在雨夜接受雨契灵庇护并主动许下归还木牌的承诺。",
+    "承诺逾期后，契痕通过旧纸伞与书生的影子相连。",
+    "契痕逐夜抽取与身份相关的记忆作为催促信号。",
+    "只有确认承诺内容并完成归还，才能解除契痕。"
+  ],
+  "clues": {
+    "fading_shadow": {
+      "clue_id": "fading_shadow",
+      "description": "灯火稳定时，书生的影缘仍比身体动作慢半拍。",
+      "is_key": true,
+      "is_misleading": false
+    },
+    "forgotten_faces": {
+      "clue_id": "forgotten_faces",
+      "description": "书生记得家书文字，却无法在脑中还原亲人的面容。",
+      "is_key": true,
+      "is_misleading": false
+    },
+    "umbrella_night_water": {
+      "clue_id": "umbrella_night_water",
+      "description": "旧纸伞只在夜间渗出无源水迹，水迹绕开破损处聚向伞柄。",
+      "is_key": true,
+      "is_misleading": false
+    },
+    "vow_knot_trace": {
+      "clue_id": "vow_knot_trace",
+      "description": "伞柄与影子之间存在闭合不全的契结，不像主动侵害留下的煞痕。",
+      "is_key": true,
+      "is_misleading": false
+    },
+    "hidden_wooden_token": {
+      "clue_id": "hidden_wooden_token",
+      "description": "书箱夹层中有一枚刻着渡口旧名的木牌，边缘与伞柄凹槽吻合。",
+      "is_key": true,
+      "is_misleading": false
+    },
+    "broken_promise": {
+      "clue_id": "broken_promise",
+      "description": "书生承认曾答应把木牌送回废弃渡口，却因赶考而失约。",
+      "is_key": true,
+      "is_misleading": false
+    },
+    "exam_fatigue": {
+      "clue_id": "exam_fatigue",
+      "description": "书生近来昼夜读书，神色疲惫。疲惫能解释困倦，却不能解释契痕。",
+      "is_key": false,
+      "is_misleading": true
+    },
+    "cold_window_draft": {
+      "clue_id": "cold_window_draft",
+      "description": "窗缝漏入冷风，容易让人误以为窗外有异常靠近。",
+      "is_key": false,
+      "is_misleading": true
+    }
+  },
+  "investigations": [
+    {
+      "investigation_id": "observe_scholar",
+      "action_type": "observe_patient",
+      "target_id": "scholar_lu",
+      "reveals_clue_ids": ["fading_shadow", "exam_fatigue"],
+      "required_skill_id": "observe_form",
+      "minimum_skill_level": 0,
+      "required_clue_ids": []
+    },
+    {
+      "investigation_id": "ask_about_memory",
+      "action_type": "question_patient",
+      "target_id": "scholar_lu",
+      "reveals_clue_ids": ["forgotten_faces"],
+      "required_skill_id": "ask_cause",
+      "minimum_skill_level": 0,
+      "required_clue_ids": []
+    },
+    {
+      "investigation_id": "inspect_umbrella",
+      "action_type": "inspect_object",
+      "target_id": "old_paper_umbrella",
+      "reveals_clue_ids": ["umbrella_night_water", "cold_window_draft"],
+      "required_skill_id": "inspect_object",
+      "minimum_skill_level": 0,
+      "required_clue_ids": []
+    },
+    {
+      "investigation_id": "observe_contract_trace",
+      "action_type": "observe_qi",
+      "target_id": "old_paper_umbrella",
+      "reveals_clue_ids": ["vow_knot_trace"],
+      "required_skill_id": "observe_qi",
+      "minimum_skill_level": 20,
+      "required_clue_ids": ["umbrella_night_water"]
+    },
+    {
+      "investigation_id": "search_book_chest",
+      "action_type": "inspect_object",
+      "target_id": "scholar_book_chest",
+      "reveals_clue_ids": ["hidden_wooden_token"],
+      "required_skill_id": "inspect_object",
+      "minimum_skill_level": 0,
+      "required_clue_ids": ["vow_knot_trace"]
+    },
+    {
+      "investigation_id": "ask_about_promise",
+      "action_type": "question_patient",
+      "target_id": "scholar_lu",
+      "reveals_clue_ids": ["broken_promise"],
+      "required_skill_id": "ask_cause",
+      "minimum_skill_level": 10,
+      "required_clue_ids": ["hidden_wooden_token"]
+    }
+  ],
+  "valid_diagnosis_ids": ["unfulfilled_rain_vow_contract"],
+  "treatments": {
+    "return_token_and_fulfill_vow": {
+      "treatment_id": "return_token_and_fulfill_vow",
+      "description": "在见证下将木牌送回旧渡口，补全书生主动许下的承诺，并确认雨契灵停止取走记忆。",
+      "outcome": "resolved",
+      "required_clue_ids": ["vow_knot_trace", "hidden_wooden_token", "broken_promise"]
+    },
+    "seal_old_umbrella": {
+      "treatment_id": "seal_old_umbrella",
+      "description": "暂时封住旧纸伞的契息，只能短暂减弱呼名梦，无法完成承诺。",
+      "outcome": "suppressed",
+      "required_clue_ids": ["umbrella_night_water"]
+    },
+    "burn_old_umbrella": {
+      "treatment_id": "burn_old_umbrella",
+      "description": "将旧纸伞直接烧毁会使未闭合的契痕失去依附物，转而加深在书生影中。",
+      "outcome": "worsened",
+      "required_clue_ids": []
+    }
+  },
+  "hints": [
+    {
+      "level": 1,
+      "text": "先区分哪些现象能由疲惫解释，哪些现象指向稳定的外部因果。",
+      "score_penalty": 2
+    },
+    {
+      "level": 2,
+      "text": "旧伞的水迹不是从破损处渗入，检查它与影子之间是否存在联系。",
+      "score_penalty": 5
+    },
+    {
+      "level": 3,
+      "text": "这更像未完成的契约而非恶意侵害；寻找承诺涉及的物件，并让书生说明隐瞒之事。",
+      "score_penalty": 10
+    }
+  ],
+  "scoring": {
+    "key_clue_points": 40,
+    "correct_diagnosis_points": 30,
+    "correct_treatment_points": 30,
+    "unsafe_treatment_penalty": 20,
+    "max_score": 100
+  }
+}

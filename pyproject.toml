@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "xuanyi-npc"
+version = "0.1.0"
+description = "Deterministic domain core for a Daoist-fantasy mentor NPC"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2.8,<3",
+]
+
+[project.scripts]
+xuanyi-case-demo = "xuanyi_npc.demo_case:main"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4,<9",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+pythonpath = ["src"]
