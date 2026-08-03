@@ -13,8 +13,7 @@ from xuanyi_npc.domain import (
     PlayerState,
     RelationshipState,
     SkillState,
-    StateChangeProposal,
-    ProposedChangeTarget,
+    ToolName,
 )
 
 
@@ -136,13 +135,22 @@ def test_agent_tool_action_requires_tool_request() -> None:
         )
 
 
-def test_skill_proposal_requires_skill_id() -> None:
-    with pytest.raises(ValidationError, match="require skill_id"):
-        StateChangeProposal(
-            target=ProposedChangeTarget.SKILL_PROFICIENCY,
-            delta=2,
-            reason="观察过程完整。",
+def test_agent_action_rejects_permanent_state_fields() -> None:
+    with pytest.raises(ValidationError):
+        AgentAction.model_validate(
+            {
+                "action_id": "action_memory_write",
+                "action_type": "respond",
+                "dialogue": "我会永远记住此事。",
+                "confidence": 0.8,
+                "memory_event": {"content": "未经规则验证的永久记忆"},
+            }
         )
+
+
+def test_permanent_memory_is_not_an_agent_tool() -> None:
+    with pytest.raises(ValueError):
+        ToolName("record_memory")
 
 
 def test_memory_event_rejects_naive_timestamp(player_state: PlayerState) -> None:

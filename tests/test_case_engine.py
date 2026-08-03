@@ -431,6 +431,102 @@ def test_repeated_investigation_does_not_duplicate_clues(
     assert len(second.session.action_history) == 2
 
 
+def test_repeated_actions_do_not_duplicate_score(
+    case_definition: CaseDefinition,
+    qualified_player_state: PlayerState,
+) -> None:
+    engine = CaseEngine()
+    session = execute_investigations(
+        engine,
+        case_definition,
+        qualified_player_state,
+        make_session(case_definition, qualified_player_state),
+        (
+            "observe_scholar",
+            "observe_scholar",
+            "ask_about_memory",
+            "inspect_umbrella",
+            "observe_contract_trace",
+            "search_book_chest",
+            "ask_about_promise",
+        ),
+    )
+    for minute in (8, 9):
+        session = engine.execute(
+            case_definition,
+            qualified_player_state,
+            session,
+            SubmitDiagnosisCommand(
+                diagnosis_id="unfulfilled_rain_vow_contract",
+                evidence_clue_ids=session.discovered_clue_ids,
+                occurred_at=BASE_TIME + timedelta(minutes=minute),
+            ),
+        ).session
+    result = engine.execute(
+        case_definition,
+        qualified_player_state,
+        session,
+        ExecuteTreatmentCommand(
+            treatment_id="return_token_and_fulfill_vow",
+            occurred_at=BASE_TIME + timedelta(minutes=10),
+        ),
+    )
+
+    assert result.score_breakdown is not None
+    assert result.score_breakdown.discovered_key_clues == 6
+    assert result.score_breakdown.clue_points == 40
+    assert result.score_breakdown.diagnosis_points == 30
+    assert result.session.score == 100
+
+
+def test_multiple_valid_diagnoses_share_the_same_scoring_contract(
+    case_definition: CaseDefinition,
+    qualified_player_state: PlayerState,
+) -> None:
+    data = case_definition.model_dump(mode="json")
+    data["valid_diagnosis_ids"].append("rain_vow_breach")
+    multi_solution_case = CaseDefinition.model_validate(data)
+    engine = CaseEngine()
+    session = execute_investigations(
+        engine,
+        multi_solution_case,
+        qualified_player_state,
+        make_session(multi_solution_case, qualified_player_state),
+        (
+            "observe_scholar",
+            "ask_about_memory",
+            "inspect_umbrella",
+            "observe_contract_trace",
+            "search_book_chest",
+            "ask_about_promise",
+        ),
+    )
+    session = engine.execute(
+        multi_solution_case,
+        qualified_player_state,
+        session,
+        SubmitDiagnosisCommand(
+            diagnosis_id="rain_vow_breach",
+            evidence_clue_ids=session.discovered_clue_ids,
+            occurred_at=BASE_TIME + timedelta(minutes=7),
+        ),
+    ).session
+    result = engine.execute(
+        multi_solution_case,
+        qualified_player_state,
+        session,
+        ExecuteTreatmentCommand(
+            treatment_id="return_token_and_fulfill_vow",
+            occurred_at=BASE_TIME + timedelta(minutes=8),
+        ),
+    )
+
+    assert result.score_breakdown is not None
+    assert result.score_breakdown.diagnosis_correct is True
+    assert result.score_breakdown.diagnosis_points == 30
+    assert result.session.score == 100
+
+
 def test_completed_session_rejects_more_commands(
     case_definition: CaseDefinition,
     qualified_player_state: PlayerState,

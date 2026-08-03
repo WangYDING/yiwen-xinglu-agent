@@ -6,7 +6,7 @@
 
 ## 当前状态
 
-当前已完成 **M1：无 LLM 的确定性病例引擎**。
+当前已完成 **M1.5：Agent 接入前的安全与评测门槛**。
 
 已经包含：
 
@@ -16,6 +16,11 @@
 - 调查、诊断、处置与基础评分引擎；
 - 明确的技能、线索、证据和会话状态错误；
 - 不调用大模型的完整病例回放；
+- 从领域事件重建病例会话的状态重放器；
+- V0、V1、V2 共用的 `EpisodeResult`；
+- 权限过滤后的 `PlayerView` 与 `CaseObservation`；
+- 不允许关键状态或永久记忆写入的安全 `AgentAction`；
+- 明确且经过配置校验的 V0、V1、V2 能力边界；
 - 领域模型、规则边界和持久化测试。
 
 当前尚未包含 LLM、MCP、长期记忆检索、数据库或交互界面。
@@ -31,7 +36,10 @@
 
 ```text
 src/xuanyi_npc/domain/   核心领域对象
+src/xuanyi_npc/application/ Agent 权限过滤视图
+src/xuanyi_npc/config/   V0、V1、V2 能力配置
 src/xuanyi_npc/engine/   确定性病例引擎
+src/xuanyi_npc/evaluation/ 统一 Episode 结果
 src/xuanyi_npc/storage/  JSON 状态存储
 data/cases/              结构化病例定义
 docs/                    架构决策记录
@@ -71,4 +79,6 @@ python -m xuanyi_npc.demo_case
 - M1 只更新病例会话，不更新玩家能力、关系或长期记忆。
 - 评分暂时只计算关键线索、诊断、处置和危险处置惩罚；提示扣分将在教学阶段接入。
 - 演示是固定路线回放，还不是交互式游戏界面。
+- V0、V1、V2 当前只有配置与共享契约，尚未接入任何大模型。
+- 长期记忆、自适应教学和 Reflection 明确不属于下一阶段的 V0 实现。
 - 当前没有评测成功率、延迟或成本数据；这些指标只能由后续真实评测生成。

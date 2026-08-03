@@ -17,14 +17,17 @@ from .errors import (
     UnknownTreatmentError,
 )
 from .results import EngineResult, ScoreBreakdown
+from .replay import CaseEventReplayer, EventReplayError
 
 __all__ = [
     "ActionMismatchError",
     "CaseEngine",
+    "CaseEventReplayer",
     "ContextMismatchError",
     "DiagnosisRequiredError",
     "EngineResult",
     "EvidenceNotDiscoveredError",
+    "EventReplayError",
     "InsufficientSkillError",
     "MissingCluePrerequisiteError",
     "RuleViolation",

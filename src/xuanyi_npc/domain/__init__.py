@@ -3,8 +3,6 @@
 from .actions import (
     AgentAction,
     AgentActionType,
-    ProposedChangeTarget,
-    StateChangeProposal,
     ToolCallRequest,
     ToolName,
 )
@@ -65,13 +63,11 @@ __all__ = [
     "MemoryType",
     "PatientDefinition",
     "PlayerState",
-    "ProposedChangeTarget",
     "RelationshipDimension",
     "RelationshipImpact",
     "RelationshipState",
     "ScoringRule",
     "SkillState",
-    "StateChangeProposal",
     "SubmitDiagnosisCommand",
     "TeachingStage",
     "ToolCallRequest",
