@@ -18,6 +18,12 @@ class ContextStrategy(str, Enum):
     PERSISTENT_MEMORY = "persistent_memory"
 
 
+class MemoryRetrievalStrategy(str, Enum):
+    NONE = "none"
+    VECTOR_TOP_K = "vector_top_k"
+    MULTI_FACTOR = "multi_factor"
+
+
 class CurriculumStrategy(str, Enum):
     FIXED = "fixed"
     ADAPTIVE = "adaptive"
@@ -32,7 +38,9 @@ class AgentVariantConfig(DomainModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     variant: AgentVariant
+    agent_context_filter: StrictBool
     context_strategy: ContextStrategy
+    memory_retrieval_strategy: MemoryRetrievalStrategy
     curriculum_strategy: CurriculumStrategy
     reflection_strategy: ReflectionStrategy
     structured_actions: StrictBool
@@ -43,34 +51,40 @@ class AgentVariantConfig(DomainModel):
         expected = {
             AgentVariant.V0: (
                 ContextStrategy.SHORT_TERM,
+                MemoryRetrievalStrategy.NONE,
                 CurriculumStrategy.FIXED,
                 ReflectionStrategy.DISABLED,
             ),
             AgentVariant.V1: (
                 ContextStrategy.PERSISTENT_MEMORY,
+                MemoryRetrievalStrategy.VECTOR_TOP_K,
                 CurriculumStrategy.FIXED,
                 ReflectionStrategy.DISABLED,
             ),
             AgentVariant.V2: (
                 ContextStrategy.PERSISTENT_MEMORY,
+                MemoryRetrievalStrategy.MULTI_FACTOR,
                 CurriculumStrategy.ADAPTIVE,
                 ReflectionStrategy.ENABLED,
             ),
         }[self.variant]
         actual = (
             self.context_strategy,
+            self.memory_retrieval_strategy,
             self.curriculum_strategy,
             self.reflection_strategy,
         )
         if actual != expected:
             raise ValueError(f"capabilities do not match {self.variant.value} boundary")
+        if not self.agent_context_filter:
+            raise ValueError("all product variants require AgentContextFilter")
         if not self.structured_actions or not self.basic_tool_calls:
-            raise ValueError("all named variants require structured actions and basic tools")
+            raise ValueError("all product variants require structured actions and basic tools")
         return self
 
     @property
     def long_term_memory_enabled(self) -> bool:
-        return self.context_strategy is ContextStrategy.PERSISTENT_MEMORY
+        return self.memory_retrieval_strategy is not MemoryRetrievalStrategy.NONE
 
     @property
     def adaptive_teaching_enabled(self) -> bool:
@@ -83,7 +97,9 @@ class AgentVariantConfig(DomainModel):
 
 V0_CONFIG = AgentVariantConfig(
     variant=AgentVariant.V0,
+    agent_context_filter=True,
     context_strategy=ContextStrategy.SHORT_TERM,
+    memory_retrieval_strategy=MemoryRetrievalStrategy.NONE,
     curriculum_strategy=CurriculumStrategy.FIXED,
     reflection_strategy=ReflectionStrategy.DISABLED,
     structured_actions=True,
@@ -92,7 +108,9 @@ V0_CONFIG = AgentVariantConfig(
 
 V1_CONFIG = AgentVariantConfig(
     variant=AgentVariant.V1,
+    agent_context_filter=True,
     context_strategy=ContextStrategy.PERSISTENT_MEMORY,
+    memory_retrieval_strategy=MemoryRetrievalStrategy.VECTOR_TOP_K,
     curriculum_strategy=CurriculumStrategy.FIXED,
     reflection_strategy=ReflectionStrategy.DISABLED,
     structured_actions=True,
@@ -101,7 +119,9 @@ V1_CONFIG = AgentVariantConfig(
 
 V2_CONFIG = AgentVariantConfig(
     variant=AgentVariant.V2,
+    agent_context_filter=True,
     context_strategy=ContextStrategy.PERSISTENT_MEMORY,
+    memory_retrieval_strategy=MemoryRetrievalStrategy.MULTI_FACTOR,
     curriculum_strategy=CurriculumStrategy.ADAPTIVE,
     reflection_strategy=ReflectionStrategy.ENABLED,
     structured_actions=True,

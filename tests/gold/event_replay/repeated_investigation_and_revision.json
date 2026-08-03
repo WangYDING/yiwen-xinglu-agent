@@ -1,0 +1,103 @@
+{
+  "initial_session": {
+    "session_id": "gold_repeated_diagnosis",
+    "case_id": "old_paper_umbrella",
+    "player_id": "player_gold_apprentice",
+    "status": "active",
+    "discovered_clue_ids": [],
+    "action_history": [],
+    "submitted_diagnosis_id": null,
+    "selected_treatment_id": null,
+    "outcome": null,
+    "score": null,
+    "revision": 0
+  },
+  "events": [
+    {
+      "event_type": "investigation_completed",
+      "sequence": 1,
+      "session_id": "gold_repeated_diagnosis",
+      "occurred_at": "2026-08-03T09:01:00Z",
+      "investigation_id": "inspect_umbrella",
+      "action_type": "inspect_object",
+      "target_id": "old_paper_umbrella",
+      "newly_discovered_clue_ids": ["cold_window_draft", "umbrella_night_water"]
+    },
+    {
+      "event_type": "investigation_completed",
+      "sequence": 2,
+      "session_id": "gold_repeated_diagnosis",
+      "occurred_at": "2026-08-03T09:02:00Z",
+      "investigation_id": "inspect_umbrella",
+      "action_type": "inspect_object",
+      "target_id": "old_paper_umbrella",
+      "newly_discovered_clue_ids": []
+    },
+    {
+      "event_type": "diagnosis_submitted",
+      "sequence": 3,
+      "session_id": "gold_repeated_diagnosis",
+      "occurred_at": "2026-08-03T09:03:00Z",
+      "diagnosis_id": "evil_spirit_attack",
+      "evidence_clue_ids": ["umbrella_night_water"]
+    },
+    {
+      "event_type": "diagnosis_submitted",
+      "sequence": 4,
+      "session_id": "gold_repeated_diagnosis",
+      "occurred_at": "2026-08-03T09:04:00Z",
+      "diagnosis_id": "unfulfilled_rain_vow_contract",
+      "evidence_clue_ids": ["umbrella_night_water"]
+    }
+  ],
+  "expected_final_session": {
+    "session_id": "gold_repeated_diagnosis",
+    "case_id": "old_paper_umbrella",
+    "player_id": "player_gold_apprentice",
+    "status": "active",
+    "discovered_clue_ids": ["cold_window_draft", "umbrella_night_water"],
+    "action_history": [
+      {
+        "sequence": 1,
+        "action_type": "inspect_object",
+        "reference_id": "inspect_umbrella",
+        "target_id": "old_paper_umbrella",
+        "revealed_clue_ids": ["cold_window_draft", "umbrella_night_water"],
+        "evidence_clue_ids": [],
+        "occurred_at": "2026-08-03T09:01:00Z"
+      },
+      {
+        "sequence": 2,
+        "action_type": "inspect_object",
+        "reference_id": "inspect_umbrella",
+        "target_id": "old_paper_umbrella",
+        "revealed_clue_ids": [],
+        "evidence_clue_ids": [],
+        "occurred_at": "2026-08-03T09:02:00Z"
+      },
+      {
+        "sequence": 3,
+        "action_type": "submit_diagnosis",
+        "reference_id": "evil_spirit_attack",
+        "target_id": "evil_spirit_attack",
+        "revealed_clue_ids": [],
+        "evidence_clue_ids": ["umbrella_night_water"],
+        "occurred_at": "2026-08-03T09:03:00Z"
+      },
+      {
+        "sequence": 4,
+        "action_type": "submit_diagnosis",
+        "reference_id": "unfulfilled_rain_vow_contract",
+        "target_id": "unfulfilled_rain_vow_contract",
+        "revealed_clue_ids": [],
+        "evidence_clue_ids": ["umbrella_night_water"],
+        "occurred_at": "2026-08-03T09:04:00Z"
+      }
+    ],
+    "submitted_diagnosis_id": "unfulfilled_rain_vow_contract",
+    "selected_treatment_id": null,
+    "outcome": null,
+    "score": null,
+    "revision": 4
+  }
+}

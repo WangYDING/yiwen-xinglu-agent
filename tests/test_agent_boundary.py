@@ -9,6 +9,7 @@ from xuanyi_npc.config import (
     AgentVariantConfig,
     ContextStrategy,
     CurriculumStrategy,
+    MemoryRetrievalStrategy,
     ReflectionStrategy,
     V0_CONFIG,
     V1_CONFIG,
@@ -240,7 +241,9 @@ def test_agent_boundary_rejects_unknown_fields(
 
 def test_named_variant_boundaries_are_explicit() -> None:
     assert V0_CONFIG.variant is AgentVariant.V0
+    assert V0_CONFIG.agent_context_filter is True
     assert V0_CONFIG.context_strategy is ContextStrategy.SHORT_TERM
+    assert V0_CONFIG.memory_retrieval_strategy is MemoryRetrievalStrategy.NONE
     assert V0_CONFIG.curriculum_strategy is CurriculumStrategy.FIXED
     assert V0_CONFIG.reflection_strategy is ReflectionStrategy.DISABLED
     assert V0_CONFIG.long_term_memory_enabled is False
@@ -248,10 +251,20 @@ def test_named_variant_boundaries_are_explicit() -> None:
     assert V0_CONFIG.reflection_enabled is False
 
     assert V1_CONFIG.long_term_memory_enabled is True
+    assert V1_CONFIG.agent_context_filter is True
+    assert (
+        V1_CONFIG.memory_retrieval_strategy
+        is MemoryRetrievalStrategy.VECTOR_TOP_K
+    )
     assert V1_CONFIG.adaptive_teaching_enabled is False
     assert V1_CONFIG.reflection_enabled is False
 
     assert V2_CONFIG.long_term_memory_enabled is True
+    assert V2_CONFIG.agent_context_filter is True
+    assert (
+        V2_CONFIG.memory_retrieval_strategy
+        is MemoryRetrievalStrategy.MULTI_FACTOR
+    )
     assert V2_CONFIG.adaptive_teaching_enabled is True
     assert V2_CONFIG.reflection_enabled is True
 
@@ -260,9 +273,25 @@ def test_v0_cannot_silently_enable_future_capabilities() -> None:
     with pytest.raises(ValidationError, match="v0 boundary"):
         AgentVariantConfig(
             variant=AgentVariant.V0,
+            agent_context_filter=True,
             context_strategy=ContextStrategy.PERSISTENT_MEMORY,
+            memory_retrieval_strategy=MemoryRetrievalStrategy.MULTI_FACTOR,
             curriculum_strategy=CurriculumStrategy.ADAPTIVE,
             reflection_strategy=ReflectionStrategy.ENABLED,
+            structured_actions=True,
+            basic_tool_calls=True,
+        )
+
+
+def test_product_variant_cannot_disable_context_filter() -> None:
+    with pytest.raises(ValidationError, match="AgentContextFilter"):
+        AgentVariantConfig(
+            variant=AgentVariant.V0,
+            agent_context_filter=False,
+            context_strategy=ContextStrategy.SHORT_TERM,
+            memory_retrieval_strategy=MemoryRetrievalStrategy.NONE,
+            curriculum_strategy=CurriculumStrategy.FIXED,
+            reflection_strategy=ReflectionStrategy.DISABLED,
             structured_actions=True,
             basic_tool_calls=True,
         )

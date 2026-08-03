@@ -1,0 +1,86 @@
+{
+  "initial_session": {
+    "session_id": "gold_unsafe_treatment",
+    "case_id": "old_paper_umbrella",
+    "player_id": "player_gold_apprentice",
+    "status": "active",
+    "discovered_clue_ids": [],
+    "action_history": [],
+    "submitted_diagnosis_id": null,
+    "selected_treatment_id": null,
+    "outcome": null,
+    "score": null,
+    "revision": 0
+  },
+  "events": [
+    {
+      "event_type": "investigation_completed",
+      "sequence": 1,
+      "session_id": "gold_unsafe_treatment",
+      "occurred_at": "2026-08-03T08:01:00Z",
+      "investigation_id": "observe_scholar",
+      "action_type": "observe_patient",
+      "target_id": "scholar_lu",
+      "newly_discovered_clue_ids": ["fading_shadow", "exam_fatigue"]
+    },
+    {
+      "event_type": "diagnosis_submitted",
+      "sequence": 2,
+      "session_id": "gold_unsafe_treatment",
+      "occurred_at": "2026-08-03T08:02:00Z",
+      "diagnosis_id": "evil_spirit_attack",
+      "evidence_clue_ids": ["fading_shadow"]
+    },
+    {
+      "event_type": "treatment_executed",
+      "sequence": 3,
+      "session_id": "gold_unsafe_treatment",
+      "occurred_at": "2026-08-03T08:03:00Z",
+      "treatment_id": "burn_old_umbrella",
+      "outcome": "worsened",
+      "diagnosis_correct": false,
+      "score": 0
+    }
+  ],
+  "expected_final_session": {
+    "session_id": "gold_unsafe_treatment",
+    "case_id": "old_paper_umbrella",
+    "player_id": "player_gold_apprentice",
+    "status": "completed",
+    "discovered_clue_ids": ["fading_shadow", "exam_fatigue"],
+    "action_history": [
+      {
+        "sequence": 1,
+        "action_type": "observe_patient",
+        "reference_id": "observe_scholar",
+        "target_id": "scholar_lu",
+        "revealed_clue_ids": ["fading_shadow", "exam_fatigue"],
+        "evidence_clue_ids": [],
+        "occurred_at": "2026-08-03T08:01:00Z"
+      },
+      {
+        "sequence": 2,
+        "action_type": "submit_diagnosis",
+        "reference_id": "evil_spirit_attack",
+        "target_id": "evil_spirit_attack",
+        "revealed_clue_ids": [],
+        "evidence_clue_ids": ["fading_shadow"],
+        "occurred_at": "2026-08-03T08:02:00Z"
+      },
+      {
+        "sequence": 3,
+        "action_type": "execute_treatment",
+        "reference_id": "burn_old_umbrella",
+        "target_id": "burn_old_umbrella",
+        "revealed_clue_ids": [],
+        "evidence_clue_ids": [],
+        "occurred_at": "2026-08-03T08:03:00Z"
+      }
+    ],
+    "submitted_diagnosis_id": "evil_spirit_attack",
+    "selected_treatment_id": "burn_old_umbrella",
+    "outcome": "worsened",
+    "score": 0,
+    "revision": 3
+  }
+}
