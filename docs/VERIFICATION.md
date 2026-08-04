@@ -80,3 +80,19 @@
 - **运行指标**：Fake LLM 输出固定为 `measurement_status = not_measured`，未填写真实延迟、Token、成本或成功率
 
 本轮没有接入真实供应商、SDK 或 API，也没有实现 MCP、长期记忆、自适应教学、Reflection、界面或多 Agent。M2b-P1 仍未开始，整个 M2 保持进行中。
+
+## 2026-08-04：M2b-P1a DeepSeek Adapter 离线预检
+
+- **验证基线提交**：`b296373b5b3079c7775b5644c5a4538a337c5926`（M2b-P0）
+- **供应商与模型配置**：DeepSeek 官方 API、`https://api.deepseek.com`、仅 `deepseek-v4-flash`；Pro 和旧模型别名不在允许配置中
+- **价格快照**：2026-08-04 DeepSeek 官方人民币价目；Flash 缓存命中输入 0.02 元/百万 Token、缓存未命中输入 1.00 元/百万 Token、输出 2.00 元/百万 Token
+- **最终全量测试**：130 passed，其中原有 97 项继续通过，新增 33 项用量、Adapter、HTTP 错误和 Pilot 门禁测试
+- **离线 HTTP 验证**：全部供应商响应使用 `httpx.MockTransport`；覆盖 `/models`、Chat JSON、缓存 Token、推理 Token、请求 ID、系统指纹、空内容、截断、401/403、429、超时、5xx、非法 JSON 和缺字段
+- **请求约束**：测试确认 `stream=false`、JSON Output、`thinking=disabled`、`temperature=0`、默认 `max_tokens=512`，且应用层工具反馈不转换为供应商原生工具调用
+- **用量与成本**：`ModelUsage` 不再假设美元；估算成本和币种成对出现，缓存缺失时按未命中保守估算，已知部分成本在用量不完整时仍保留
+- **Pilot 门禁**：只允许冻结的 3 条 P0 场景各 1 次、每 Episode 8 步、每步一次格式修复；默认预算 1.00 CNY，达到预算返回 `budget_exhausted` 并保留已完成检查点
+- **回归验证**：无 LLM Demo 仍为 100 分；Fake LLM 完整 Episode 与 3 条离线 dev 场景继续通过，事件可重放
+- **格式检查**：`git diff --check` 通过
+- **密钥与网络**：未读取或打印真实 `DEEPSEEK_API_KEY`；未执行模型发现命令或 Pilot 命令；真实 DeepSeek API 调用次数 0，费用 0 元
+
+本记录只证明协议实现和离线门禁。真实 Key 权限、Flash 可用性、模型行为、延迟、Token 和成本仍未验证，属于需要用户再次明确授权的 M2b-P1b。

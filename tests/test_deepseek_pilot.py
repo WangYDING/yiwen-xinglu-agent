@@ -1,0 +1,146 @@
+from collections import deque
+from decimal import Decimal
+
+from xuanyi_npc.agents import (
+    DeepSeekAdapterConfig,
+    DeepSeekModelDiscovery,
+    LLMRequest,
+    LLMResponse,
+)
+from xuanyi_npc.agents.deepseek_cli import paid_pilot_main
+from xuanyi_npc.application.deepseek_pilot import (
+    FROZEN_P0_SCENARIO_IDS,
+    DeepSeekPilotRunResult,
+    DeepSeekPilotRunner,
+    PilotRunStatus,
+)
+from xuanyi_npc.evaluation import ModelUsage, load_deepseek_pilot_pricing
+from xuanyi_npc.evaluation.dev_contracts import ScriptedActionOutput
+from xuanyi_npc.evaluation.dev_runner import load_dev_suite
+
+
+class CostedScriptAdapter:
+    def __init__(
+        self,
+        responses: list[str],
+        *,
+        budget: str = "0.001",
+        model_available: bool = True,
+    ) -> None:
+        self.config = DeepSeekAdapterConfig(
+            api_key="unit-test-placeholder",
+            base_url="https://api.deepseek.test",
+            pilot_max_cost_cny=Decimal(budget),
+        )
+        self._responses = deque(responses)
+        self._model_available = model_available
+        self.chat_calls = 0
+        self.discovery_calls = 0
+
+    def discover_models(self) -> DeepSeekModelDiscovery:
+        self.discovery_calls += 1
+        available = (
+            ("deepseek-v4-flash",)
+            if self._model_available
+            else ("deepseek-v4-pro",)
+        )
+        return DeepSeekModelDiscovery(
+            configured_model=self.config.model,
+            available_models=available,
+            configured_model_available=self._model_available,
+        )
+
+    def complete(self, request: LLMRequest) -> LLMResponse:
+        self.chat_calls += 1
+        return LLMResponse(
+            content=self._responses.popleft(),
+            usage=ModelUsage(
+                provider_model="deepseek-v4-flash",
+                input_tokens=100,
+                output_tokens=20,
+                cache_hit_input_tokens=0,
+                cache_miss_input_tokens=100,
+                reasoning_tokens=0,
+                latency_ms=10.0,
+                estimated_cost=Decimal("0.000125"),
+                cost_currency="CNY",
+                provider_request_id=f"request_{self.chat_calls:03d}",
+                system_fingerprint="fp_test",
+            ),
+        )
+
+
+def correct_episode_responses() -> list[str]:
+    suite = load_dev_suite()
+    script = suite.scripts["correct_case"]
+    return [
+        suite.actions[output.action_ref].model_dump_json()
+        for output in script.outputs
+        if isinstance(output, ScriptedActionOutput)
+    ]
+
+
+def test_pilot_budget_stop_preserves_completed_episode_checkpoint(tmp_path) -> None:
+    adapter = CostedScriptAdapter(correct_episode_responses())
+    checkpoint = tmp_path / "pilot_result.json"
+
+    result = DeepSeekPilotRunner(adapter).run(checkpoint)
+
+    assert result.status is PilotRunStatus.BUDGET_EXHAUSTED
+    assert result.execution_config.provider == "deepseek"
+    assert result.execution_config.prompt_version == "v0.2.0"
+    assert result.execution_config.pricing_snapshot_id == (
+        "deepseek_v4_flash_2026_08_04"
+    )
+    assert "api_key" not in result.execution_config.model_dump()
+    assert result.estimated_cost == Decimal("0.001000")
+    assert len(result.completed_episodes) == 1
+    assert result.completed_episodes[0].scenario_id == "dev_case_correct_001"
+    assert result.completed_episodes[0].episode.max_steps == 8
+    assert result.completed_episodes[0].episode.usage is not None
+    assert result.completed_episodes[0].episode.usage.cost_currency == "CNY"
+    assert tuple(
+        step.provider_usages[0].provider_request_id
+        for step in result.completed_episodes[0].episode.steps
+    ) == tuple(f"request_{index:03d}" for index in range(1, 9))
+    assert result.unstarted_scenario_ids == FROZEN_P0_SCENARIO_IDS[1:]
+    assert adapter.chat_calls == 8
+    assert adapter.discovery_calls == 1
+    restored = DeepSeekPilotRunResult.model_validate_json(
+        checkpoint.read_text(encoding="utf-8")
+    )
+    assert restored == result
+
+
+def test_pilot_model_unavailable_stops_before_any_chat_request(tmp_path) -> None:
+    adapter = CostedScriptAdapter([], model_available=False)
+
+    result = DeepSeekPilotRunner(adapter).run(tmp_path / "unavailable.json")
+
+    assert result.status is PilotRunStatus.MODEL_UNAVAILABLE
+    assert result.available_models == ("deepseek-v4-pro",)
+    assert result.completed_episodes == ()
+    assert result.unstarted_scenario_ids == FROZEN_P0_SCENARIO_IDS
+    assert adapter.discovery_calls == 1
+    assert adapter.chat_calls == 0
+
+
+def test_pilot_pricing_freezes_three_scenarios_and_limits() -> None:
+    pricing = load_deepseek_pilot_pricing()
+
+    assert pricing.allowed_scenario_ids == FROZEN_P0_SCENARIO_IDS
+    assert pricing.runs_per_scenario == 1
+    assert pricing.max_steps_per_episode == 8
+    assert pricing.max_format_repair_attempts_per_step == 1
+
+
+def test_paid_pilot_command_refuses_without_explicit_confirmation(
+    monkeypatch,
+    capsys,
+) -> None:
+    monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
+
+    exit_code = paid_pilot_main([])
+
+    assert exit_code == 2
+    assert "Refusing to start" in capsys.readouterr().err

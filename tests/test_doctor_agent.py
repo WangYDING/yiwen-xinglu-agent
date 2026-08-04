@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from decimal import Decimal
 
 from xuanyi_npc.agents import (
     ChatMessage,
@@ -9,6 +10,7 @@ from xuanyi_npc.agents import (
     DoctorAgentInterface,
     FixedV0Curriculum,
     LLMAdapter,
+    LLMAdapterError,
     ScriptedFakeLLM,
 )
 from xuanyi_npc.application import AgentContextFilter
@@ -22,6 +24,7 @@ from xuanyi_npc.domain import (
     SubmitDiagnosisCommand,
 )
 from xuanyi_npc.engine import CaseEngine
+from xuanyi_npc.evaluation import ModelUsage
 
 
 def action_json(step_index: int, dialogue: str = "先察其形。") -> str:
@@ -239,6 +242,35 @@ def test_adapter_failure_uses_fallback_without_unbounded_retry(
     assert decision.llm_attempts == 1
     assert len(fake.requests) == 1
     assert fake.remaining_responses == 1
+
+
+def test_charged_adapter_failure_preserves_returned_usage(
+    case_definition: CaseDefinition,
+    qualified_player_state: PlayerState,
+) -> None:
+    measured = ModelUsage(
+        provider_model="deepseek-v4-flash",
+        input_tokens=100,
+        output_tokens=20,
+        cache_hit_input_tokens=0,
+        cache_miss_input_tokens=100,
+        reasoning_tokens=0,
+        latency_ms=10.0,
+        estimated_cost=Decimal("0.00014"),
+        cost_currency="CNY",
+        provider_request_id="request_truncated",
+    )
+    fake = ScriptedFakeLLM(
+        [LLMAdapterError("charged response rejected", usage=measured)]
+    )
+
+    decision = DoctorAgent(fake).decide(
+        agent_input(case_definition, qualified_player_state)
+    )
+
+    assert decision.used_fallback is True
+    assert decision.llm_attempts == 1
+    assert decision.usages == (measured,)
 
 
 def test_wrong_episode_action_id_also_gets_one_repair(

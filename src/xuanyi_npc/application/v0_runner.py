@@ -189,7 +189,10 @@ class V0EpisodeRunner:
             steps=tuple(steps),
             events=tuple(events),
             score_breakdown=score_breakdown,
-            usage=self._aggregate_usage(usages) if complete_usage else None,
+            usage=self._aggregate_usage(
+                usages,
+                measurement_complete=complete_usage,
+            ),
         )
 
     @staticmethod
@@ -208,6 +211,7 @@ class V0EpisodeRunner:
             error_code=error_code,
             llm_attempts=decision.llm_attempts,
             used_fallback=decision.used_fallback,
+            provider_usages=decision.usages,
         )
 
     def _failed(
@@ -227,21 +231,51 @@ class V0EpisodeRunner:
         )
 
     @staticmethod
-    def _aggregate_usage(usages: list[ModelUsage]) -> ModelUsage | None:
+    def _aggregate_usage(
+        usages: list[ModelUsage],
+        *,
+        measurement_complete: bool = True,
+    ) -> ModelUsage | None:
         if not usages:
             return None
         providers = {usage.provider_model for usage in usages}
         provider_model = providers.pop() if len(providers) == 1 else "mixed_models"
-        costs = [usage.cost_usd for usage in usages]
+        costs = [usage.estimated_cost for usage in usages]
+        currencies = {usage.cost_currency for usage in usages}
+        can_aggregate_cost = bool(
+            all(cost is not None for cost in costs)
+            and len(currencies) == 1
+            and None not in currencies
+        )
         total_cost = (
             sum((cost for cost in costs if cost is not None), Decimal("0"))
-            if all(cost is not None for cost in costs)
+            if can_aggregate_cost
             else None
+        )
+        cost_currency = currencies.pop() if can_aggregate_cost else None
+        request_id = usages[0].provider_request_id if len(usages) == 1 else None
+        fingerprints = {usage.system_fingerprint for usage in usages}
+        system_fingerprint = (
+            fingerprints.pop() if len(fingerprints) == 1 else None
         )
         return ModelUsage(
             provider_model=provider_model,
             input_tokens=sum(usage.input_tokens for usage in usages),
             output_tokens=sum(usage.output_tokens for usage in usages),
+            cache_hit_input_tokens=sum(
+                usage.cache_hit_input_tokens for usage in usages
+            ),
+            cache_miss_input_tokens=sum(
+                usage.cache_miss_input_tokens for usage in usages
+            ),
+            reasoning_tokens=sum(usage.reasoning_tokens for usage in usages),
             latency_ms=float(sum(usage.latency_ms for usage in usages)),
-            cost_usd=total_cost,
+            estimated_cost=total_cost,
+            cost_currency=cost_currency,
+            provider_request_id=request_id,
+            system_fingerprint=system_fingerprint,
+            measurement_complete=(
+                measurement_complete
+                and all(usage.measurement_complete for usage in usages)
+            ),
         )

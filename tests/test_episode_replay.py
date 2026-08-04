@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal
 
 import pytest
 from pydantic import ValidationError
@@ -18,7 +19,12 @@ from xuanyi_npc.domain import (
     ToolName,
 )
 from xuanyi_npc.engine import CaseEngine, CaseEventReplayer, EventReplayError
-from xuanyi_npc.evaluation import EpisodeResult, EpisodeStatus, EpisodeStep
+from xuanyi_npc.evaluation import (
+    EpisodeResult,
+    EpisodeStatus,
+    EpisodeStep,
+    ModelUsage,
+)
 
 
 BASE_TIME = datetime(2026, 8, 3, 8, 0, tzinfo=timezone.utc)
@@ -163,7 +169,26 @@ def test_episode_result_serialization_round_trip(
     case_definition: CaseDefinition,
     qualified_player_state: PlayerState,
 ) -> None:
-    episode = run_completed_episode(case_definition, qualified_player_state)
+    episode = run_completed_episode(
+        case_definition,
+        qualified_player_state,
+    ).model_copy(
+        update={
+            "usage": ModelUsage(
+                provider_model="deepseek-v4-flash",
+                input_tokens=100,
+                output_tokens=20,
+                cache_hit_input_tokens=40,
+                cache_miss_input_tokens=60,
+                reasoning_tokens=0,
+                latency_ms=25.0,
+                estimated_cost=Decimal("0.0001"),
+                cost_currency="CNY",
+                provider_request_id="request_round_trip",
+                system_fingerprint="fp_round_trip",
+            )
+        }
+    )
 
     restored = EpisodeResult.model_validate_json(episode.model_dump_json())
 

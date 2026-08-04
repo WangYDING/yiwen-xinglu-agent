@@ -4,7 +4,16 @@ from decimal import Decimal
 from enum import Enum
 from typing import Annotated
 
-from pydantic import ConfigDict, Field, StrictBool, StrictFloat, StrictInt, model_validator
+from pydantic import (
+    ConfigDict,
+    Field,
+    StrictBool,
+    StrictFloat,
+    StrictInt,
+    StrictStr,
+    StringConstraints,
+    model_validator,
+)
 
 from xuanyi_npc.config import AgentVariant
 from xuanyi_npc.domain.actions import AgentAction, AgentActionType
@@ -15,10 +24,52 @@ from xuanyi_npc.engine.replay import CaseEventReplayer, EventReplayError
 from xuanyi_npc.engine.results import ScoreBreakdown
 
 
+CurrencyCode = Annotated[
+    StrictStr,
+    StringConstraints(
+        strip_whitespace=True,
+        min_length=3,
+        max_length=3,
+        pattern=r"^[A-Z]{3}$",
+    ),
+]
+
+
 class EpisodeStatus(str, Enum):
     COMPLETED = "completed"
     MAX_STEPS_REACHED = "max_steps_reached"
     FAILED = "failed"
+
+
+class ModelUsage(DomainModel):
+    """Measured usage only. Omit the object when no model call was measured."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
+
+    provider_model: NonEmptyText
+    input_tokens: Annotated[StrictInt, Field(ge=0)]
+    output_tokens: Annotated[StrictInt, Field(ge=0)]
+    cache_hit_input_tokens: Annotated[StrictInt, Field(ge=0)]
+    cache_miss_input_tokens: Annotated[StrictInt, Field(ge=0)]
+    reasoning_tokens: Annotated[StrictInt, Field(ge=0)]
+    latency_ms: Annotated[StrictFloat, Field(ge=0)]
+    estimated_cost: Annotated[Decimal, Field(ge=0)] | None = None
+    cost_currency: CurrencyCode | None = None
+    provider_request_id: NonEmptyText | None = None
+    system_fingerprint: NonEmptyText | None = None
+    measurement_complete: StrictBool = True
+
+    @model_validator(mode="after")
+    def validate_usage_consistency(self) -> "ModelUsage":
+        if self.cache_hit_input_tokens + self.cache_miss_input_tokens != self.input_tokens:
+            raise ValueError(
+                "cache hit and miss input tokens must sum to input_tokens"
+            )
+        if (self.estimated_cost is None) != (self.cost_currency is None):
+            raise ValueError(
+                "estimated_cost and cost_currency must both be present or absent"
+            )
+        return self
 
 
 class EpisodeStep(DomainModel):
@@ -33,6 +84,7 @@ class EpisodeStep(DomainModel):
     error_code: Identifier | None = None
     llm_attempts: Annotated[StrictInt, Field(ge=1, le=2)] = 1
     used_fallback: StrictBool = False
+    provider_usages: tuple[ModelUsage, ...] = Field(default_factory=tuple)
 
     @model_validator(mode="after")
     def validate_step_outcome(self) -> "EpisodeStep":
@@ -46,17 +98,9 @@ class EpisodeStep(DomainModel):
             raise ValueError("fallback steps must use a non-tool respond action")
         if len(set(self.event_sequences)) != len(self.event_sequences):
             raise ValueError("event_sequences cannot contain duplicates")
+        if len(self.provider_usages) > self.llm_attempts:
+            raise ValueError("step model usages cannot exceed LLM attempts")
         return self
-
-
-class ModelUsage(DomainModel):
-    """Measured usage only. Omit the object when no model call was measured."""
-
-    provider_model: NonEmptyText
-    input_tokens: Annotated[StrictInt, Field(ge=0)]
-    output_tokens: Annotated[StrictInt, Field(ge=0)]
-    latency_ms: Annotated[StrictFloat, Field(ge=0)]
-    cost_usd: Annotated[Decimal, Field(ge=0)] | None = None
 
 
 class EpisodeResult(DomainModel):

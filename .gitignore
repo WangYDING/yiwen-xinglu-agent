@@ -7,6 +7,10 @@ htmlcov/
 .venv/
 venv/
 .env
+.env.*
+!.env.example
+*.key
+*.pem
 .idea/
 .vscode/
 build/

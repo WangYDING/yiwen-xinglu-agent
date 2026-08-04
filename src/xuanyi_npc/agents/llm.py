@@ -50,6 +50,15 @@ class LLMResponse(DomainModel):
 class LLMAdapterError(RuntimeError):
     """Raised by an adapter when a model response cannot be obtained."""
 
+    def __init__(
+        self,
+        message: str,
+        *,
+        usage: ModelUsage | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.usage = usage
+
 
 @runtime_checkable
 class LLMAdapter(Protocol):

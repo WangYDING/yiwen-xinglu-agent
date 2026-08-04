@@ -15,6 +15,11 @@ from .dev_contracts import (
     DevTrajectoryRole,
 )
 from .dev_evaluator import DevEpisodeEvaluator
+from .costing import (
+    DeepSeekPilotPricing,
+    estimate_model_usage_cost,
+    load_deepseek_pilot_pricing,
+)
 
 __all__ = [
     "EpisodeResult",
@@ -28,4 +33,7 @@ __all__ = [
     "DevSuiteDefinition",
     "DevSuiteRunResult",
     "DevTrajectoryRole",
+    "DeepSeekPilotPricing",
+    "estimate_model_usage_cost",
+    "load_deepseek_pilot_pricing",
 ]

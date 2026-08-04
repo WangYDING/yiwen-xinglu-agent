@@ -9,7 +9,14 @@ from xuanyi_npc.domain import AgentAction, AgentActionType
 from xuanyi_npc.domain.base import DomainModel, NonEmptyText
 from xuanyi_npc.evaluation import ModelUsage
 
-from .llm import ChatMessage, ChatRole, LLMAdapter, LLMRequest, LLMResponse
+from .llm import (
+    ChatMessage,
+    ChatRole,
+    LLMAdapter,
+    LLMAdapterError,
+    LLMRequest,
+    LLMResponse,
+)
 
 
 V0_SYSTEM_PROMPT = """你是架空道家志怪世界中的道医师父。你只依据提供的可见信息行动。
@@ -96,8 +103,13 @@ class DoctorAgent:
 
         try:
             first_response = self.adapter.complete(request)
-        except Exception:
-            return self._fallback(agent_input.step_index, 1, responses)
+        except Exception as exc:
+            return self._fallback(
+                agent_input.step_index,
+                1,
+                responses,
+                self._usage_from_error(exc),
+            )
         responses.append(first_response)
 
         try:
@@ -111,8 +123,13 @@ class DoctorAgent:
             )
             try:
                 repaired_response = self.adapter.complete(repair_request)
-            except Exception:
-                return self._fallback(agent_input.step_index, 2, responses)
+            except Exception as exc:
+                return self._fallback(
+                    agent_input.step_index,
+                    2,
+                    responses,
+                    self._usage_from_error(exc),
+                )
             responses.append(repaired_response)
             try:
                 action = self._parse_action(repaired_response, agent_input.step_index)
@@ -195,6 +212,7 @@ class DoctorAgent:
         step_index: int,
         llm_attempts: int,
         responses: list[LLMResponse],
+        error_usages: tuple[ModelUsage, ...] = (),
     ) -> AgentDecision:
         return AgentDecision(
             action=AgentAction(
@@ -205,7 +223,7 @@ class DoctorAgent:
             ),
             llm_attempts=llm_attempts,
             used_fallback=True,
-            usages=DoctorAgent._usages(responses),
+            usages=(*DoctorAgent._usages(responses), *error_usages),
         )
 
     @staticmethod
@@ -213,3 +231,9 @@ class DoctorAgent:
         return tuple(
             response.usage for response in responses if response.usage is not None
         )
+
+    @staticmethod
+    def _usage_from_error(error: Exception) -> tuple[ModelUsage, ...]:
+        if isinstance(error, LLMAdapterError) and error.usage is not None:
+            return (error.usage,)
+        return ()

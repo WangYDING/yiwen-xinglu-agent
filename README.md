@@ -6,7 +6,7 @@
 
 ## 当前状态
 
-当前已完成 **M2a：Fake LLM Agent Harness 与安全闭环**，以及 **M2b-P0：供应商无关 dev 场景与确定性评测器**。整个 M2 仍在进行中。
+当前已完成 **M2a：Fake LLM Agent Harness 与安全闭环**、**M2b-P0：供应商无关 dev 场景与确定性评测器**，以及 **M2b-P1a：DeepSeek Adapter 与离线预检**。整个 M2 仍在进行中。
 
 已经包含：
 
@@ -28,14 +28,17 @@
 - 使用脚本化 Fake LLM 跑通并记录完整 Episode；
 - 3 条严格 Schema 的 dev 场景，以及每条场景的参考轨迹和明确错误轨迹；
 - 以统一 `EpisodeResult` 为输入的确定性评测器和单命令运行入口；
+- DeepSeek V4 Flash 的直接 HTTP Adapter、只读模型发现和明确供应商错误；
+- 日期化人民币价格快照、供应商无关用量记录和 1 元 Pilot 预算门禁；
+- 只使用伪 HTTP 响应的 DeepSeek Adapter 与 Pilot 离线测试；
 - 面向 Agent 的公开诊断候选、调查说明和处置说明；
 - 未知诊断候选由规则层拒绝，错误候选可正常提交并按确定性规则计分；
 - 全新 Python 3.12 虚拟环境中的安装、测试和 Demo 复现记录；
 - 领域模型、规则边界和持久化测试。
 
-**下一阶段是 M2b-P1**：真实 LLM 适配、小型 Pilot，以及真实超时、Token 和延迟验证。在 P1 完成前，不把整个 M2 标为完成，也不进入 M3。
+**下一阶段是 M2b-P1b**：在用户单独授权后查询当前 Key 可用模型并运行小型付费 Pilot，采集真实超时、Token、延迟和人民币成本。在 P1b 完成前，不把整个 M2 标为完成，也不进入 M3。
 
-当前尚未接入真实 LLM 供应商，也不包含 MCP、长期记忆检索、数据库或交互界面。现有结果只能证明结构化 Agent 编排、规则隔离和 Fake LLM 安全闭环可运行，不能证明真实模型的工具选择或病例完成能力。
+当前已经实现 DeepSeek 官方 API Adapter，但尚未向真实 API 发起请求。项目仍不包含 MCP、长期记忆检索、数据库或交互界面。现有结果只能证明结构化 Agent 编排、规则隔离、Fake LLM 安全闭环和 DeepSeek 离线协议兼容性，不能证明真实模型的工具选择或病例完成能力。
 
 ## 设计边界
 
@@ -57,6 +60,7 @@ src/xuanyi_npc/evaluation/ 统一 Episode 结果与确定性 dev 评测器
 src/xuanyi_npc/storage/  JSON 状态存储
 data/cases/              结构化病例定义
 data/evaluation/         严格 Schema 的 dev 场景与参考/错误轨迹
+data/pilot/              带日期和来源的 Pilot 价格与安全策略快照
 docs/                    架构决策记录
 tests/                   自动化测试
 ```
@@ -101,19 +105,62 @@ M2b-P0 的 3 条 dev 场景也完全离线，可由一条命令重复运行：
 xuanyi-dev-eval
 ```
 
-未安装命令入口时，可在已安装项目的环境中运行 `python -m xuanyi_npc.evaluation.dev_runner`。输出只有确定性轨迹结果；Fake LLM 的延迟、Token、成本和真实成功率保持“未测量”。
+未安装项目时，在仓库根目录使用以下准确命令：
+
+```powershell
+$env:PYTHONPATH="src"
+python -m xuanyi_npc.evaluation.dev_runner
+```
+
+在 macOS/Linux 中使用 `PYTHONPATH=src python -m xuanyi_npc.evaluation.dev_runner`。输出只有确定性轨迹结果；Fake LLM 的延迟、Token、成本和真实成功率保持“未测量”。
+
+## DeepSeek M2b-P1a 预检
+
+当前配置固定使用 DeepSeek 官方 OpenAI 兼容地址和 `deepseek-v4-flash`，禁止自动切换 Pro 或旧模型别名。配置项示例见 `.env.example`；项目不会自动加载 `.env` 文件。
+
+在 PowerShell 当前进程中，可使用不回显明文的方式设置 Key：
+
+```powershell
+$secret = Read-Host "DEEPSEEK_API_KEY" -AsSecureString
+$env:DEEPSEEK_API_KEY = [System.Net.NetworkCredential]::new("", $secret).Password
+```
+
+使用结束后执行 `Remove-Item Env:DEEPSEEK_API_KEY`。不要把真实 Key 写入 `.env.example`、命令历史、源码、日志或测试。
+
+安装项目后，以下命令会发起一次真实但只读的 `/models` 请求，列出当前 Key 可用模型并检查 Flash 是否存在：
+
+```bash
+xuanyi-deepseek-models
+```
+
+未安装项目时，对应 PowerShell 命令为：
+
+```powershell
+$env:PYTHONPATH="src"
+python -m xuanyi_npc.agents.deepseek_cli models
+```
+
+付费 Pilot 必须等待单独授权；授权后的准确命令是：
+
+```bash
+xuanyi-deepseek-pilot --confirm-paid-pilot --output results/deepseek_pilot_001.json
+```
+
+未安装项目时，在 PowerShell 中先设置 `$env:PYTHONPATH="src"`，再运行 `python -m xuanyi_npc.agents.deepseek_cli pilot --confirm-paid-pilot --output results/deepseek_pilot_001.json`；macOS/Linux 使用 `PYTHONPATH=src python -m xuanyi_npc.agents.deepseek_cli pilot --confirm-paid-pilot --output results/deepseek_pilot_001.json`。没有 `--confirm-paid-pilot` 时，程序会在读取 Key 和发起网络请求之前拒绝运行。
+
+Pilot 默认保护参数：总预算 1.00 CNY；只运行冻结的 3 条 P0 场景；每场景 1 次；每个 Episode 最多 8 步；每步最多一次格式修复；单次输出最多 512 Token；Adapter 不进行隐式重试。累计返回成本达到预算后，不再启动新 Episode，并以 `budget_exhausted` 状态保留已完成检查点。
 
 ## 当前限制
 
 - JSON 存储目前只用于验证状态接口，尚未处理多进程并发。
-- `LLMAdapter` 目前只有测试用 Fake 实现，尚未验证真实供应商的超时、限流、结构化输出兼容性、延迟、Token 或成本；这些属于 M2b-P1。
+- DeepSeek `LLMAdapter` 已通过 MockTransport 离线测试，但尚未验证真实供应商的认证、限流、结构化输出行为、延迟、Token 或成本；这些属于 M2b-P1b。
 - M1 只更新病例会话，不更新玩家能力、关系或长期记忆。
 - 评分暂时只计算关键线索、诊断、处置和危险处置惩罚；提示扣分将在教学阶段接入。
 - 演示是固定路线回放，还不是交互式游戏界面。
-- V0 的 M2a Harness 与 M2b-P0 离线评测门槛已实现，但完整 M2 仍等待 M2b-P1；V1、V2 当前只有配置与共享契约。
+- V0 的 M2a Harness、M2b-P0 离线评测门槛和 M2b-P1a Adapter 预检已实现，但完整 M2 仍等待 M2b-P1b；V1、V2 当前只有配置与共享契约。
 - 三个正式版本始终启用 `AgentContextFilter`；不安全提示词对照只允许在隔离的 A4 安全消融中运行。
 - V1 只规划基础向量 Top-K 长期记忆和固定课程；多因素记忆排序、自适应教学与 Reflection 属于 V2。
 - 长期记忆、自适应教学和 Reflection 明确不属于当前 V0 实现。
 - 当前 V0 的固定课程只按步骤编号推进，不基于玩家表现动态改变。
 - 当前没有评测成功率、延迟或成本数据；这些指标只能由后续真实评测生成。
-- 下一阶段只能是 M2b-P1；MCP（M3）及以后里程碑均未开始。
+- 下一阶段只能是经单独授权的 M2b-P1b；MCP（M3）及以后里程碑均未开始。
