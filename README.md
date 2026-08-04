@@ -6,7 +6,7 @@
 
 ## 当前状态
 
-当前已完成 **M2a：Fake LLM Agent Harness 与安全闭环**。整个 M2 尚未完成。
+当前已完成 **M2a：Fake LLM Agent Harness 与安全闭环**，以及 **M2b-P0：供应商无关 dev 场景与确定性评测器**。整个 M2 仍在进行中。
 
 已经包含：
 
@@ -26,12 +26,14 @@
 - `AgentAction` 格式错误时的一次修复重试与确定性降级；
 - 将工具建议转换为领域命令、再交给病例引擎校验的应用层；
 - 使用脚本化 Fake LLM 跑通并记录完整 Episode；
+- 3 条严格 Schema 的 dev 场景，以及每条场景的参考轨迹和明确错误轨迹；
+- 以统一 `EpisodeResult` 为输入的确定性评测器和单命令运行入口；
 - 面向 Agent 的公开诊断候选、调查说明和处置说明；
 - 未知诊断候选由规则层拒绝，错误候选可正常提交并按确定性规则计分；
 - 全新 Python 3.12 虚拟环境中的安装、测试和 Demo 复现记录；
 - 领域模型、规则边界和持久化测试。
 
-**M2b 尚待完成**：真实 LLM 适配、3 条 dev 场景、小型 Pilot，以及真实超时、Token 和延迟验证。在 M2b 完成前，不把整个 M2 标为完成，也不进入 M3。
+**下一阶段是 M2b-P1**：真实 LLM 适配、小型 Pilot，以及真实超时、Token 和延迟验证。在 P1 完成前，不把整个 M2 标为完成，也不进入 M3。
 
 当前尚未接入真实 LLM 供应商，也不包含 MCP、长期记忆检索、数据库或交互界面。现有结果只能证明结构化 Agent 编排、规则隔离和 Fake LLM 安全闭环可运行，不能证明真实模型的工具选择或病例完成能力。
 
@@ -51,9 +53,10 @@ src/xuanyi_npc/agents/   LLM 协议、DoctorAgent 与 Fake LLM
 src/xuanyi_npc/application/ Agent 权限过滤视图
 src/xuanyi_npc/config/   V0、V1、V2 能力配置
 src/xuanyi_npc/engine/   确定性病例引擎
-src/xuanyi_npc/evaluation/ 统一 Episode 结果
+src/xuanyi_npc/evaluation/ 统一 Episode 结果与确定性 dev 评测器
 src/xuanyi_npc/storage/  JSON 状态存储
 data/cases/              结构化病例定义
+data/evaluation/         严格 Schema 的 dev 场景与参考/错误轨迹
 docs/                    架构决策记录
 tests/                   自动化测试
 ```
@@ -92,17 +95,25 @@ M2a 的 Agent 闭环使用 Fake LLM 自动验证，不需要 API 密钥：
 python -m pytest tests/test_doctor_agent.py tests/test_v0_episode_runner.py
 ```
 
+M2b-P0 的 3 条 dev 场景也完全离线，可由一条命令重复运行：
+
+```bash
+xuanyi-dev-eval
+```
+
+未安装命令入口时，可在已安装项目的环境中运行 `python -m xuanyi_npc.evaluation.dev_runner`。输出只有确定性轨迹结果；Fake LLM 的延迟、Token、成本和真实成功率保持“未测量”。
+
 ## 当前限制
 
 - JSON 存储目前只用于验证状态接口，尚未处理多进程并发。
-- `LLMAdapter` 目前只有测试用 Fake 实现，尚未验证真实供应商的超时、限流、结构化输出兼容性、延迟、Token 或成本；这些属于 M2b。
+- `LLMAdapter` 目前只有测试用 Fake 实现，尚未验证真实供应商的超时、限流、结构化输出兼容性、延迟、Token 或成本；这些属于 M2b-P1。
 - M1 只更新病例会话，不更新玩家能力、关系或长期记忆。
 - 评分暂时只计算关键线索、诊断、处置和危险处置惩罚；提示扣分将在教学阶段接入。
 - 演示是固定路线回放，还不是交互式游戏界面。
-- V0 的 M2a Harness 已实现，但完整 M2 仍等待 M2b；V1、V2 当前只有配置与共享契约。
+- V0 的 M2a Harness 与 M2b-P0 离线评测门槛已实现，但完整 M2 仍等待 M2b-P1；V1、V2 当前只有配置与共享契约。
 - 三个正式版本始终启用 `AgentContextFilter`；不安全提示词对照只允许在隔离的 A4 安全消融中运行。
 - V1 只规划基础向量 Top-K 长期记忆和固定课程；多因素记忆排序、自适应教学与 Reflection 属于 V2。
 - 长期记忆、自适应教学和 Reflection 明确不属于当前 V0 实现。
 - 当前 V0 的固定课程只按步骤编号推进，不基于玩家表现动态改变。
 - 当前没有评测成功率、延迟或成本数据；这些指标只能由后续真实评测生成。
-- 下一阶段只能是 M2b；MCP（M3）及以后里程碑均未开始。
+- 下一阶段只能是 M2b-P1；MCP（M3）及以后里程碑均未开始。

@@ -64,3 +64,19 @@
 - **实验 v0.1 SHA256**：`681CC9B9236CA3095A3D1BD01A6C48D2DE7CD52936B22F849B8C5CF93802BA08`，原文件作为历史版本保留
 
 验证结束后删除临时环境。本记录只证明 M2a Fake LLM Harness 和安全闭环；真实 LLM 适配、3 条 dev 场景、小型 Pilot、真实超时、Token 与延迟仍属于未完成的 M2b。
+
+## 2026-08-04：M2a 检查点与 M2b-P0 确定性 dev 预检
+
+- **M2a 本地检查点**：`ab7e960387c5387606cbf4f9395d4a579d2fbba9`（`feat: complete safe M2a agent harness`）
+- **最终全量测试**：97 passed，其中原有 88 项继续通过，新增 9 项 dev Schema、评测与轨迹测试
+- **无 LLM Demo**：8 个确定性动作完成病例，评分仍为 100
+- **Fake LLM 完整 Episode**：8 步、8 个连续领域事件、终态重放一致
+- **dev 单命令入口**：`xuanyi-dev-eval` / `python -m xuanyi_npc.evaluation.dev_runner`
+- **dev_case_correct_001**：参考轨迹完成，8 步、8 事件、100 分、重放一致；词表外错误轨迹有 2 个规则拒绝步骤，停在 6 事件/修订 6，拒绝步骤没有产生事件
+- **dev_case_wrong_hypothesis_001**：公开错误候选被规则层接受，Episode 完成且 8 事件可重放；诊断分为 0、总分 70，评测器分类为 `wrong_hypothesis` 与 `score_mismatch`
+- **dev_recovery_001**：参考轨迹首次格式失败后在同一步完成一次修复，8 步完成并得到 100 分；失败对照在 8 步上限终止、8 次安全降级、0 事件、终态等于初态
+- **安全上下文**：6 条轨迹的所有 Agent 请求均未发现配置中的内部根因、合法诊断集合、正确性、评分或隐藏门槛字段
+- **事件一致性**：6 条轨迹均通过连续性检查，且从初始状态重放事件得到相同终态
+- **运行指标**：Fake LLM 输出固定为 `measurement_status = not_measured`，未填写真实延迟、Token、成本或成功率
+
+本轮没有接入真实供应商、SDK 或 API，也没有实现 MCP、长期记忆、自适应教学、Reflection、界面或多 Agent。M2b-P1 仍未开始，整个 M2 保持进行中。
