@@ -25,6 +25,7 @@ from xuanyi_npc.engine import (
     SessionClosedError,
     SkillLockedError,
     TreatmentPrerequisiteError,
+    UnknownDiagnosisError,
     UnknownInvestigationError,
     UnknownTreatmentError,
 )
@@ -103,7 +104,7 @@ def test_complete_correct_case_without_llm(
         qualified_player_state,
         session,
         SubmitDiagnosisCommand(
-            diagnosis_id="unfulfilled_rain_vow_contract",
+            diagnosis_id="rain_vow_breach",
             evidence_clue_ids=session.discovered_clue_ids,
             occurred_at=BASE_TIME + timedelta(minutes=7),
         ),
@@ -264,13 +265,35 @@ def test_diagnosis_cannot_cite_undiscovered_evidence(
             qualified_player_state,
             session,
             SubmitDiagnosisCommand(
-                diagnosis_id="unfulfilled_rain_vow_contract",
+                diagnosis_id="rain_vow_breach",
                 evidence_clue_ids={"broken_promise"},
                 occurred_at=BASE_TIME,
             ),
         )
 
     assert session.submitted_diagnosis_id is None
+
+
+def test_unknown_diagnosis_is_rejected_without_state_change(
+    case_definition: CaseDefinition,
+    qualified_player_state: PlayerState,
+) -> None:
+    session = make_session(case_definition, qualified_player_state)
+
+    with pytest.raises(UnknownDiagnosisError):
+        CaseEngine().execute(
+            case_definition,
+            qualified_player_state,
+            session,
+            SubmitDiagnosisCommand(
+                diagnosis_id="invented_diagnosis",
+                occurred_at=BASE_TIME,
+            ),
+        )
+
+    assert session.submitted_diagnosis_id is None
+    assert session.revision == 0
+    assert session.action_history == ()
 
 
 def test_treatment_requires_diagnosis(
@@ -339,7 +362,7 @@ def test_resolving_treatment_requires_discovered_evidence(
         qualified_player_state,
         make_session(case_definition, qualified_player_state),
         SubmitDiagnosisCommand(
-            diagnosis_id="unfulfilled_rain_vow_contract",
+            diagnosis_id="rain_vow_breach",
             occurred_at=BASE_TIME,
         ),
     ).session
@@ -388,6 +411,7 @@ def test_error_treatments_have_deterministic_outcomes(
             occurred_at=BASE_TIME + timedelta(minutes=5),
         ),
     ).session
+    assert session.submitted_diagnosis_id == "evil_spirit_attack"
 
     result = engine.execute(
         case_definition,
@@ -402,6 +426,7 @@ def test_error_treatments_have_deterministic_outcomes(
     assert result.session.outcome is expected_outcome
     assert result.score_breakdown is not None
     assert result.score_breakdown.diagnosis_correct is False
+    assert result.score_breakdown.diagnosis_points == 0
     if expected_outcome is TreatmentOutcome.WORSENED:
         assert result.score_breakdown.unsafe_treatment_penalty == 20
         assert result.session.score == 0
@@ -457,7 +482,7 @@ def test_repeated_actions_do_not_duplicate_score(
             qualified_player_state,
             session,
             SubmitDiagnosisCommand(
-                diagnosis_id="unfulfilled_rain_vow_contract",
+                diagnosis_id="rain_vow_breach",
                 evidence_clue_ids=session.discovered_clue_ids,
                 occurred_at=BASE_TIME + timedelta(minutes=minute),
             ),
@@ -484,7 +509,11 @@ def test_multiple_valid_diagnoses_share_the_same_scoring_contract(
     qualified_player_state: PlayerState,
 ) -> None:
     data = case_definition.model_dump(mode="json")
-    data["valid_diagnosis_ids"].append("rain_vow_breach")
+    data["diagnosis_candidates"]["witnessed_rain_vow_breach"] = {
+        "diagnosis_id": "witnessed_rain_vow_breach",
+        "public_description": "雨夜承诺形成的契约未在见证下完成。",
+    }
+    data["valid_diagnosis_ids"].append("witnessed_rain_vow_breach")
     multi_solution_case = CaseDefinition.model_validate(data)
     engine = CaseEngine()
     session = execute_investigations(
@@ -506,7 +535,7 @@ def test_multiple_valid_diagnoses_share_the_same_scoring_contract(
         qualified_player_state,
         session,
         SubmitDiagnosisCommand(
-            diagnosis_id="rain_vow_breach",
+            diagnosis_id="witnessed_rain_vow_breach",
             evidence_clue_ids=session.discovered_clue_ids,
             occurred_at=BASE_TIME + timedelta(minutes=7),
         ),

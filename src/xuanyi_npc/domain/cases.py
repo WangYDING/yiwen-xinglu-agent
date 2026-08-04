@@ -64,10 +64,18 @@ class ClueDefinition(DomainModel):
         return self
 
 
+class DiagnosisCandidateDefinition(DomainModel):
+    """Public hypothesis vocabulary; correctness remains private case truth."""
+
+    diagnosis_id: Identifier
+    public_description: NonEmptyText
+
+
 class InvestigationDefinition(DomainModel):
     investigation_id: Identifier
     action_type: CaseActionType
     target_id: Identifier
+    public_description: NonEmptyText
     reveals_clue_ids: frozenset[Identifier] = Field(min_length=1)
     required_skill_id: Identifier | None = None
     minimum_skill_level: BoundedScore = 0
@@ -84,6 +92,7 @@ class InvestigationDefinition(DomainModel):
 
 class TreatmentDefinition(DomainModel):
     treatment_id: Identifier
+    public_description: NonEmptyText
     description: NonEmptyText
     outcome: TreatmentOutcome
     required_clue_ids: frozenset[Identifier] = Field(default_factory=frozenset)
@@ -121,6 +130,9 @@ class CaseDefinition(DomainModel):
     causal_chain: tuple[NonEmptyText, ...] = Field(min_length=1)
     clues: dict[Identifier, ClueDefinition] = Field(min_length=1)
     investigations: tuple[InvestigationDefinition, ...] = Field(min_length=1)
+    diagnosis_candidates: dict[Identifier, DiagnosisCandidateDefinition] = Field(
+        min_length=2
+    )
     valid_diagnosis_ids: frozenset[Identifier] = Field(min_length=1)
     treatments: dict[Identifier, TreatmentDefinition] = Field(min_length=1)
     hints: tuple[HintDefinition, ...] = Field(min_length=3, max_length=3)
@@ -160,8 +172,22 @@ class CaseDefinition(DomainModel):
         if resolved_treatments != 1:
             raise ValueError("a technical case must have exactly one resolving treatment")
 
-        if self.root_cause not in self.valid_diagnosis_ids:
-            raise ValueError("root_cause must be included in valid_diagnosis_ids")
+        for key, candidate in self.diagnosis_candidates.items():
+            if key != candidate.diagnosis_id:
+                raise ValueError(
+                    f"diagnosis candidate map key {key!r} does not match diagnosis_id"
+                )
+        unknown_valid_diagnoses = self.valid_diagnosis_ids.difference(
+            self.diagnosis_candidates
+        )
+        if unknown_valid_diagnoses:
+            raise ValueError(
+                "valid_diagnosis_ids must reference public diagnosis candidates"
+            )
+        if not set(self.diagnosis_candidates).difference(self.valid_diagnosis_ids):
+            raise ValueError(
+                "public diagnosis candidates must include at least one incorrect hypothesis"
+            )
 
         if {hint.level for hint in self.hints} != {1, 2, 3}:
             raise ValueError("hint levels must contain exactly 1, 2, and 3")

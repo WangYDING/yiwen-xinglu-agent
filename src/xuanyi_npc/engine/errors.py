@@ -43,6 +43,10 @@ class EvidenceNotDiscoveredError(RuleViolation):
     code = "evidence_not_discovered"
 
 
+class UnknownDiagnosisError(RuleViolation):
+    code = "unknown_diagnosis"
+
+
 class DiagnosisRequiredError(RuleViolation):
     code = "diagnosis_required"
 

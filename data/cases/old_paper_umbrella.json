@@ -74,6 +74,7 @@
       "investigation_id": "observe_scholar",
       "action_type": "observe_patient",
       "target_id": "scholar_lu",
+      "public_description": "观察书生的神色、动作、影子与周围灯火表现。",
       "reveals_clue_ids": ["fading_shadow", "exam_fatigue"],
       "required_skill_id": "observe_form",
       "minimum_skill_level": 0,
@@ -83,6 +84,7 @@
       "investigation_id": "ask_about_memory",
       "action_type": "question_patient",
       "target_id": "scholar_lu",
+      "public_description": "询问书生近期睡眠、记忆和日常经历的变化。",
       "reveals_clue_ids": ["forgotten_faces"],
       "required_skill_id": "ask_cause",
       "minimum_skill_level": 0,
@@ -92,6 +94,7 @@
       "investigation_id": "inspect_umbrella",
       "action_type": "inspect_object",
       "target_id": "old_paper_umbrella",
+      "public_description": "检查旧纸伞的破损、水迹、伞柄和异常痕迹。",
       "reveals_clue_ids": ["umbrella_night_water", "cold_window_draft"],
       "required_skill_id": "inspect_object",
       "minimum_skill_level": 0,
@@ -101,6 +104,7 @@
       "investigation_id": "observe_contract_trace",
       "action_type": "observe_qi",
       "target_id": "old_paper_umbrella",
+      "public_description": "观察旧纸伞与书生之间是否存在异常炁息联系。",
       "reveals_clue_ids": ["vow_knot_trace"],
       "required_skill_id": "observe_qi",
       "minimum_skill_level": 20,
@@ -110,6 +114,7 @@
       "investigation_id": "search_book_chest",
       "action_type": "inspect_object",
       "target_id": "scholar_book_chest",
+      "public_description": "检查书箱、夹层和随身旧物中是否有相关物件。",
       "reveals_clue_ids": ["hidden_wooden_token"],
       "required_skill_id": "inspect_object",
       "minimum_skill_level": 0,
@@ -119,28 +124,46 @@
       "investigation_id": "ask_about_promise",
       "action_type": "question_patient",
       "target_id": "scholar_lu",
+      "public_description": "根据已经发现的物证，继续询问书生是否隐瞒过承诺。",
       "reveals_clue_ids": ["broken_promise"],
       "required_skill_id": "ask_cause",
       "minimum_skill_level": 10,
       "required_clue_ids": ["hidden_wooden_token"]
     }
   ],
-  "valid_diagnosis_ids": ["unfulfilled_rain_vow_contract"],
+  "diagnosis_candidates": {
+    "rain_vow_breach": {
+      "diagnosis_id": "rain_vow_breach",
+      "public_description": "书生与旧伞相关的一项雨夜承诺尚未履行，异常可能来自未闭合的契约。"
+    },
+    "evil_spirit_attack": {
+      "diagnosis_id": "evil_spirit_attack",
+      "public_description": "有外来灵体主动侵袭书生，旧纸伞只是异常力量附着的媒介。"
+    },
+    "exam_exhaustion": {
+      "diagnosis_id": "exam_exhaustion",
+      "public_description": "长期备考和睡眠紊乱使书生心神衰弱，所见异常可能主要源于疲惫。"
+    }
+  },
+  "valid_diagnosis_ids": ["rain_vow_breach"],
   "treatments": {
     "return_token_and_fulfill_vow": {
       "treatment_id": "return_token_and_fulfill_vow",
+      "public_description": "在见证下将木牌送回旧渡口，并为书生举行补契仪式。",
       "description": "在见证下将木牌送回旧渡口，补全书生主动许下的承诺，并确认雨契灵停止取走记忆。",
       "outcome": "resolved",
       "required_clue_ids": ["vow_knot_trace", "hidden_wooden_token", "broken_promise"]
     },
     "seal_old_umbrella": {
       "treatment_id": "seal_old_umbrella",
+      "public_description": "使用封契法封住旧纸伞与书生之间显现的契息。",
       "description": "暂时封住旧纸伞的契息，只能短暂减弱呼名梦，无法完成承诺。",
       "outcome": "suppressed",
       "required_clue_ids": ["umbrella_night_water"]
     },
     "burn_old_umbrella": {
       "treatment_id": "burn_old_umbrella",
+      "public_description": "以净火焚毁旧纸伞，尝试切断它与书生之间的联系。",
       "description": "将旧纸伞直接烧毁会使未闭合的契痕失去依附物，转而加深在书生影中。",
       "outcome": "worsened",
       "required_clue_ids": []

@@ -43,12 +43,19 @@ class InvestigationOptionView(AgentViewModel):
     investigation_id: Identifier
     action_type: CaseActionType
     target_id: Identifier
+    public_description: NonEmptyText
+
+
+class DiagnosisCandidateView(AgentViewModel):
+    diagnosis_id: Identifier
+    public_description: NonEmptyText
 
 
 class TreatmentOptionView(AgentViewModel):
-    """Only the action identifier is public; outcome and gate rules stay private."""
+    """Public action semantics; outcome and gate rules stay private."""
 
     treatment_id: Identifier
+    public_description: NonEmptyText
 
 
 class CaseObservation(AgentViewModel):
@@ -64,6 +71,9 @@ class CaseObservation(AgentViewModel):
     session_revision: StrictInt = Field(ge=0)
     discovered_clues: tuple[ObservedClueView, ...] = Field(default_factory=tuple)
     available_investigations: tuple[InvestigationOptionView, ...] = Field(
+        default_factory=tuple
+    )
+    diagnosis_candidates: tuple[DiagnosisCandidateView, ...] = Field(
         default_factory=tuple
     )
     can_submit_diagnosis: StrictBool
@@ -111,6 +121,7 @@ class AgentContextFilter:
                 investigation_id=investigation.investigation_id,
                 action_type=investigation.action_type,
                 target_id=investigation.target_id,
+                public_description=investigation.public_description,
             )
             for investigation in sorted(
                 case.investigations,
@@ -127,8 +138,21 @@ class AgentContextFilter:
             )
             for clue_id in sorted(session.discovered_clue_ids)
         )
+        diagnosis_candidates = tuple(
+            DiagnosisCandidateView(
+                diagnosis_id=candidate.diagnosis_id,
+                public_description=candidate.public_description,
+            )
+            for candidate in sorted(
+                case.diagnosis_candidates.values(),
+                key=lambda item: item.diagnosis_id,
+            )
+        )
         treatments = tuple(
-            TreatmentOptionView(treatment_id=treatment.treatment_id)
+            TreatmentOptionView(
+                treatment_id=treatment.treatment_id,
+                public_description=treatment.public_description,
+            )
             for treatment in sorted(
                 case.treatments.values(),
                 key=lambda item: item.treatment_id,
@@ -148,6 +172,7 @@ class AgentContextFilter:
             session_revision=session.revision,
             discovered_clues=clues,
             available_investigations=investigations,
+            diagnosis_candidates=diagnosis_candidates,
             can_submit_diagnosis=is_active,
             submitted_diagnosis_id=session.submitted_diagnosis_id,
             available_treatments=treatments,

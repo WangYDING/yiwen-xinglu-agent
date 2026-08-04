@@ -100,7 +100,7 @@ def main() -> int:
         player,
         session,
         SubmitDiagnosisCommand(
-            diagnosis_id="unfulfilled_rain_vow_contract",
+            diagnosis_id="rain_vow_breach",
             evidence_clue_ids=session.discovered_clue_ids,
             occurred_at=base_time + timedelta(minutes=7),
         ),

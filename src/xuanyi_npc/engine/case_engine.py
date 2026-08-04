@@ -31,6 +31,7 @@ from .errors import (
     SkillLockedError,
     TreatmentPrerequisiteError,
     UnknownCommandError,
+    UnknownDiagnosisError,
     UnknownInvestigationError,
     UnknownTreatmentError,
 )
@@ -175,6 +176,10 @@ class CaseEngine:
         session: CaseSessionState,
         command: SubmitDiagnosisCommand,
     ) -> EngineResult:
+        if command.diagnosis_id not in case.diagnosis_candidates:
+            raise UnknownDiagnosisError(
+                f"unknown diagnosis candidate: {command.diagnosis_id}"
+            )
         unavailable_evidence = command.evidence_clue_ids.difference(
             session.discovered_clue_ids
         )

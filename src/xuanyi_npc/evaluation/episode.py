@@ -7,7 +7,7 @@ from typing import Annotated
 from pydantic import ConfigDict, Field, StrictBool, StrictFloat, StrictInt, model_validator
 
 from xuanyi_npc.config import AgentVariant
-from xuanyi_npc.domain.actions import AgentAction
+from xuanyi_npc.domain.actions import AgentAction, AgentActionType
 from xuanyi_npc.domain.base import DomainModel, Identifier, NonEmptyText
 from xuanyi_npc.domain.cases import CaseSessionState, CaseSessionStatus
 from xuanyi_npc.domain.events import CaseEvent
@@ -31,6 +31,8 @@ class EpisodeStep(DomainModel):
         default_factory=tuple
     )
     error_code: Identifier | None = None
+    llm_attempts: Annotated[StrictInt, Field(ge=1, le=2)] = 1
+    used_fallback: StrictBool = False
 
     @model_validator(mode="after")
     def validate_step_outcome(self) -> "EpisodeStep":
@@ -40,6 +42,8 @@ class EpisodeStep(DomainModel):
             raise ValueError("rejected steps require error_code")
         if not self.accepted and self.event_sequences:
             raise ValueError("rejected steps cannot emit domain events")
+        if self.used_fallback and self.action.action_type is not AgentActionType.RESPOND:
+            raise ValueError("fallback steps must use a non-tool respond action")
         if len(set(self.event_sequences)) != len(self.event_sequences):
             raise ValueError("event_sequences cannot contain duplicates")
         return self

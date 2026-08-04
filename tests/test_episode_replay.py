@@ -94,7 +94,7 @@ def run_completed_episode(
 
     record(
         SubmitDiagnosisCommand(
-            diagnosis_id="unfulfilled_rain_vow_contract",
+            diagnosis_id="rain_vow_breach",
             evidence_clue_ids=current.discovered_clue_ids,
             occurred_at=BASE_TIME + timedelta(minutes=7),
         ),

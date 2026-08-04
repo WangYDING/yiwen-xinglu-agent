@@ -13,6 +13,7 @@ from .errors import (
     SkillLockedError,
     TreatmentPrerequisiteError,
     UnknownCommandError,
+    UnknownDiagnosisError,
     UnknownInvestigationError,
     UnknownTreatmentError,
 )
@@ -36,6 +37,7 @@ __all__ = [
     "SkillLockedError",
     "TreatmentPrerequisiteError",
     "UnknownCommandError",
+    "UnknownDiagnosisError",
     "UnknownInvestigationError",
     "UnknownTreatmentError",
 ]

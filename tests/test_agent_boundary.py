@@ -63,6 +63,9 @@ def test_initial_case_observation_hides_truth_and_future_clues(
     available_ids = {
         item.investigation_id for item in observation.available_investigations
     }
+    candidate_ids = {
+        item.diagnosis_id for item in observation.diagnosis_candidates
+    }
 
     assert available_ids == {
         "ask_about_memory",
@@ -71,10 +74,31 @@ def test_initial_case_observation_hides_truth_and_future_clues(
     }
     assert observation.discovered_clues == ()
     assert observation.available_treatments == ()
+    assert candidate_ids == {
+        "evil_spirit_attack",
+        "exam_exhaustion",
+        "rain_vow_breach",
+    }
+    assert all(
+        candidate.public_description
+        for candidate in observation.diagnosis_candidates
+    )
+    assert all(
+        set(candidate.model_dump()) == {"diagnosis_id", "public_description"}
+        for candidate in observation.diagnosis_candidates
+    )
+    assert all(
+        option.public_description
+        for option in observation.available_investigations
+    )
+    assert case_definition.root_cause not in serialized
     assert "root_cause" not in serialized
     assert "causal_chain" not in serialized
     assert "hidden_information" not in serialized
     assert "valid_diagnosis_ids" not in serialized
+    assert "is_correct" not in serialized
+    assert "diagnosis_correct" not in serialized
+    assert "scoring" not in serialized
     assert "required_clue_ids" not in serialized
     assert "minimum_skill_level" not in serialized
     assert "broken_promise" not in serialized
@@ -168,6 +192,10 @@ def test_treatment_view_hides_outcome_and_hidden_requirements(
         "burn_old_umbrella",
         "seal_old_umbrella",
     }
+    assert all(
+        treatment.public_description
+        for treatment in observation.available_treatments
+    )
     assert "outcome" not in serialized
     assert "resolved" not in serialized
     assert "worsened" not in serialized

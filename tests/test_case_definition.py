@@ -31,6 +31,20 @@ def test_example_case_meets_minimum_technical_spec(
     assert resolving_treatments and len(resolving_treatments) == 1
     assert len(error_treatments) == 2
     assert {hint.level for hint in case_definition.hints} == {1, 2, 3}
+    assert case_definition.valid_diagnosis_ids.issubset(
+        case_definition.diagnosis_candidates
+    )
+    assert set(case_definition.diagnosis_candidates).difference(
+        case_definition.valid_diagnosis_ids
+    )
+    assert all(
+        investigation.public_description
+        for investigation in case_definition.investigations
+    )
+    assert all(
+        treatment.public_description
+        for treatment in case_definition.treatments.values()
+    )
 
 
 def test_case_rejects_unknown_action(case_definition: CaseDefinition) -> None:
@@ -57,13 +71,23 @@ def test_case_rejects_unknown_clue_reference(case_definition: CaseDefinition) ->
         CaseDefinition.model_validate(data)
 
 
-def test_case_root_cause_must_be_a_valid_diagnosis(
+def test_valid_diagnoses_must_reference_public_candidates(
     case_definition: CaseDefinition,
 ) -> None:
     data = case_definition.model_dump(mode="json")
     data["valid_diagnosis_ids"] = ["different_cause"]
 
-    with pytest.raises(ValidationError, match="root_cause"):
+    with pytest.raises(ValidationError, match="public diagnosis candidates"):
+        CaseDefinition.model_validate(data)
+
+
+def test_public_diagnosis_vocabulary_requires_an_incorrect_hypothesis(
+    case_definition: CaseDefinition,
+) -> None:
+    data = case_definition.model_dump(mode="json")
+    data["valid_diagnosis_ids"] = list(data["diagnosis_candidates"])
+
+    with pytest.raises(ValidationError, match="incorrect hypothesis"):
         CaseDefinition.model_validate(data)
 
 

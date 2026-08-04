@@ -46,7 +46,7 @@
       "sequence": 4,
       "session_id": "gold_repeated_diagnosis",
       "occurred_at": "2026-08-03T09:04:00Z",
-      "diagnosis_id": "unfulfilled_rain_vow_contract",
+      "diagnosis_id": "rain_vow_breach",
       "evidence_clue_ids": ["umbrella_night_water"]
     }
   ],
@@ -87,14 +87,14 @@
       {
         "sequence": 4,
         "action_type": "submit_diagnosis",
-        "reference_id": "unfulfilled_rain_vow_contract",
-        "target_id": "unfulfilled_rain_vow_contract",
+        "reference_id": "rain_vow_breach",
+        "target_id": "rain_vow_breach",
         "revealed_clue_ids": [],
         "evidence_clue_ids": ["umbrella_night_water"],
         "occurred_at": "2026-08-03T09:04:00Z"
       }
     ],
-    "submitted_diagnosis_id": "unfulfilled_rain_vow_contract",
+    "submitted_diagnosis_id": "rain_vow_breach",
     "selected_treatment_id": null,
     "outcome": null,
     "score": null,
