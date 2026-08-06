@@ -1,0 +1,23 @@
+{
+  "snapshot_id": "deepseek_v4_flash_pilot_policy_2026_08_06",
+  "provider": "deepseek",
+  "model": "deepseek-v4-flash",
+  "effective_date": "2026-08-04",
+  "source_title": "DeepSeek API Docs - 模型 & 价格",
+  "source_url": "https://api-docs.deepseek.com/zh-cn/quick_start/pricing/",
+  "currency": "CNY",
+  "unit_tokens": 1000000,
+  "cache_hit_input_price_per_unit": "0.02",
+  "cache_miss_input_price_per_unit": "1.00",
+  "output_price_per_unit": "2.00",
+  "allowed_scenario_ids": [
+    "dev_case_correct_001",
+    "dev_case_wrong_hypothesis_001",
+    "dev_recovery_001"
+  ],
+  "runs_per_scenario": 1,
+  "max_steps_per_episode": 8,
+  "max_format_repair_attempts_per_step": 1,
+  "request_input_token_upper_bound_method": "utf8_bytes_plus_framing",
+  "request_framing_token_allowance": 4096
+}

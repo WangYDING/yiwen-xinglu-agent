@@ -14,6 +14,7 @@ from xuanyi_npc.agents import (
     DoctorAgentInput,
     DoctorAgentInterface,
     FixedV0Curriculum,
+    LLMAdapterError,
 )
 from xuanyi_npc.config import AgentVariant
 from xuanyi_npc.domain import (
@@ -117,15 +118,37 @@ class V0EpisodeRunner:
 
         for step_index in range(1, self.config.max_steps + 1):
             observation = self.context_filter.case_observation(case, player, current)
-            decision = self.doctor_agent.decide(
-                DoctorAgentInput(
-                    step_index=step_index,
-                    player_view=player_view,
-                    case_observation=observation,
-                    recent_messages=tuple(recent_messages),
-                    fixed_lesson=self.curriculum.lesson_for_step(step_index),
+            try:
+                decision = self.doctor_agent.decide(
+                    DoctorAgentInput(
+                        step_index=step_index,
+                        player_view=player_view,
+                        case_observation=observation,
+                        recent_messages=tuple(recent_messages),
+                        fixed_lesson=self.curriculum.lesson_for_step(step_index),
+                    )
                 )
-            )
+            except LLMAdapterError as exc:
+                if not exc.abort_episode:
+                    raise
+                usages.extend(exc.prior_usages)
+                if exc.usage is not None:
+                    usages.append(exc.usage)
+                return EpisodeResult(
+                    episode_id=episode_id,
+                    variant=AgentVariant.V0,
+                    status=EpisodeStatus.FAILED,
+                    max_steps=self.config.max_steps,
+                    initial_session=initial_session,
+                    final_session=current,
+                    steps=tuple(steps),
+                    events=tuple(events),
+                    failure_code=getattr(exc, "code", "llm_execution_aborted"),
+                    usage=self._aggregate_usage(
+                        usages,
+                        measurement_complete=False,
+                    ),
+                )
             if len(decision.usages) != decision.llm_attempts:
                 complete_usage = False
             usages.extend(decision.usages)

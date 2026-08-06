@@ -14,7 +14,7 @@ DEFAULT_DEEPSEEK_PRICING_PATH = (
     REPOSITORY_ROOT
     / "data"
     / "pilot"
-    / "deepseek_v4_flash_pricing_2026-08-04.json"
+    / "deepseek_v4_flash_pilot_policy_2026-08-06.json"
 )
 
 
@@ -38,6 +38,10 @@ class DeepSeekPilotPricing(DomainModel):
     runs_per_scenario: Literal[1]
     max_steps_per_episode: Literal[8]
     max_format_repair_attempts_per_step: Literal[1]
+    request_input_token_upper_bound_method: Literal[
+        "utf8_bytes_plus_framing"
+    ] = "utf8_bytes_plus_framing"
+    request_framing_token_allowance: Annotated[StrictInt, Field(ge=256)] = 4096
 
     @model_validator(mode="after")
     def validate_scenarios(self) -> "DeepSeekPilotPricing":

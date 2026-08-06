@@ -6,7 +6,7 @@
 
 ## 当前状态
 
-当前已完成 **M2a：Fake LLM Agent Harness 与安全闭环**、**M2b-P0：供应商无关 dev 场景与确定性评测器**，以及 **M2b-P1a：DeepSeek Adapter 与离线预检**。整个 M2 仍在进行中。
+当前已完成 **M2a：Fake LLM Agent Harness 与安全闭环**、**M2b-P0：供应商无关 dev 场景与确定性评测器**，以及 **M2b-P1a：DeepSeek Adapter 与离线预检**。2026-08-06 已完成真实模型发现，并在随后一次明确授权下运行过首个诊断性 Pilot；由于严格的逐请求预算门禁是在该次运行后补齐，M2b-P1b 仍保持“进行中”，不得据此推进 M3。
 
 已经包含：
 
@@ -29,16 +29,16 @@
 - 3 条严格 Schema 的 dev 场景，以及每条场景的参考轨迹和明确错误轨迹；
 - 以统一 `EpisodeResult` 为输入的确定性评测器和单命令运行入口；
 - DeepSeek V4 Flash 的直接 HTTP Adapter、只读模型发现和明确供应商错误；
-- 日期化人民币价格快照、供应商无关用量记录和 1 元 Pilot 预算门禁；
+- 日期化人民币价格快照、供应商无关用量记录和请求发送前的 1 元 Pilot 严格预算门禁；
 - 只使用伪 HTTP 响应的 DeepSeek Adapter 与 Pilot 离线测试；
 - 面向 Agent 的公开诊断候选、调查说明和处置说明；
 - 未知诊断候选由规则层拒绝，错误候选可正常提交并按确定性规则计分；
 - 全新 Python 3.12 虚拟环境中的安装、测试和 Demo 复现记录；
 - 领域模型、规则边界和持久化测试。
 
-**下一阶段是 M2b-P1b**：在用户单独授权后查询当前 Key 可用模型并运行小型付费 Pilot，采集真实超时、Token、延迟和人民币成本。在 P1b 完成前，不把整个 M2 标为完成，也不进入 M3。
+**当前停在 M2b-P1b 收口**：当前 Key 已通过一次只读 `/models` 验证并确认可见 `deepseek-v4-flash`。后续任何付费运行都需新的单独授权；在 P1b 完成前，不把整个 M2 标为完成，也不进入 M3。
 
-当前已经实现 DeepSeek 官方 API Adapter，但尚未向真实 API 发起请求。项目仍不包含 MCP、长期记忆检索、数据库或交互界面。现有结果只能证明结构化 Agent 编排、规则隔离、Fake LLM 安全闭环和 DeepSeek 离线协议兼容性，不能证明真实模型的工具选择或病例完成能力。
+当前真实记录包括一次独立模型发现，以及一次诊断性 Pilot 内的 1 次 `/models` 和 23 次 `/chat/completions`；该 Pilot 的供应商返回成本估算为 `0.0332138 CNY`，3 条场景任务通过数为 0，3 条轨迹均可重放。它是发现 V0 固定课程问题的单次负结果，不是正式成功率结论。项目仍不包含 MCP、长期记忆检索、数据库或交互界面。
 
 ## 设计边界
 
@@ -114,20 +114,19 @@ python -m xuanyi_npc.evaluation.dev_runner
 
 在 macOS/Linux 中使用 `PYTHONPATH=src python -m xuanyi_npc.evaluation.dev_runner`。输出只有确定性轨迹结果；Fake LLM 的延迟、Token、成本和真实成功率保持“未测量”。
 
-## DeepSeek M2b-P1a 预检
+## DeepSeek M2b 配置与安全边界
 
-当前配置固定使用 DeepSeek 官方 OpenAI 兼容地址和 `deepseek-v4-flash`，禁止自动切换 Pro 或旧模型别名。配置项示例见 `.env.example`；项目不会自动加载 `.env` 文件。
+当前配置固定使用 DeepSeek 官方 OpenAI 兼容地址和 `deepseek-v4-flash`，禁止自动切换 Pro 或旧模型别名。项目从仓库根目录运行时会自动读取本地 `.env`；系统环境变量优先于 `.env` 中的同名配置。
 
-在 PowerShell 当前进程中，可使用不回显明文的方式设置 Key：
+先在仓库根目录复制配置模板：
 
 ```powershell
-$secret = Read-Host "DEEPSEEK_API_KEY" -AsSecureString
-$env:DEEPSEEK_API_KEY = [System.Net.NetworkCredential]::new("", $secret).Password
+Copy-Item .env.example .env
 ```
 
-使用结束后执行 `Remove-Item Env:DEEPSEEK_API_KEY`。不要把真实 Key 写入 `.env.example`、命令历史、源码、日志或测试。
+然后只在 `.env` 中把 `DEEPSEEK_API_KEY=replace_with_your_deepseek_api_key` 的占位值替换为真实 Key。`.env` 已被 Git 忽略；不要把真实 Key 写入 `.env.example`、源码、日志、测试或聊天。如果不希望密钥落盘，也可以继续使用操作系统环境变量。
 
-安装项目后，以下命令会发起一次真实但只读的 `/models` 请求，列出当前 Key 可用模型并检查 Flash 是否存在：
+模型发现已经完成。只有在再次获得外部请求授权、确需复核模型列表时，以下命令才会发起一次真实但只读的 `/models` 请求：
 
 ```bash
 xuanyi-deepseek-models
@@ -140,7 +139,7 @@ $env:PYTHONPATH="src"
 python -m xuanyi_npc.agents.deepseek_cli models
 ```
 
-付费 Pilot 必须等待单独授权；授权后的准确命令是：
+付费 Pilot 当前暂停，必须再次获得单独授权。授权后的准确命令是：
 
 ```bash
 xuanyi-deepseek-pilot --confirm-paid-pilot --output results/deepseek_pilot_001.json
@@ -148,12 +147,12 @@ xuanyi-deepseek-pilot --confirm-paid-pilot --output results/deepseek_pilot_001.j
 
 未安装项目时，在 PowerShell 中先设置 `$env:PYTHONPATH="src"`，再运行 `python -m xuanyi_npc.agents.deepseek_cli pilot --confirm-paid-pilot --output results/deepseek_pilot_001.json`；macOS/Linux 使用 `PYTHONPATH=src python -m xuanyi_npc.agents.deepseek_cli pilot --confirm-paid-pilot --output results/deepseek_pilot_001.json`。没有 `--confirm-paid-pilot` 时，程序会在读取 Key 和发起网络请求之前拒绝运行。
 
-Pilot 默认保护参数：总预算 1.00 CNY；只运行冻结的 3 条 P0 场景；每场景 1 次；每个 Episode 最多 8 步；每步最多一次格式修复；单次输出最多 512 Token；Adapter 不进行隐式重试。累计返回成本达到预算后，不再启动新 Episode，并以 `budget_exhausted` 状态保留已完成检查点。
+Pilot 默认保护参数：总预算 1.00 CNY；只运行冻结的 3 条 P0 场景；每场景 1 次；每个 Episode 最多 8 步；每步最多一次格式修复；单次输出最多 512 Token；Adapter 不进行隐式重试。每次 Chat 发送前，将完整请求 JSON 的 UTF-8 字节数加 4096 Token 协议余量作为输入上界，全部按缓存未命中价计费，再加 512 个输出 Token 的最高费用。只有“已确认成本＋本次最大预留成本不超过 1.00 CNY”才发送；超时、响应缺少用量或用量无法核对时保留该请求的最大预留并立即冻结后续请求。
 
 ## 当前限制
 
 - JSON 存储目前只用于验证状态接口，尚未处理多进程并发。
-- DeepSeek `LLMAdapter` 已通过 MockTransport 离线测试，但尚未验证真实供应商的认证、限流、结构化输出行为、延迟、Token 或成本；这些属于 M2b-P1b。
+- DeepSeek `LLMAdapter` 已通过 MockTransport 离线测试，也有一次真实诊断性 Pilot 数据；单次样本不能代表稳定成功率、限流表现或长期成本。
 - M1 只更新病例会话，不更新玩家能力、关系或长期记忆。
 - 评分暂时只计算关键线索、诊断、处置和危险处置惩罚；提示扣分将在教学阶段接入。
 - 演示是固定路线回放，还不是交互式游戏界面。
@@ -162,5 +161,5 @@ Pilot 默认保护参数：总预算 1.00 CNY；只运行冻结的 3 条 P0 场�
 - V1 只规划基础向量 Top-K 长期记忆和固定课程；多因素记忆排序、自适应教学与 Reflection 属于 V2。
 - 长期记忆、自适应教学和 Reflection 明确不属于当前 V0 实现。
 - 当前 V0 的固定课程只按步骤编号推进，不基于玩家表现动态改变。
-- 当前没有评测成功率、延迟或成本数据；这些指标只能由后续真实评测生成。
-- 下一阶段只能是经单独授权的 M2b-P1b；MCP（M3）及以后里程碑均未开始。
+- 当前只有一次诊断性 Pilot 的真实 Token、延迟、成本和失败轨迹，不足以形成正式比较或简历指标。
+- 后续付费运行必须重新取得明确授权；MCP（M3）及以后里程碑均未开始。

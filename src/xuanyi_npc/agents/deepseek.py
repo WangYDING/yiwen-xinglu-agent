@@ -5,11 +5,14 @@ from __future__ import annotations
 import json
 import os
 import time
+from collections import ChainMap
 from collections.abc import Callable, Mapping
 from decimal import Decimal
+from pathlib import Path
 from typing import Annotated, Literal
 
 import httpx
+from dotenv import dotenv_values
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -38,11 +41,35 @@ AGENT_ACTION_JSON_EXAMPLE = {
     "confidence": 0.5,
 }
 
+DEEPSEEK_ENV_NAMES = (
+    "DEEPSEEK_API_KEY",
+    "DEEPSEEK_BASE_URL",
+    "DEEPSEEK_MODEL",
+    "DEEPSEEK_TIMEOUT_SECONDS",
+    "DEEPSEEK_MAX_OUTPUT_TOKENS",
+    "XUANYI_PILOT_MAX_COST_CNY",
+)
+
+
+def _load_project_dotenv() -> Mapping[str, str]:
+    """Read ``.env`` from the current project directory without mutating it."""
+
+    path = Path.cwd() / ".env"
+    if not path.is_file():
+        return {}
+    values = dotenv_values(path, encoding="utf-8", interpolate=False)
+    return {
+        name: value
+        for name in DEEPSEEK_ENV_NAMES
+        if (value := values.get(name)) is not None
+    }
+
 
 class DeepSeekAdapterError(LLMAdapterError):
     """Base error with a stable, non-sensitive classification code."""
 
     code = "deepseek_adapter_error"
+
 
 class DeepSeekConfigurationError(DeepSeekAdapterError):
     code = "deepseek_configuration_error"
@@ -88,6 +115,27 @@ class DeepSeekTruncatedOutputError(DeepSeekAdapterError):
     code = "deepseek_output_truncated"
 
 
+class DeepSeekBudgetExceededError(DeepSeekAdapterError):
+    code = "deepseek_budget_exhausted"
+
+    def __init__(self) -> None:
+        super().__init__(
+            "the conservative request reservation would exceed the Pilot budget",
+            abort_episode=True,
+        )
+
+
+class DeepSeekUsageUnavailableError(DeepSeekAdapterError):
+    code = "deepseek_usage_unavailable"
+
+    def __init__(self, *, usage: ModelUsage | None = None) -> None:
+        super().__init__(
+            "request usage is unavailable or cannot be reconciled safely",
+            usage=usage,
+            abort_episode=True,
+        )
+
+
 class DeepSeekModelUnavailableError(DeepSeekAdapterError):
     code = "deepseek_model_unavailable"
 
@@ -97,8 +145,84 @@ class DeepSeekModelUnavailableError(DeepSeekAdapterError):
         super().__init__("configured DeepSeek model is not available for this API key")
 
 
+class DeepSeekRequestReservation(DomainModel):
+    """Conservative upper bound reserved before one paid Chat request."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    input_token_upper_bound: Annotated[int, Field(ge=1)]
+    output_token_upper_bound: Annotated[int, Field(ge=1)]
+    maximum_cost_cny: Annotated[Decimal, Field(gt=0)]
+
+
+class DeepSeekRequestBudgetGuard:
+    """Synchronous reserve-then-settle guard for paid Chat requests."""
+
+    def __init__(self, max_cost_cny: Decimal) -> None:
+        if max_cost_cny <= 0:
+            raise ValueError("Pilot budget must be positive")
+        self.max_cost_cny = max_cost_cny
+        self.known_cost_cny = Decimal("0")
+        self._outstanding: DeepSeekRequestReservation | None = None
+        self.halted = False
+        self.stop_reason: str | None = None
+
+    @property
+    def maximum_committed_cost_cny(self) -> Decimal:
+        outstanding = (
+            self._outstanding.maximum_cost_cny
+            if self._outstanding is not None
+            else Decimal("0")
+        )
+        return self.known_cost_cny + outstanding
+
+    @property
+    def can_start_episode(self) -> bool:
+        return not self.halted and self.known_cost_cny < self.max_cost_cny
+
+    def reserve(self, reservation: DeepSeekRequestReservation) -> None:
+        if self.halted:
+            if self.stop_reason == DeepSeekBudgetExceededError.code:
+                raise DeepSeekBudgetExceededError()
+            raise DeepSeekUsageUnavailableError()
+        if self._outstanding is not None:
+            self.halt_unknown_usage()
+            raise DeepSeekUsageUnavailableError()
+        if self.known_cost_cny + reservation.maximum_cost_cny > self.max_cost_cny:
+            self.halted = True
+            self.stop_reason = DeepSeekBudgetExceededError.code
+            raise DeepSeekBudgetExceededError()
+        self._outstanding = reservation
+
+    def settle(self, usage: ModelUsage) -> None:
+        reservation = self._outstanding
+        if reservation is None:
+            self.halt_unknown_usage()
+            raise DeepSeekUsageUnavailableError(usage=usage)
+        if (
+            not usage.measurement_complete
+            or usage.estimated_cost is None
+            or usage.cost_currency != "CNY"
+        ):
+            self.halt_unknown_usage()
+            raise DeepSeekUsageUnavailableError(usage=usage)
+        actual_cost = usage.estimated_cost
+        if actual_cost > reservation.maximum_cost_cny:
+            self.known_cost_cny += actual_cost
+            self._outstanding = None
+            self.halted = True
+            self.stop_reason = DeepSeekUsageUnavailableError.code
+            raise DeepSeekUsageUnavailableError(usage=usage)
+        self.known_cost_cny += actual_cost
+        self._outstanding = None
+
+    def halt_unknown_usage(self) -> None:
+        self.halted = True
+        self.stop_reason = DeepSeekUsageUnavailableError.code
+
+
 class DeepSeekAdapterConfig(DomainModel):
-    """Explicit configuration; ``from_env`` is the only environment reader."""
+    """Explicit configuration; ``from_env`` is the only secret-file reader."""
 
     model_config = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
 
@@ -124,7 +248,11 @@ class DeepSeekAdapterConfig(DomainModel):
         cls,
         environ: Mapping[str, str] | None = None,
     ) -> "DeepSeekAdapterConfig":
-        source = os.environ if environ is None else environ
+        source: Mapping[str, str]
+        if environ is None:
+            source = ChainMap(os.environ, _load_project_dotenv())
+        else:
+            source = environ
         api_key = source.get("DEEPSEEK_API_KEY", "").strip()
         if not api_key:
             raise DeepSeekMissingAPIKeyError(
@@ -237,6 +365,9 @@ class DeepSeekChatAdapter:
         self._client = client or httpx.Client()
         self._owns_client = client is None
         self._monotonic = monotonic
+        self.request_budget = DeepSeekRequestBudgetGuard(
+            self.config.pilot_max_cost_cny
+        )
 
     @classmethod
     def from_env(
@@ -290,46 +421,96 @@ class DeepSeekChatAdapter:
         return discovery
 
     def complete(self, request: LLMRequest) -> LLMResponse:
-        started = self._monotonic()
-        response = self._send(
-            "POST",
-            "/chat/completions",
-            json_body=self._chat_payload(request),
+        request_payload = self._chat_payload(request)
+        reservation = self._reservation_for_payload(request_payload)
+        self.request_budget.reserve(reservation)
+        usage_settled = False
+        try:
+            started = self._monotonic()
+            response = self._send(
+                "POST",
+                "/chat/completions",
+                json_body=request_payload,
+            )
+            latency_ms = float((self._monotonic() - started) * 1000)
+            payload = self._decode_json(response)
+            try:
+                envelope = _ChatCompletionEnvelope.model_validate(payload)
+            except ValidationError:
+                raise DeepSeekResponseFieldError(
+                    "DeepSeek chat response is missing or has invalid required fields"
+                ) from None
+
+            choice = envelope.choices[0]
+            try:
+                usage = self._model_usage(envelope, latency_ms)
+            except ValidationError:
+                raise DeepSeekResponseFieldError(
+                    "DeepSeek usage response contains inconsistent fields"
+                ) from None
+            self.request_budget.settle(usage)
+            usage_settled = True
+            if choice.finish_reason == "length":
+                raise DeepSeekTruncatedOutputError(
+                    "DeepSeek output was truncated at the configured token limit",
+                    usage=usage,
+                )
+            if choice.finish_reason != "stop":
+                raise DeepSeekProviderError(
+                    "DeepSeek completion did not finish normally",
+                    usage=usage,
+                )
+            content = choice.message.content
+            if content is None or not content.strip():
+                raise DeepSeekEmptyContentError(
+                    "DeepSeek returned an empty final content field",
+                    usage=usage,
+                )
+
+            return LLMResponse(content=content, usage=usage)
+        except Exception as exc:
+            if not usage_settled:
+                self.request_budget.halt_unknown_usage()
+                if isinstance(exc, LLMAdapterError):
+                    exc.abort_episode = True
+                    raise
+                raise DeepSeekUsageUnavailableError() from exc
+            raise
+
+    def conservative_request_reservation(
+        self,
+        request: LLMRequest,
+    ) -> DeepSeekRequestReservation:
+        """Reserve a byte-level upper bound plus provider framing allowance."""
+
+        return self._reservation_for_payload(self._chat_payload(request))
+
+    def _reservation_for_payload(
+        self,
+        request_payload: Mapping[str, object],
+    ) -> DeepSeekRequestReservation:
+        """Calculate the reservation for the exact payload that will be sent."""
+
+        serialized = json.dumps(
+            request_payload,
+            ensure_ascii=False,
+            separators=(",", ":"),
+            sort_keys=True,
+        ).encode("utf-8")
+        input_token_upper_bound = (
+            len(serialized) + self.pricing.request_framing_token_allowance
         )
-        latency_ms = float((self._monotonic() - started) * 1000)
-        payload = self._decode_json(response)
-        try:
-            envelope = _ChatCompletionEnvelope.model_validate(payload)
-        except ValidationError:
-            raise DeepSeekResponseFieldError(
-                "DeepSeek chat response is missing or has invalid required fields"
-            ) from None
-
-        choice = envelope.choices[0]
-        try:
-            usage = self._model_usage(envelope, latency_ms)
-        except ValidationError:
-            raise DeepSeekResponseFieldError(
-                "DeepSeek usage response contains inconsistent fields"
-            ) from None
-        if choice.finish_reason == "length":
-            raise DeepSeekTruncatedOutputError(
-                "DeepSeek output was truncated at the configured token limit",
-                usage=usage,
-            )
-        if choice.finish_reason != "stop":
-            raise DeepSeekProviderError(
-                "DeepSeek completion did not finish normally",
-                usage=usage,
-            )
-        content = choice.message.content
-        if content is None or not content.strip():
-            raise DeepSeekEmptyContentError(
-                "DeepSeek returned an empty final content field",
-                usage=usage,
-            )
-
-        return LLMResponse(content=content, usage=usage)
+        maximum_cost = estimate_model_usage_cost(
+            cache_hit_input_tokens=0,
+            cache_miss_input_tokens=input_token_upper_bound,
+            output_tokens=self.config.max_output_tokens,
+            pricing=self.pricing,
+        )
+        return DeepSeekRequestReservation(
+            input_token_upper_bound=input_token_upper_bound,
+            output_token_upper_bound=self.config.max_output_tokens,
+            maximum_cost_cny=maximum_cost,
+        )
 
     def _chat_payload(self, request: LLMRequest) -> dict[str, object]:
         messages: list[dict[str, str]] = []

@@ -4,6 +4,9 @@ from decimal import Decimal
 from xuanyi_npc.agents import (
     DeepSeekAdapterConfig,
     DeepSeekModelDiscovery,
+    DeepSeekRequestBudgetGuard,
+    DeepSeekRequestReservation,
+    DeepSeekUsageUnavailableError,
     LLMRequest,
     LLMResponse,
 )
@@ -26,6 +29,8 @@ class CostedScriptAdapter:
         *,
         budget: str = "0.001",
         model_available: bool = True,
+        request_reservation_cost: str = "0.000125",
+        usage_available: bool = True,
     ) -> None:
         self.config = DeepSeekAdapterConfig(
             api_key="unit-test-placeholder",
@@ -34,8 +39,13 @@ class CostedScriptAdapter:
         )
         self._responses = deque(responses)
         self._model_available = model_available
+        self._request_reservation_cost = Decimal(request_reservation_cost)
+        self._usage_available = usage_available
         self.chat_calls = 0
         self.discovery_calls = 0
+        self.request_budget = DeepSeekRequestBudgetGuard(
+            self.config.pilot_max_cost_cny
+        )
 
     def discover_models(self) -> DeepSeekModelDiscovery:
         self.discovery_calls += 1
@@ -51,23 +61,32 @@ class CostedScriptAdapter:
         )
 
     def complete(self, request: LLMRequest) -> LLMResponse:
-        self.chat_calls += 1
-        return LLMResponse(
-            content=self._responses.popleft(),
-            usage=ModelUsage(
-                provider_model="deepseek-v4-flash",
-                input_tokens=100,
-                output_tokens=20,
-                cache_hit_input_tokens=0,
-                cache_miss_input_tokens=100,
-                reasoning_tokens=0,
-                latency_ms=10.0,
-                estimated_cost=Decimal("0.000125"),
-                cost_currency="CNY",
-                provider_request_id=f"request_{self.chat_calls:03d}",
-                system_fingerprint="fp_test",
-            ),
+        self.request_budget.reserve(
+            DeepSeekRequestReservation(
+                input_token_upper_bound=100,
+                output_token_upper_bound=20,
+                maximum_cost_cny=self._request_reservation_cost,
+            )
         )
+        self.chat_calls += 1
+        usage = ModelUsage(
+            provider_model="deepseek-v4-flash",
+            input_tokens=100,
+            output_tokens=20,
+            cache_hit_input_tokens=0,
+            cache_miss_input_tokens=100,
+            reasoning_tokens=0,
+            latency_ms=10.0,
+            estimated_cost=Decimal("0.000125"),
+            cost_currency="CNY",
+            provider_request_id=f"request_{self.chat_calls:03d}",
+            system_fingerprint="fp_test",
+        )
+        if not self._usage_available:
+            self.request_budget.halt_unknown_usage()
+            raise DeepSeekUsageUnavailableError()
+        self.request_budget.settle(usage)
+        return LLMResponse(content=self._responses.popleft(), usage=usage)
 
 
 def correct_episode_responses() -> list[str]:
@@ -90,15 +109,19 @@ def test_pilot_budget_stop_preserves_completed_episode_checkpoint(tmp_path) -> N
     assert result.execution_config.provider == "deepseek"
     assert result.execution_config.prompt_version == "v0.2.0"
     assert result.execution_config.pricing_snapshot_id == (
-        "deepseek_v4_flash_2026_08_04"
+        "deepseek_v4_flash_pilot_policy_2026_08_06"
     )
     assert "api_key" not in result.execution_config.model_dump()
     assert result.estimated_cost == Decimal("0.001000")
+    assert result.maximum_committed_cost == Decimal("0.001000")
     assert len(result.completed_episodes) == 1
     assert result.completed_episodes[0].scenario_id == "dev_case_correct_001"
     assert result.completed_episodes[0].episode.max_steps == 8
     assert result.completed_episodes[0].episode.usage is not None
     assert result.completed_episodes[0].episode.usage.cost_currency == "CNY"
+    assert result.completed_episodes[0].evaluation.task_passed is True
+    assert result.completed_episodes[0].evaluation.usage_measured is True
+    assert result.completed_episodes[0].evaluation.failure_categories == ()
     assert tuple(
         step.provider_usages[0].provider_request_id
         for step in result.completed_episodes[0].episode.steps
@@ -123,6 +146,72 @@ def test_pilot_model_unavailable_stops_before_any_chat_request(tmp_path) -> None
     assert result.unstarted_scenario_ids == FROZEN_P0_SCENARIO_IDS
     assert adapter.discovery_calls == 1
     assert adapter.chat_calls == 0
+
+
+def test_request_budget_rejects_before_network_or_state_change(tmp_path) -> None:
+    adapter = CostedScriptAdapter(
+        correct_episode_responses(),
+        budget="0.000124",
+    )
+
+    result = DeepSeekPilotRunner(adapter).run(tmp_path / "budget_blocked.json")
+
+    assert result.status is PilotRunStatus.BUDGET_EXHAUSTED
+    assert result.estimated_cost == Decimal("0")
+    assert result.maximum_committed_cost == Decimal("0")
+    assert result.completed_episodes == ()
+    assert result.unstarted_scenario_ids == FROZEN_P0_SCENARIO_IDS
+    assert adapter.discovery_calls == 1
+    assert adapter.chat_calls == 0
+
+
+def test_missing_usage_stops_after_one_request_without_events(tmp_path) -> None:
+    adapter = CostedScriptAdapter(
+        correct_episode_responses(),
+        usage_available=False,
+    )
+
+    result = DeepSeekPilotRunner(adapter).run(tmp_path / "usage_missing.json")
+
+    assert result.status is PilotRunStatus.USAGE_UNAVAILABLE
+    assert result.estimated_cost == Decimal("0")
+    assert result.maximum_committed_cost == Decimal("0.000125")
+    assert len(result.completed_episodes) == 1
+    episode = result.completed_episodes[0].episode
+    assert episode.status.value == "failed"
+    assert episode.failure_code == "deepseek_usage_unavailable"
+    assert episode.steps == ()
+    assert episode.events == ()
+    assert episode.final_session == episode.initial_session
+    assert result.unstarted_scenario_ids == FROZEN_P0_SCENARIO_IDS[1:]
+    assert adapter.discovery_calls == 1
+    assert adapter.chat_calls == 1
+
+
+def test_budget_blocked_format_repair_preserves_first_call_usage(tmp_path) -> None:
+    adapter = CostedScriptAdapter(
+        ["not-json"],
+        budget="0.000125",
+    )
+
+    result = DeepSeekPilotRunner(adapter).run(tmp_path / "repair_blocked.json")
+
+    assert result.status is PilotRunStatus.BUDGET_EXHAUSTED
+    assert result.estimated_cost == Decimal("0.000125")
+    assert result.maximum_committed_cost == Decimal("0.000125")
+    assert len(result.completed_episodes) == 1
+    episode = result.completed_episodes[0].episode
+    assert episode.status.value == "failed"
+    assert episode.failure_code == "deepseek_budget_exhausted"
+    assert episode.steps == ()
+    assert episode.events == ()
+    assert episode.final_session == episode.initial_session
+    assert episode.usage is not None
+    assert episode.usage.estimated_cost == Decimal("0.000125")
+    assert episode.usage.measurement_complete is False
+    assert result.unstarted_scenario_ids == FROZEN_P0_SCENARIO_IDS[1:]
+    assert adapter.discovery_calls == 1
+    assert adapter.chat_calls == 1
 
 
 def test_pilot_pricing_freezes_three_scenarios_and_limits() -> None:

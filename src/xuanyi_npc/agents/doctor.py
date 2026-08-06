@@ -104,6 +104,8 @@ class DoctorAgent:
         try:
             first_response = self.adapter.complete(request)
         except Exception as exc:
+            if isinstance(exc, LLMAdapterError) and exc.abort_episode:
+                raise
             return self._fallback(
                 agent_input.step_index,
                 1,
@@ -124,6 +126,12 @@ class DoctorAgent:
             try:
                 repaired_response = self.adapter.complete(repair_request)
             except Exception as exc:
+                if isinstance(exc, LLMAdapterError) and exc.abort_episode:
+                    exc.prior_usages = (
+                        *self._usages(responses),
+                        *exc.prior_usages,
+                    )
+                    raise
                 return self._fallback(
                     agent_input.step_index,
                     2,

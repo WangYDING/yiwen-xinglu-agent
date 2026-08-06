@@ -94,10 +94,15 @@ def test_deepseek_pricing_snapshot_estimates_cache_components_separately() -> No
     )
 
     assert pricing.effective_date.isoformat() == "2026-08-04"
+    assert pricing.snapshot_id == "deepseek_v4_flash_pilot_policy_2026_08_06"
     assert pricing.currency == "CNY"
     assert pricing.source_url == (
         "https://api-docs.deepseek.com/zh-cn/quick_start/pricing/"
     )
+    assert pricing.request_input_token_upper_bound_method == (
+        "utf8_bytes_plus_framing"
+    )
+    assert pricing.request_framing_token_allowance == 4096
     assert cost == Decimal("0.001004")
 
 

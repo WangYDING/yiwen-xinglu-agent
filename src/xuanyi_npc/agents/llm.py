@@ -55,9 +55,12 @@ class LLMAdapterError(RuntimeError):
         message: str,
         *,
         usage: ModelUsage | None = None,
+        abort_episode: bool = False,
     ) -> None:
         super().__init__(message)
         self.usage = usage
+        self.abort_episode = abort_episode
+        self.prior_usages: tuple[ModelUsage, ...] = ()
 
 
 @runtime_checkable

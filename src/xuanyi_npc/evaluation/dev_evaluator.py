@@ -18,6 +18,8 @@ class DevEpisodeEvaluator:
         scenario: DevScenario,
         trajectory_id: str,
         episode: EpisodeResult,
+        *,
+        enforce_usage_expectation: bool = True,
     ) -> DevEvaluationResult:
         failures: set[DevFailureCategory] = set()
         truth = scenario.ground_truth
@@ -84,7 +86,11 @@ class DevEpisodeEvaluator:
             failures.add(DevFailureCategory.SCORE_MISMATCH)
 
         usage_measured = episode.usage is not None
-        if criteria.require_unmeasured_usage and usage_measured:
+        if (
+            enforce_usage_expectation
+            and criteria.require_unmeasured_usage
+            and usage_measured
+        ):
             failures.add(DevFailureCategory.UNEXPECTED_MEASURED_USAGE)
 
         ordered_failures = tuple(sorted(failures, key=lambda item: item.value))

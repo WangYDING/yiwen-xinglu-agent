@@ -7,11 +7,14 @@ from enum import Enum
 from pathlib import Path
 from typing import Literal, Protocol
 
-from pydantic import ConfigDict, Field
+from pydantic import ConfigDict, Field, model_validator
 
 from xuanyi_npc.agents import (
     DeepSeekAdapterConfig,
+    DeepSeekBudgetExceededError,
     DeepSeekModelDiscovery,
+    DeepSeekRequestBudgetGuard,
+    DeepSeekUsageUnavailableError,
     DoctorAgent,
     DoctorAgentConfig,
     LLMAdapter,
@@ -44,6 +47,7 @@ FROZEN_P0_SCENARIO_IDS = (
 
 class DeepSeekPilotAdapter(LLMAdapter, Protocol):
     config: DeepSeekAdapterConfig
+    request_budget: DeepSeekRequestBudgetGuard
 
     def discover_models(self) -> DeepSeekModelDiscovery:
         """Return the models currently available to this credential."""
@@ -80,6 +84,10 @@ class PilotExecutionConfig(DomainModel):
     max_format_repair_attempts_per_step: Literal[1]
     runs_per_scenario: Literal[1]
     pricing_snapshot_id: Identifier
+    request_input_token_upper_bound_method: Literal[
+        "utf8_bytes_plus_framing"
+    ] = "utf8_bytes_plus_framing"
+    request_framing_token_allowance: int = Field(default=4096, ge=256)
 
 
 class DeepSeekPilotRunResult(DomainModel):
@@ -91,34 +99,25 @@ class DeepSeekPilotRunResult(DomainModel):
     available_models: tuple[NonEmptyText, ...]
     budget_limit: Decimal = Field(gt=0)
     estimated_cost: Decimal = Field(ge=0)
+    maximum_committed_cost: Decimal = Field(ge=0)
     cost_currency: Literal["CNY"] = "CNY"
     completed_episodes: tuple[PilotEpisodeRecord, ...]
     unstarted_scenario_ids: tuple[Identifier, ...]
 
+    @model_validator(mode="before")
+    @classmethod
+    def migrate_pre_request_budget_checkpoint(cls, data: object) -> object:
+        if isinstance(data, dict) and "maximum_committed_cost" not in data:
+            return {**data, "maximum_committed_cost": data.get("estimated_cost", 0)}
+        return data
 
-class PilotBudgetGuard:
-    """Track returned cost estimates and decide whether another Episode may start."""
-
-    def __init__(self, max_cost_cny: Decimal) -> None:
-        if max_cost_cny <= 0:
-            raise ValueError("Pilot budget must be positive")
-        self.max_cost_cny = max_cost_cny
-        self.estimated_cost_cny = Decimal("0")
-
-    @property
-    def can_start_episode(self) -> bool:
-        return self.estimated_cost_cny < self.max_cost_cny
-
-    def add_episode(self, episode: EpisodeResult) -> bool:
-        usage = episode.usage
-        if (
-            usage is None
-            or usage.estimated_cost is None
-            or usage.cost_currency != "CNY"
-        ):
-            return False
-        self.estimated_cost_cny += usage.estimated_cost
-        return usage.measurement_complete
+    @model_validator(mode="after")
+    def validate_budget_bounds(self) -> "DeepSeekPilotRunResult":
+        if self.estimated_cost > self.maximum_committed_cost:
+            raise ValueError("known cost cannot exceed maximum committed cost")
+        if self.maximum_committed_cost > self.budget_limit:
+            raise ValueError("maximum committed cost cannot exceed budget limit")
+        return self
 
 
 class DeepSeekPilotRunner:
@@ -152,7 +151,6 @@ class DeepSeekPilotRunner:
             result = self._result(
                 PilotRunStatus.MODEL_UNAVAILABLE,
                 discovery,
-                Decimal("0"),
                 (),
                 scenario_ids,
             )
@@ -161,7 +159,7 @@ class DeepSeekPilotRunner:
 
         player = build_demo_player()
         evaluator = DevEpisodeEvaluator()
-        budget = PilotBudgetGuard(self.adapter.config.pilot_max_cost_cny)
+        budget = self.adapter.request_budget
         records: list[PilotEpisodeRecord] = []
 
         for index, scenario in enumerate(suite.scenarios):
@@ -170,7 +168,6 @@ class DeepSeekPilotRunner:
                 result = self._result(
                     PilotRunStatus.BUDGET_EXHAUSTED,
                     discovery,
-                    budget.estimated_cost_cny,
                     tuple(records),
                     pending,
                 )
@@ -194,23 +191,39 @@ class DeepSeekPilotRunner:
                 initial_session=initial_session,
                 initial_user_message=scenario.initial_user_message,
             )
-            records.append(
-                PilotEpisodeRecord(
-                    scenario_id=scenario.scenario_id,
-                    episode=episode,
-                    evaluation=evaluator.evaluate(
-                        scenario,
-                        "pilot_run_001",
-                        episode,
-                    ),
+            record = PilotEpisodeRecord(
+                scenario_id=scenario.scenario_id,
+                episode=episode,
+                evaluation=evaluator.evaluate(
+                    scenario,
+                    "pilot_run_001",
+                    episode,
+                    enforce_usage_expectation=False,
                 )
             )
             remaining = scenario_ids[index + 1 :]
-            if not budget.add_episode(episode):
+            if episode.failure_code == DeepSeekBudgetExceededError.code:
+                request_already_recorded = bool(
+                    episode.steps or episode.usage is not None
+                )
+                if request_already_recorded:
+                    records.append(record)
+                result = self._result(
+                    PilotRunStatus.BUDGET_EXHAUSTED,
+                    discovery,
+                    tuple(records),
+                    remaining if request_already_recorded else pending,
+                )
+                self._checkpoint(checkpoint_path, result)
+                return result
+            records.append(record)
+            if (
+                episode.failure_code == DeepSeekUsageUnavailableError.code
+                or budget.halted
+            ):
                 result = self._result(
                     PilotRunStatus.USAGE_UNAVAILABLE,
                     discovery,
-                    budget.estimated_cost_cny,
                     tuple(records),
                     remaining,
                 )
@@ -229,7 +242,6 @@ class DeepSeekPilotRunner:
             snapshot = self._result(
                 status,
                 discovery,
-                budget.estimated_cost_cny,
                 tuple(records),
                 remaining,
             )
@@ -253,12 +265,16 @@ class DeepSeekPilotRunner:
             raise ValueError("Pilot format repair limit must remain one")
         if self.pricing.model != self.adapter.config.model:
             raise ValueError("Pilot pricing and adapter model must match")
+        if (
+            self.adapter.request_budget.max_cost_cny
+            != self.adapter.config.pilot_max_cost_cny
+        ):
+            raise ValueError("request budget and configured Pilot budget must match")
 
     def _result(
         self,
         status: PilotRunStatus,
         discovery: DeepSeekModelDiscovery,
-        estimated_cost: Decimal,
         records: tuple[PilotEpisodeRecord, ...],
         unstarted: tuple[str, ...],
     ) -> DeepSeekPilotRunResult:
@@ -276,11 +292,20 @@ class DeepSeekPilotRunner:
                 ),
                 runs_per_scenario=self.pricing.runs_per_scenario,
                 pricing_snapshot_id=self.pricing.snapshot_id,
+                request_input_token_upper_bound_method=(
+                    self.pricing.request_input_token_upper_bound_method
+                ),
+                request_framing_token_allowance=(
+                    self.pricing.request_framing_token_allowance
+                ),
             ),
             configured_model=discovery.configured_model,
             available_models=discovery.available_models,
             budget_limit=self.adapter.config.pilot_max_cost_cny,
-            estimated_cost=estimated_cost,
+            estimated_cost=self.adapter.request_budget.known_cost_cny,
+            maximum_committed_cost=(
+                self.adapter.request_budget.maximum_committed_cost_cny
+            ),
             completed_episodes=records,
             unstarted_scenario_ids=unstarted,
         )

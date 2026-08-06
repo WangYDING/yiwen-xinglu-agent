@@ -1,6 +1,7 @@
 import json
 from collections.abc import Callable
 from decimal import Decimal
+from pathlib import Path
 
 import httpx
 import pytest
@@ -11,6 +12,7 @@ from xuanyi_npc.agents import (
     ChatRole,
     DeepSeekAdapterConfig,
     DeepSeekAuthenticationError,
+    DeepSeekBudgetExceededError,
     DeepSeekChatAdapter,
     DeepSeekEmptyContentError,
     DeepSeekInvalidJSONError,
@@ -21,12 +23,21 @@ from xuanyi_npc.agents import (
     DeepSeekResponseFieldError,
     DeepSeekTimeoutError,
     DeepSeekTruncatedOutputError,
+    DeepSeekUsageUnavailableError,
     LLMRequest,
 )
 from xuanyi_npc.domain import AgentAction
 
 
 PLACEHOLDER_CREDENTIAL = "unit-test-placeholder"
+DEEPSEEK_ENV_NAMES = (
+    "DEEPSEEK_API_KEY",
+    "DEEPSEEK_BASE_URL",
+    "DEEPSEEK_MODEL",
+    "DEEPSEEK_TIMEOUT_SECONDS",
+    "DEEPSEEK_MAX_OUTPUT_TOKENS",
+    "XUANYI_PILOT_MAX_COST_CNY",
+)
 
 
 def adapter_config(**updates: object) -> DeepSeekAdapterConfig:
@@ -112,6 +123,52 @@ def test_environment_configuration_uses_safe_pilot_defaults() -> None:
     assert config.timeout_seconds == 60.0
     assert config.max_output_tokens == 512
     assert config.pilot_max_cost_cny == Decimal("1.00")
+
+
+def test_environment_configuration_loads_project_dotenv(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    for name in DEEPSEEK_ENV_NAMES:
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".env").write_text(
+        "\n".join(
+            (
+                f"DEEPSEEK_API_KEY={PLACEHOLDER_CREDENTIAL}",
+                "DEEPSEEK_TIMEOUT_SECONDS=45",
+                "XUANYI_PILOT_MAX_COST_CNY=0.75",
+            )
+        ),
+        encoding="utf-8",
+    )
+
+    config = DeepSeekAdapterConfig.from_env()
+
+    assert config.api_key.get_secret_value() == PLACEHOLDER_CREDENTIAL
+    assert config.timeout_seconds == 45.0
+    assert config.pilot_max_cost_cny == Decimal("0.75")
+    assert PLACEHOLDER_CREDENTIAL not in repr(config)
+
+
+def test_process_environment_overrides_project_dotenv(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    for name in DEEPSEEK_ENV_NAMES:
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".env").write_text(
+        "DEEPSEEK_API_KEY=file-placeholder\nDEEPSEEK_TIMEOUT_SECONDS=45\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("DEEPSEEK_API_KEY", PLACEHOLDER_CREDENTIAL)
+    monkeypatch.setenv("DEEPSEEK_TIMEOUT_SECONDS", "30")
+
+    config = DeepSeekAdapterConfig.from_env()
+
+    assert config.api_key.get_secret_value() == PLACEHOLDER_CREDENTIAL
+    assert config.timeout_seconds == 30.0
 
 
 @pytest.mark.parametrize("model", ["deepseek-v4-pro", "deepseek-chat", "deepseek-reasoner"])
@@ -228,6 +285,70 @@ def test_chat_request_and_usage_follow_deepseek_contract() -> None:
     assert response.usage.cost_currency == "CNY"
 
 
+def test_conservative_request_reservation_uses_cache_miss_and_output_caps() -> None:
+    adapter = DeepSeekChatAdapter(adapter_config())
+
+    reservation = adapter.conservative_request_reservation(llm_request())
+
+    expected_cost = (
+        Decimal(reservation.input_token_upper_bound) * Decimal("1.00")
+        + Decimal(reservation.output_token_upper_bound) * Decimal("2.00")
+    ) / Decimal("1000000")
+    assert reservation.input_token_upper_bound > 0
+    assert reservation.output_token_upper_bound == 512
+    assert reservation.maximum_cost_cny == expected_cost
+    adapter.close()
+
+
+def test_request_budget_allows_exact_reservation_boundary() -> None:
+    probe = DeepSeekChatAdapter(adapter_config())
+    reservation = probe.conservative_request_reservation(llm_request())
+    probe.close()
+    calls = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        return httpx.Response(200, json=completion_payload())
+
+    adapter = DeepSeekChatAdapter(
+        adapter_config(pilot_max_cost_cny=reservation.maximum_cost_cny),
+        client=mock_client(handler),
+    )
+
+    adapter.complete(llm_request())
+
+    assert calls == 1
+
+
+def test_request_budget_rejects_before_http_when_reservation_exceeds_limit() -> None:
+    probe = DeepSeekChatAdapter(adapter_config())
+    reservation = probe.conservative_request_reservation(llm_request())
+    probe.close()
+    calls = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        return httpx.Response(200, json=completion_payload())
+
+    adapter = DeepSeekChatAdapter(
+        adapter_config(
+            pilot_max_cost_cny=(
+                reservation.maximum_cost_cny - Decimal("0.0000001")
+            )
+        ),
+        client=mock_client(handler),
+    )
+
+    with pytest.raises(DeepSeekBudgetExceededError):
+        adapter.complete(llm_request())
+
+    assert calls == 0
+    assert adapter.request_budget.known_cost_cny == Decimal("0")
+    assert adapter.request_budget.maximum_committed_cost_cny == Decimal("0")
+
+
 def test_missing_optional_cache_and_reasoning_details_use_conservative_defaults() -> None:
     payload = completion_payload()
     payload["usage"] = {
@@ -297,6 +418,9 @@ def test_timeout_is_classified_without_retry() -> None:
         adapter.complete(llm_request())
 
     assert calls == 1
+    with pytest.raises(DeepSeekUsageUnavailableError):
+        adapter.complete(llm_request())
+    assert calls == 1
 
 
 def test_provider_5xx_is_classified_without_leaking_response_body() -> None:
@@ -363,15 +487,23 @@ def test_length_finish_reason_is_classified_as_truncation() -> None:
 
 
 def test_missing_required_response_fields_are_classified() -> None:
+    calls = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        return httpx.Response(
+            200,
+            json={"id": "request_without_choices", "model": "model"},
+        )
+
     adapter = DeepSeekChatAdapter(
         adapter_config(),
-        client=mock_client(
-            lambda request: httpx.Response(
-                200,
-                json={"id": "request_without_choices", "model": "model"},
-            )
-        ),
+        client=mock_client(handler),
     )
 
     with pytest.raises(DeepSeekResponseFieldError):
         adapter.complete(llm_request())
+    with pytest.raises(DeepSeekUsageUnavailableError):
+        adapter.complete(llm_request())
+    assert calls == 1
