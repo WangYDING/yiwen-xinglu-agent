@@ -4,10 +4,22 @@ import pytest
 from pydantic import ValidationError
 
 from xuanyi_npc.agents import DoctorAgent, ScriptedFakeLLM
+from xuanyi_npc.application import (
+    CaseObservation,
+    DiagnosisReadinessDecision,
+    PlayerView,
+)
 from xuanyi_npc.application.v0_runner import V0EpisodeConfig, V0EpisodeRunner
 from xuanyi_npc.config import AgentVariant
 from xuanyi_npc.demo_case import build_demo_player
-from xuanyi_npc.domain import CaseDefinition, CaseSessionState
+from xuanyi_npc.domain import (
+    AgentAction,
+    AgentActionType,
+    CaseDefinition,
+    CaseSessionState,
+    ToolCallRequest,
+    ToolName,
+)
 from xuanyi_npc.evaluation import (
     EpisodeResult,
     EpisodeStatus,
@@ -32,15 +44,56 @@ from xuanyi_npc.evaluation.pilot_runner import (
 )
 
 
-def _correct_reference_episode():
+class _AlwaysReadyPolicy:
+    policy_id = "test_always_ready"
+
+    def evaluate(
+        self,
+        *,
+        player_view: PlayerView,
+        case_observation: CaseObservation,
+        proposed_action: AgentAction | None = None,
+    ) -> DiagnosisReadinessDecision:
+        del player_view, case_observation, proposed_action
+        return DiagnosisReadinessDecision(
+            policy_id=self.policy_id,
+            can_submit_diagnosis=True,
+        )
+
+
+def _reference_episode(
+    *,
+    diagnosis_id: str = "rain_vow_breach",
+    evidence_clue_ids: tuple[str, ...] | None = None,
+    treatment_id: str = "return_token_and_fulfill_vow",
+):
     probe = load_pilot_probe_suite().probes[0]
     dev = load_dev_suite()
     script = dev.scripts["correct_case"]
-    responses = tuple(
-        dev.actions[output.action_ref].model_dump_json()
-        for output in script.outputs
-        if isinstance(output, ScriptedActionOutput)
-    )
+    actions: list[AgentAction] = []
+    for output in script.outputs:
+        if not isinstance(output, ScriptedActionOutput):
+            continue
+        action = dev.actions[output.action_ref]
+        call = action.tool_call
+        if call is not None and call.name is ToolName.SUBMIT_DIAGNOSIS:
+            arguments = dict(call.arguments)
+            arguments["diagnosis_id"] = diagnosis_id
+            if evidence_clue_ids is not None:
+                arguments["evidence_clue_ids"] = list(evidence_clue_ids)
+            action = action.model_copy(
+                update={"tool_call": call.model_copy(update={"arguments": arguments})}
+            )
+        elif call is not None and call.name is ToolName.EXECUTE_TREATMENT:
+            action = action.model_copy(
+                update={
+                    "tool_call": call.model_copy(
+                        update={"arguments": {"treatment_id": treatment_id}}
+                    )
+                }
+            )
+        actions.append(action)
+    responses = tuple(action.model_dump_json() for action in actions)
     case = CaseDefinition.model_validate_json(
         Path(DEFAULT_CASE_PATH).read_text(encoding="utf-8")
     )
@@ -63,6 +116,53 @@ def _correct_reference_episode():
         initial_user_message=probe.initial_user_message,
     )
     return probe, episode, fake
+
+
+def _correct_reference_episode():
+    return _reference_episode()
+
+
+def _one_step_diagnosis_episode(
+    *,
+    evidence_clue_ids: tuple[str, ...] = (),
+    diagnosis_readiness_policy=None,
+):
+    probe = load_pilot_probe_suite().probes[0]
+    case = CaseDefinition.model_validate_json(
+        Path(DEFAULT_CASE_PATH).read_text(encoding="utf-8")
+    )
+    player = build_demo_player()
+    action = AgentAction(
+        action_id="agent_step_001",
+        action_type=AgentActionType.USE_TOOL,
+        dialogue="提交诊断建议。",
+        tool_call=ToolCallRequest(
+            name=ToolName.SUBMIT_DIAGNOSIS,
+            arguments={
+                "diagnosis_id": "rain_vow_breach",
+                "evidence_clue_ids": list(evidence_clue_ids),
+            },
+        ),
+        confidence=0.5,
+    )
+    initial = CaseSessionState(
+        session_id="pilot_premature_reference",
+        case_id=case.case_id,
+        player_id=player.player_id,
+    )
+    episode = V0EpisodeRunner(
+        DoctorAgent(ScriptedFakeLLM((action.model_dump_json(),))),
+        clock=DeterministicDevClock(),
+        config=V0EpisodeConfig(max_steps=1),
+        diagnosis_readiness_policy=diagnosis_readiness_policy,
+    ).run(
+        episode_id="pilot_premature_reference",
+        case=case,
+        player=player,
+        initial_session=initial,
+        initial_user_message=probe.initial_user_message,
+    )
+    return probe, episode
 
 
 def test_real_pilot_probe_schema_is_strict_and_separate_from_fake_contract() -> None:
@@ -90,7 +190,87 @@ def test_first_pass_valid_format_is_a_protocol_success_without_repair() -> None:
     assert result.format_outcome is PilotFormatOutcome.FIRST_PASS
     assert result.first_pass_structured_steps == 8
     assert result.repaired_steps == 0
+    assert result.diagnosis_evidence_coverage == 1.0
     assert result.failure_categories == ()
+
+
+def test_closed_diagnosis_gate_is_a_premature_action() -> None:
+    probe, episode = _one_step_diagnosis_episode()
+
+    result = PilotBehaviorEvaluator().evaluate(probe, episode)
+
+    assert episode.steps[0].error_code == "diagnosis_not_ready"
+    assert result.premature_actions == 1
+    assert PilotFailureCategory.PREMATURE_ACTION in result.failure_categories
+
+
+def test_undiscovered_evidence_rejection_is_a_premature_action() -> None:
+    probe, episode = _one_step_diagnosis_episode(
+        evidence_clue_ids=("broken_promise",),
+        diagnosis_readiness_policy=_AlwaysReadyPolicy(),
+    )
+
+    result = PilotBehaviorEvaluator().evaluate(probe, episode)
+
+    assert episode.steps[0].error_code == "evidence_not_discovered"
+    assert result.premature_actions == 1
+    assert PilotFailureCategory.PREMATURE_ACTION in result.failure_categories
+
+
+def test_open_gate_accepts_sufficient_non_exhaustive_evidence() -> None:
+    cited = (
+        "broken_promise",
+        "hidden_wooden_token",
+        "umbrella_night_water",
+        "vow_knot_trace",
+    )
+    probe, episode, _ = _reference_episode(evidence_clue_ids=cited)
+
+    result = PilotBehaviorEvaluator().evaluate(probe, episode)
+
+    assert episode.final_session.score == 100
+    assert "forgotten_faces" in episode.final_session.discovered_clue_ids
+    assert "forgotten_faces" not in cited
+    assert result.task_outcome is PilotTaskOutcome.PASSED
+    assert result.task_passed is True
+    assert result.failure_categories == ()
+    assert result.premature_actions == 0
+    assert result.diagnosis_evidence_cited_count == 4
+    assert result.diagnosis_evidence_available_count == 8
+    assert result.diagnosis_evidence_coverage == 0.5
+
+
+@pytest.mark.parametrize(
+    ("diagnosis_id", "treatment_id", "expected_failure"),
+    (
+        (
+            "evil_spirit_attack",
+            "return_token_and_fulfill_vow",
+            PilotFailureCategory.WRONG_DIAGNOSIS,
+        ),
+        (
+            "rain_vow_breach",
+            "seal_old_umbrella",
+            PilotFailureCategory.WRONG_TREATMENT,
+        ),
+    ),
+)
+def test_wrong_diagnosis_and_treatment_still_fail_behavior_evaluation(
+    diagnosis_id: str,
+    treatment_id: str,
+    expected_failure: PilotFailureCategory,
+) -> None:
+    probe, episode, _ = _reference_episode(
+        diagnosis_id=diagnosis_id,
+        treatment_id=treatment_id,
+    )
+
+    result = PilotBehaviorEvaluator().evaluate(probe, episode)
+
+    assert result.task_outcome is PilotTaskOutcome.FAILED
+    assert result.task_passed is False
+    assert expected_failure in result.failure_categories
+    assert result.premature_actions == 0
 
 
 def test_zero_step_timeout_is_inconclusive_and_format_is_not_observed() -> None:

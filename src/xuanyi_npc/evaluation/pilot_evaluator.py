@@ -1,6 +1,10 @@
 """Deterministic evaluator for real-model behavior probes."""
 
-from xuanyi_npc.domain import AgentActionType, ToolName
+from xuanyi_npc.domain import (
+    AgentActionType,
+    InvestigationCompletedEvent,
+    ToolName,
+)
 from xuanyi_npc.engine import CaseEventReplayer, EventReplayError
 
 from .episode import EpisodeResult
@@ -14,6 +18,7 @@ from .pilot_contracts import (
 
 
 _PREMATURE_ERROR_CODES = {
+    "diagnosis_not_ready",
     "evidence_not_discovered",
     "diagnosis_required",
     "treatment_prerequisite_missing",
@@ -133,6 +138,11 @@ class PilotBehaviorEvaluator:
         diagnosis_correct = (
             None if diagnosis_id is None else diagnosis_id in truth.valid_diagnosis_ids
         )
+        (
+            diagnosis_evidence_cited_count,
+            diagnosis_evidence_available_count,
+            diagnosis_evidence_coverage,
+        ) = self._diagnosis_evidence_metrics(episode)
         treatment_id = episode.final_session.selected_treatment_id
         treatment_resolving = (
             None if treatment_id is None else treatment_id == truth.resolving_treatment_id
@@ -157,12 +167,6 @@ class PilotBehaviorEvaluator:
         premature = sum(
             step.error_code in _PREMATURE_ERROR_CODES for step in episode.steps
         )
-        for step in diagnosis_steps:
-            if not step.accepted or step.action.tool_call is None:
-                continue
-            evidence = set(step.action.tool_call.arguments.get("evidence_clue_ids", []))
-            if not truth.diagnosis_evidence_floor.issubset(evidence):
-                premature += 1
         if premature > criteria.maximum_premature_actions:
             failures.add(PilotFailureCategory.PREMATURE_ACTION)
 
@@ -194,9 +198,45 @@ class PilotBehaviorEvaluator:
             replay_consistent=replay_consistent,
             diagnosis_tool_called=diagnosis_tool_called,
             diagnosis_correct=diagnosis_correct,
+            diagnosis_evidence_cited_count=diagnosis_evidence_cited_count,
+            diagnosis_evidence_available_count=diagnosis_evidence_available_count,
+            diagnosis_evidence_coverage=diagnosis_evidence_coverage,
             treatment_tool_called=treatment_tool_called,
             treatment_resolving=treatment_resolving,
             premature_actions=premature,
             progressless_responds=progressless_responds,
             final_score=episode.final_session.score,
         )
+
+    @staticmethod
+    def _diagnosis_evidence_metrics(
+        episode: EpisodeResult,
+    ) -> tuple[int, int, float | None]:
+        """Describe the last accepted diagnosis without making it a task gate."""
+
+        events_by_sequence = {event.sequence: event for event in episode.events}
+        discovered = set(episode.initial_session.discovered_clue_ids)
+        cited_count = 0
+        available_count = 0
+        observed_diagnosis = False
+
+        for step in episode.steps:
+            call = step.action.tool_call
+            if (
+                step.accepted
+                and call is not None
+                and call.name is ToolName.SUBMIT_DIAGNOSIS
+            ):
+                cited = set(call.arguments.get("evidence_clue_ids", []))
+                cited_count = len(cited)
+                available_count = len(discovered)
+                observed_diagnosis = True
+
+            for sequence in step.event_sequences:
+                event = events_by_sequence[sequence]
+                if isinstance(event, InvestigationCompletedEvent):
+                    discovered.update(event.newly_discovered_clue_ids)
+
+        if not observed_diagnosis or available_count == 0:
+            return cited_count, available_count, None
+        return cited_count, available_count, float(cited_count / available_count)

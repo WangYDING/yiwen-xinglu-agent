@@ -3,7 +3,14 @@
 from enum import Enum
 from typing import Annotated, Literal
 
-from pydantic import ConfigDict, Field, StrictBool, StrictInt, model_validator
+from pydantic import (
+    ConfigDict,
+    Field,
+    StrictBool,
+    StrictFloat,
+    StrictInt,
+    model_validator,
+)
 
 from xuanyi_npc.domain import AgentAction, TreatmentOutcome
 from xuanyi_npc.domain.base import DomainModel, Identifier, NonEmptyText
@@ -123,6 +130,12 @@ class PilotEvaluationResult(PilotModel):
     replay_consistent: StrictBool
     diagnosis_tool_called: StrictBool
     diagnosis_correct: StrictBool | None = None
+    diagnosis_evidence_cited_count: Annotated[StrictInt, Field(ge=0)] = 0
+    diagnosis_evidence_available_count: Annotated[StrictInt, Field(ge=0)] = 0
+    diagnosis_evidence_coverage: Annotated[
+        StrictFloat,
+        Field(ge=0, le=1),
+    ] | None = None
     treatment_tool_called: StrictBool
     treatment_resolving: StrictBool | None = None
     premature_actions: Annotated[StrictInt, Field(ge=0)]
