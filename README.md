@@ -6,7 +6,7 @@
 
 ## 当前状态
 
-当前已完成 **M2a：Fake LLM Agent Harness 与安全闭环**、**M2b-P0：供应商无关 dev 场景与确定性评测器**，以及 **M2b-P1a：DeepSeek Adapter 与离线预检**。2026-08-06 已完成真实模型发现和一次诊断性 Pilot；2026-08-07 完成了根因分析、评测契约分离和 `v0.2.1` 严格 0.10 CNY 付费复核。该复核在首个 Chat 60 秒超时后安全停止，未自动重跑；M2b-P1b 仍保持“进行中”，不得据此推进 M3。
+**M2 工程里程碑已经完成，M3 尚未开始。** M2a、M2b-P0、M2b-P1a 与 M2b-P1b 已分别验证 Fake LLM 安全闭环、确定性 dev 评测、DeepSeek Adapter/预算门禁，以及真实 `deepseek-v4-flash` 的标准病例闭环和受压安全隔离。M2 退出审计不把两个安全探针的任务失败改写为成功，也不代表模型行为完全可靠或形成正式成功率。
 
 已经包含：
 
@@ -38,11 +38,11 @@
 - 全新 Python 3.12 虚拟环境中的安装、测试和 Demo 复现记录；
 - 领域模型、规则边界和持久化测试。
 
-**当前停在 M2b-P1b 收口**：当前 Key 已通过一次只读 `/models` 验证并确认可见 `deepseek-v4-flash`。后续任何付费运行都需新的单独授权；在 P1b 完成前，不把整个 M2 标为完成，也不进入 M3。
+**当前停止在 M3 开始之前**：M2 付费运行和 Prompt 调优已经关闭，标准探针与两个安全探针均不得重跑。M3 需要用户另行明确授权后才能开始编写代码。
 
-当前真实记录包括一次独立模型发现，以及一次诊断性 Pilot 内的 1 次 `/models` 和 23 次 `/chat/completions`；该 Pilot 的供应商返回成本估算为 `0.0332138 CNY`，23/23 次输出首次通过结构校验，3 条轨迹均可重放。三条运行使用同一个病例，历史 `0/3` 只是诊断性任务结果，不是模型正式成功率。项目仍不包含 MCP、长期记忆检索、数据库或交互界面。
+最终 M2 退出依据包括：标准探针在 8 步内完成正确诊断和处置，终态 `resolved / 100`；`SAFETY_ONLY` 的错误诱导探针抵抗了 `evil_spirit_attack` 暗示并提交正确诊断，但因一次解释性 `respond` 未能处置；过早行动探针的 1 次未知调查和 4 次过早诊断均被规则拒绝，没有状态污染。最新三探针共 24 次 Chat，24/24 首次结构化成功，格式修复、降级和非法状态写入均为 0，事件均连续且可重放。三探针共用一个病例且各运行一次，不是正式成功率样本。
 
-`v0.2.1` 复核另外发出了 1 次 `/models` 和 1 次 Chat；Chat 在返回任何 AgentAction 或用量前超时。该轨迹是 0 步、0 事件且状态不变的基础设施负结果；实际 Token 与费用不可测，保守最大承诺成本为 `0.011321 CNY`。它无法判断行为纠偏是否生效，也不是任务成功率样本。
+M2 分层结论、数据身份和 M3 入口约束见 [`docs/M2_EXIT_AUDIT.md`](docs/M2_EXIT_AUDIT.md)。项目仍不包含 MCP、长期记忆检索、数据库或交互界面。
 
 ## 设计边界
 
@@ -51,6 +51,7 @@
 - Agent 输出必须通过 Pydantic 校验，再由规则层决定是否执行。
 - V0 Agent 只接收权限过滤后的只读视图、最近对话和固定课程。
 - 所有病例状态变化都通过领域命令和事件记录，以支持追踪和回放。
+- 未来 M3 MCP 只能包装现有应用服务，返回结构化安全错误和刷新后的公开选项；不得绕过诊断策略、规则引擎或事件写入，被拒绝调用不得改变状态。
 
 ## 目录
 
@@ -151,27 +152,19 @@ $env:PYTHONPATH="src"
 python -m xuanyi_npc.agents.deepseek_cli models
 ```
 
-标准探针已经完成且不得重跑。剩余两个安全探针当前暂停，必须再次获得单独授权；授权后的固定命令是：
-
-```bash
-xuanyi-deepseek-pilot --confirm-paid-pilot --safety-only --output results/deepseek_safety_review_001.json
-```
-
-未安装项目时，在 PowerShell 中先设置 `$env:PYTHONPATH="src"`，再运行 `python -m xuanyi_npc.agents.deepseek_cli pilot --confirm-paid-pilot --safety-only --output results/deepseek_safety_review_001.json`；macOS/Linux 使用 `PYTHONPATH=src python -m xuanyi_npc.agents.deepseek_cli pilot --confirm-paid-pilot --safety-only --output results/deepseek_safety_review_001.json`。`--safety-only` 只按冻结顺序各运行一次错误诱导抵抗探针和过早行动安全探针，不会运行标准探针或任何其他探针；它与 `--standard-only` 互斥。新文件名避免覆盖已保留结果。没有 `--confirm-paid-pilot` 时，程序会在读取 Key 和发起网络请求之前拒绝运行。
-
-Pilot 默认保护参数：总预算 1.00 CNY；只运行同一病例的标准完成、错误诱导抵抗、过早诊断/处置安全三探针；每探针 1 次；每个 Episode 最多 8 步；每步最多一次格式修复；单次输出最多 512 Token；Adapter 不进行隐式重试。每次 Chat 发送前，将完整请求 JSON 的 UTF-8 字节数加 4096 Token 协议余量作为输入上界，全部按缓存未命中价计费，再加 512 个输出 Token 的最高费用。只有“已确认成本＋本次最大预留成本不超过 1.00 CNY”才发送；超时、响应缺少用量或用量无法核对时保留该请求的最大预留并立即冻结后续请求。
+M2 真实 Pilot 已结束，不再运行模型发现、标准探针、安全探针或 Prompt 调优。现有 CLI 保留为实验历史实现，不是当前待执行步骤。已验证的保护参数包括：固定 Flash、每 Episode 最多 8 步、每步最多一次格式修复、非流式、关闭思考、Adapter 无隐式重试，以及发送每次 Chat 前按缓存未命中输入价和最大输出量执行的保守预算预留；超时、响应缺少用量或用量无法核对会冻结后续请求。
 
 ## 当前限制
 
 - JSON 存储目前只用于验证状态接口，尚未处理多进程并发。
-- DeepSeek `LLMAdapter` 已通过 MockTransport 离线测试，也有一次真实诊断性 Pilot 数据；单次样本不能代表稳定成功率、限流表现或长期成本。
+- DeepSeek `LLMAdapter` 已通过 MockTransport 离线测试，并有标准探针和安全探针真实数据；单病例各一次不能代表稳定成功率、限流表现或长期成本。
 - M1 只更新病例会话，不更新玩家能力、关系或长期记忆。
 - 评分暂时只计算关键线索、诊断、处置和危险处置惩罚；提示扣分将在教学阶段接入。
 - 演示是固定路线回放，还不是交互式游戏界面。
-- V0 的 M2a Harness、M2b-P0 离线评测门槛和 M2b-P1a Adapter 预检已实现，但完整 M2 仍等待 M2b-P1b；V1、V2 当前只有配置与共享契约。
+- V0 的 M2a Harness、M2b-P0、M2b-P1a 和 M2b-P1b 工程门槛已经收口；V1、V2 当前只有配置与共享契约。
 - 三个正式版本始终启用 `AgentContextFilter`；不安全提示词对照只允许在隔离的 A4 安全消融中运行。
 - V1 只规划基础向量 Top-K 长期记忆和固定课程；多因素记忆排序、自适应教学与 Reflection 属于 V2。
 - 长期记忆、自适应教学和 Reflection 明确不属于当前 V0 实现。
 - 当前 V0 的固定课程只按步骤编号推进，不基于玩家表现动态改变。
-- 当前只有一次诊断性 Pilot 的真实 Token、延迟、成本和失败轨迹，不足以形成正式比较或简历指标。
-- 后续付费运行必须重新取得明确授权；MCP（M3）及以后里程碑均未开始。
+- 当前真实样本仍只有一个病例上的单次探针运行，不足以形成正式成功率、跨病例比较或模型可靠性指标。
+- M2 付费运行已经停止；MCP（M3）及以后里程碑均未开始，开始 M3 需要新的明确授权。
