@@ -151,6 +151,14 @@ def test_fake_llm_runs_complete_v0_episode_through_rule_engine(
     assert fake.remaining_responses == 0
     assert len(fake.requests) == 8
     assert all(len(request.messages) <= 6 for request in fake.requests)
+    first_prompt = "\n".join(
+        message.content for message in fake.requests[0].messages
+    )
+    diagnosis_prompt = "\n".join(
+        message.content for message in fake.requests[6].messages
+    )
+    assert '"can_submit_diagnosis": false' in first_prompt
+    assert '"can_submit_diagnosis": true' in diagnosis_prompt
 
 
 def test_rule_rejection_is_recorded_without_state_change_or_hidden_error_detail(
@@ -200,7 +208,7 @@ def test_rule_rejection_is_recorded_without_state_change_or_hidden_error_detail(
     assert "tool name does not match" not in second_request_text
 
 
-def test_undiscovered_evidence_proposal_is_rejected_by_existing_rule_engine(
+def test_fixed_v0_rejects_diagnosis_before_visible_investigations(
     case_definition: CaseDefinition,
     qualified_player_state: PlayerState,
 ) -> None:
@@ -235,7 +243,7 @@ def test_undiscovered_evidence_proposal_is_rejected_by_existing_rule_engine(
     )
 
     assert episode.steps[0].accepted is False
-    assert episode.steps[0].error_code == "evidence_not_discovered"
+    assert episode.steps[0].error_code == "diagnosis_not_ready"
     assert episode.final_session == initial
     assert episode.events == ()
 

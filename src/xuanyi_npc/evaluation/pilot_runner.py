@@ -3,6 +3,7 @@
 from pathlib import Path
 
 from xuanyi_npc.agents import DoctorAgent, ScriptedFakeLLM
+from xuanyi_npc.application import DiagnosisReadinessDecision
 from xuanyi_npc.application.v0_runner import V0EpisodeConfig, V0EpisodeRunner
 from xuanyi_npc.demo_case import build_demo_player
 from xuanyi_npc.domain import CaseDefinition, CaseSessionState
@@ -24,6 +25,25 @@ DEFAULT_PILOT_PROBE_PATH = (
 DEFAULT_SANITIZED_TRACE_PATH = (
     REPOSITORY_ROOT / "data" / "evaluation" / "pilot_run_001_sanitized.json"
 )
+
+
+class _HistoricalTraceReadinessPolicy:
+    """Preserve the engine-only readiness used by the frozen v0.2.0 traces."""
+
+    policy_id = "historical_trace_v020"
+
+    def evaluate(
+        self,
+        *,
+        player_view,
+        case_observation,
+        proposed_action=None,
+    ) -> DiagnosisReadinessDecision:
+        del player_view, proposed_action
+        return DiagnosisReadinessDecision(
+            policy_id=self.policy_id,
+            can_submit_diagnosis=case_observation.can_submit_diagnosis,
+        )
 
 
 def load_pilot_probe_suite(
@@ -69,6 +89,7 @@ def run_sanitized_pilot_trace_evaluation(
             DoctorAgent(fake),
             clock=DeterministicDevClock(),
             config=V0EpisodeConfig(max_steps=probe.max_steps),
+            diagnosis_readiness_policy=_HistoricalTraceReadinessPolicy(),
         ).run(
             episode_id=f"offline_{trace.trace_id}",
             case=case,

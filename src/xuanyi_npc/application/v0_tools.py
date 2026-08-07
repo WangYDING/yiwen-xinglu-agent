@@ -27,7 +27,10 @@ from xuanyi_npc.engine import (
     UnknownInvestigationError,
 )
 
-from .views import AgentContextFilter
+from .diagnosis_readiness import (
+    DiagnosisReadinessPolicy,
+)
+from .views import AgentContextFilter, CaseObservation
 
 
 class ToolCallError(ValueError):
@@ -42,6 +45,12 @@ class InvalidToolArgumentsError(ToolCallError):
 
 class ToolActionRequiredError(ToolCallError):
     code = "tool_action_required"
+
+
+class DiagnosisNotReadyError(ToolCallError):
+    """Raised only when the selected runtime policy blocks diagnosis."""
+
+    code = "diagnosis_not_ready"
 
 
 class ToolArguments(DomainModel):
@@ -95,9 +104,32 @@ class V0ToolExecutor:
         self,
         engine: CaseEngine | None = None,
         context_filter: AgentContextFilter | None = None,
+        diagnosis_readiness_policy: DiagnosisReadinessPolicy | None = None,
     ) -> None:
         self.engine = engine or CaseEngine()
         self.context_filter = context_filter or AgentContextFilter()
+        self.diagnosis_readiness_policy = diagnosis_readiness_policy
+
+    def case_observation(
+        self,
+        case: CaseDefinition,
+        player: PlayerState,
+        session: CaseSessionState,
+        proposed_action: AgentAction | None = None,
+    ) -> CaseObservation:
+        """Apply the selected runtime policy to the otherwise generic safe view."""
+
+        observation = self.context_filter.case_observation(case, player, session)
+        if self.diagnosis_readiness_policy is None:
+            return observation
+        decision = self.diagnosis_readiness_policy.evaluate(
+            player_view=self.context_filter.player_view(player),
+            case_observation=observation,
+            proposed_action=proposed_action,
+        )
+        return observation.model_copy(
+            update={"can_submit_diagnosis": decision.can_submit_diagnosis}
+        )
 
     def execute(
         self,
@@ -121,7 +153,7 @@ class V0ToolExecutor:
 
         if call.name is ToolName.GET_CASE_OBSERVATION:
             self._parse_arguments(EmptyToolArguments, call.arguments)
-            view = self.context_filter.case_observation(case, player, session)
+            view = self.case_observation(case, player, session)
             return ToolExecutionResult(
                 session=session,
                 message=(
@@ -168,6 +200,20 @@ class V0ToolExecutor:
 
         if call.name is ToolName.SUBMIT_DIAGNOSIS:
             arguments = self._parse_arguments(DiagnosisToolArguments, call.arguments)
+            if (
+                arguments.diagnosis_id in case.diagnosis_candidates
+                and self.diagnosis_readiness_policy is not None
+            ):
+                observation = self.case_observation(
+                    case,
+                    player,
+                    session,
+                    proposed_action=action,
+                )
+                if not observation.can_submit_diagnosis:
+                    raise DiagnosisNotReadyError(
+                        "the selected runtime policy does not permit diagnosis yet"
+                    )
             result = self.engine.execute(
                 case,
                 player,

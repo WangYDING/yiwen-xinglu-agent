@@ -35,6 +35,10 @@ from xuanyi_npc.evaluation import (
 )
 
 from .v0_tools import ToolCallError, V0ToolExecutor
+from .diagnosis_readiness import (
+    DiagnosisReadinessPolicy,
+    FixedV0DiagnosisReadinessPolicy,
+)
 from .views import AgentContextFilter, ViewContextError
 
 
@@ -70,12 +74,36 @@ class V0EpisodeRunner:
         curriculum: FixedV0Curriculum | None = None,
         clock: Clock | None = None,
         config: V0EpisodeConfig | None = None,
+        diagnosis_readiness_policy: DiagnosisReadinessPolicy | None = None,
     ) -> None:
         self.doctor_agent = doctor_agent
-        self.context_filter = context_filter or AgentContextFilter()
-        self.tool_executor = tool_executor or V0ToolExecutor(
-            context_filter=self.context_filter
-        )
+        if tool_executor is not None and diagnosis_readiness_policy is not None:
+            raise ValueError(
+                "inject diagnosis readiness through the runner or tool executor, not both"
+            )
+        if tool_executor is None:
+            self.context_filter = context_filter or AgentContextFilter()
+            self.tool_executor = V0ToolExecutor(
+                context_filter=self.context_filter,
+                diagnosis_readiness_policy=(
+                    diagnosis_readiness_policy
+                    or FixedV0DiagnosisReadinessPolicy()
+                ),
+            )
+        else:
+            if (
+                context_filter is not None
+                and context_filter is not tool_executor.context_filter
+            ):
+                raise ValueError(
+                    "runner and tool executor must share one context filter"
+                )
+            self.tool_executor = tool_executor
+            self.context_filter = tool_executor.context_filter
+            if tool_executor.diagnosis_readiness_policy is None:
+                raise ValueError(
+                    "a custom fixed_v0 tool executor requires an explicit diagnosis policy"
+                )
         self.curriculum = curriculum or FixedV0Curriculum()
         self.clock = clock or SystemClock()
         self.config = config or V0EpisodeConfig()
@@ -90,7 +118,7 @@ class V0EpisodeRunner:
     ) -> EpisodeResult:
         try:
             player_view = self.context_filter.player_view(player)
-            self.context_filter.case_observation(case, player, initial_session)
+            self.tool_executor.case_observation(case, player, initial_session)
         except ViewContextError:
             return self._failed(
                 episode_id,
@@ -117,7 +145,7 @@ class V0EpisodeRunner:
         status = EpisodeStatus.MAX_STEPS_REACHED
 
         for step_index in range(1, self.config.max_steps + 1):
-            observation = self.context_filter.case_observation(case, player, current)
+            observation = self.tool_executor.case_observation(case, player, current)
             try:
                 decision = self.doctor_agent.decide(
                     DoctorAgentInput(
