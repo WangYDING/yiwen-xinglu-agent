@@ -223,3 +223,12 @@
 - **工具边界**：冻结 `get_player_view`、`get_case_observation`、`observe_patient`、`question_patient`、`inspect_object`、`observe_qi`、`investigate_location`、`submit_diagnosis`、`execute_treatment` 九个工具。不增加 Resources、Prompts、Sampling、Roots、Elicitation、长期记忆或新玩法。
 - **验证边界**：P0 只用官方 `Client(server)` 做纯进程内发现和调用，不在模块导入时读取 `.env`、启动 stdio/HTTP 服务或建立网络连接。M3-P0 完成不代表真实 MCP Host、stdio、HTTP/SSE、认证或部署可用；这些属于需要另行授权的 M3-P1 及以后阶段。
 - **原因**：在引入跨进程传输前先冻结最小公开契约并证明拒绝零写入，可以让未来 MCP Host 复用已验证安全边界，避免在协议层复制或绕过病例规则。
+
+## ADR-032：M3-P1 使用显式本地目录和官方 stdio 生命周期
+
+- **状态**：已接受
+- **日期**：2026-08-07
+- **决策**：M3-P1 将 SDK 依赖精确固定为 `mcp==2.0.0`，通过 `xuanyi-mcp-stdio` / `python -m xuanyi_npc.mcp_server.stdio` 启动既有 `MCPServer`。启动参数必须显式提供已经存在的病例目录和状态目录；在进入 stdio 传输前校验目录及其中全部病例 JSON。缺少参数、目录无效或病例数据无效时只向 stderr 返回安全诊断并以非零码退出。正常运行时 stdout 只承载 MCP 协议，模块导入不启动服务、不写状态、不读取 `.env` 或访问网络。
+- **生命周期**：集成测试必须使用官方 `StdioServerParameters`、`stdio_client` 和 `Client` 启动真实独立 Python 子进程，并设置有界连接、请求和关闭等待。客户端关闭 stdin 后服务器应正常退出；重启的新进程继续通过同一 Facade 和 `JsonStateStore` 恢复状态。测试目录只能是临时目录，被拒绝调用继续保持事件、修订和文件字节均不变。
+- **范围边界**：P1 不修改冻结的九个工具、参数 Schema、安全语义、诊断策略或规则引擎，不增加 HTTP/SSE、认证、远程部署、长期记忆、Reflection、自适应诊断或多结局。P1 通过后仍需单独执行 M3 退出审计，不能自行宣布整个 M3 完成。
+- **原因**：真实 stdio 子进程引入配置、协议通道纯净性、进程回收和磁盘恢复等进程内测试无法覆盖的风险；显式配置与启动前失败可以避免误用真实状态或进入半启动状态。

@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "httpx>=0.27,<1",
-    "mcp>=2,<3",
+    "mcp==2.0.0",
     "pydantic>=2.8,<3",
     "python-dotenv>=1.0,<2",
 ]
@@ -21,6 +21,7 @@ xuanyi-dev-eval = "xuanyi_npc.evaluation.dev_runner:main"
 xuanyi-pilot-replay = "xuanyi_npc.evaluation.pilot_runner:main"
 xuanyi-deepseek-models = "xuanyi_npc.agents.deepseek_cli:model_discovery_main"
 xuanyi-deepseek-pilot = "xuanyi_npc.agents.deepseek_cli:paid_pilot_main"
+xuanyi-mcp-stdio = "xuanyi_npc.mcp_server.stdio:main"
 
 [project.optional-dependencies]
 dev = [
