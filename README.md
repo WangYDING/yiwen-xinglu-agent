@@ -6,7 +6,7 @@
 
 ## 当前状态
 
-**M2 与 M3 工程里程碑已经完成，M4-P0 的 V1 长期记忆规划已经冻结，M4-P1 尚未开始。** M3-P0/P1 已验证官方 MCP v2 的冻结工具契约、应用服务安全边界、进程内等价性、本地 stdio 子进程、磁盘恢复和正常关闭。M4-P0 只完成来源链、SQLite、基础 Top-K、安全过滤和离线评测的文档决策，仓库中尚无长期记忆数据库、Embedding、向量检索或 V1 Agent 接入。
+**M2 与 M3 工程里程碑已经完成，M4-P1 的确定性记忆投影与 SQLite 持久化已经完成，M4-P2 尚未开始。** M3-P0/P1 已验证官方 MCP v2 的冻结工具契约、应用服务安全边界和本地 stdio 生命周期。M4-P1 已实现公开来源收据、三类确定性投影、Schema v1 SQLite 权威库、幂等/冲突、生命周期和显式协调恢复；尚无 Embedding、Top-K 或 V1 Agent 上下文接入。
 
 已经包含：
 
@@ -40,14 +40,16 @@
 - 使用官方 `Client(server)` 完成纯进程内发现、调用、拒绝不落盘和参考轨迹等价性验证；
 - 使用官方 stdio 客户端启动独立 Python 子进程，完成工具发现、完整轨迹、磁盘恢复、重启和正常关闭验证；
 - V1 长期记忆的单向事件投影、SQLite 权威存储、幂等/删除/重建、派生向量、玩家隔离和 Gold 评测规划；
+- V1 的严格公开来源契约、确定性调查/诊断/处置记忆投影和 SQLite Schema v1 权威存储；
+- 更正、失效、应用级隐私硬删除、非内容墓碑、事务回滚和状态先提交后的显式协调恢复；
 - 全新 Python 3.12 虚拟环境中的安装、测试和 Demo 复现记录；
 - 领域模型、规则边界和持久化测试。
 
-**当前停止在 M4-P1 开始之前**：M2 付费运行和 Prompt 调优已经关闭，标准探针与两个安全探针均不得重跑。M3 已按最小本地 stdio 范围完成退出审计；M4-P0 没有实现长期记忆运行能力，也没有开始自适应教学、Reflection、多 Agent、界面或新玩法。
+**当前停止在 M4-P2 开始之前**：M2 付费运行和 Prompt 调优已经关闭，标准探针与两个安全探针均不得重跑。M3 已按最小本地 stdio 范围完成退出审计；M4-P1 只通过显式 V1 协调边界启用写入，没有接入共享 V0/MCP 路径，也没有实现 Embedding、检索、Agent Prompt、自适应教学、Reflection、多 Agent、界面或新玩法。
 
 最终 M2 退出依据包括：标准探针在 8 步内完成正确诊断和处置，终态 `resolved / 100`；`SAFETY_ONLY` 的错误诱导探针抵抗了 `evil_spirit_attack` 暗示并提交正确诊断，但因一次解释性 `respond` 未能处置；过早行动探针的 1 次未知调查和 4 次过早诊断均被规则拒绝，没有状态污染。最新三探针共 24 次 Chat，24/24 首次结构化成功，格式修复、降级和非法状态写入均为 0，事件均连续且可重放。三探针共用一个病例且各运行一次，不是正式成功率样本。
 
-M2 分层结论和数据身份见 [`docs/M2_EXIT_AUDIT.md`](docs/M2_EXIT_AUDIT.md)，M3 证据和限制见 [`docs/M3_EXIT_AUDIT.md`](docs/M3_EXIT_AUDIT.md)。M4-P0 架构见 [`docs/M4_MEMORY_PLAN.md`](docs/M4_MEMORY_PLAN.md)，Gold 评测计划见 [`docs/M4_MEMORY_EVALUATION_PLAN.md`](docs/M4_MEMORY_EVALUATION_PLAN.md)。项目已经包含最小 MCP 包装和本地 stdio 启动入口，但仍不包含 HTTP/SSE、认证、远程部署、长期记忆运行代码、数据库或交互界面。
+M2 分层结论和数据身份见 [`docs/M2_EXIT_AUDIT.md`](docs/M2_EXIT_AUDIT.md)，M3 证据和限制见 [`docs/M3_EXIT_AUDIT.md`](docs/M3_EXIT_AUDIT.md)。M4 架构与 P1 实现边界见 [`docs/M4_MEMORY_PLAN.md`](docs/M4_MEMORY_PLAN.md)，Gold 评测计划见 [`docs/M4_MEMORY_EVALUATION_PLAN.md`](docs/M4_MEMORY_EVALUATION_PLAN.md)。项目已经包含最小 MCP 包装、本地 stdio 启动入口和纯本地 SQLite 记忆权威库，但仍不包含 HTTP/SSE、认证、远程部署、Embedding、向量检索、V1 Prompt 或交互界面。
 
 ## 设计边界
 
@@ -64,12 +66,13 @@ M2 分层结论和数据身份见 [`docs/M2_EXIT_AUDIT.md`](docs/M2_EXIT_AUDIT.m
 ```text
 src/xuanyi_npc/domain/   核心领域对象
 src/xuanyi_npc/agents/   LLM 协议、DoctorAgent 与 Fake LLM
-src/xuanyi_npc/application/ Agent 权限过滤视图
+src/xuanyi_npc/application/ Agent 权限过滤视图与显式 V1 记忆协调
 src/xuanyi_npc/config/   V0、V1、V2 能力配置
 src/xuanyi_npc/engine/   确定性病例引擎
 src/xuanyi_npc/evaluation/ 统一 Episode 结果与确定性 dev 评测器
 src/xuanyi_npc/mcp_server/ 官方 MCP v2 的进程内工具契约与 Server factory
-src/xuanyi_npc/storage/  JSON 状态存储
+src/xuanyi_npc/memory/   M4 公开来源、投影与生命周期契约
+src/xuanyi_npc/storage/  JSON 状态与 SQLite 权威记忆存储
 data/cases/              结构化病例定义
 data/evaluation/         P0 dev 场景、真实行为探针与脱敏回归轨迹
 data/pilot/              带日期和来源的 Pilot 价格与安全策略快照
@@ -191,12 +194,12 @@ M2 真实 Pilot 已结束，不再运行模型发现、标准探针、安全探�
 - M1 只更新病例会话，不更新玩家能力、关系或长期记忆。
 - 评分暂时只计算关键线索、诊断、处置和危险处置惩罚；提示扣分将在教学阶段接入。
 - 演示是固定路线回放，还不是交互式游戏界面。
-- V0 的 M2a Harness、M2b-P0、M2b-P1a 和 M2b-P1b 工程门槛已经收口；V1、V2 当前只有配置与共享契约。
+- V0 的 M2a Harness、M2b-P0、M2b-P1a 和 M2b-P1b 工程门槛已经收口；V1 当前仅完成记忆持久化底座，尚未接入检索与 Agent，V2 仍只有配置与共享契约。
 - 三个正式版本始终启用 `AgentContextFilter`；不安全提示词对照只允许在隔离的 A4 安全消融中运行。
-- V1 只规划基础向量 Top-K 长期记忆和固定课程；多因素记忆排序、自适应教学与 Reflection 属于 V2。
+- V1 只增加基础向量 Top-K 长期记忆并保持固定课程；多因素记忆排序、自适应教学与 Reflection 属于 V2。
 - 长期记忆、自适应教学和 Reflection 明确不属于当前 V0 实现。
-- M4-P0 已冻结“SQLite 权威记忆 + 可重建派生向量 + 进程内余弦 Top-K + 确定性 Fake Embedding”的简单方案；M4-P1 尚未实现任何一项。
+- M4-P1 已实现 SQLite 权威记忆、公开来源链、生命周期和协调恢复；可重建派生向量、Fake Embedding 与进程内余弦 Top-K 仍属于尚未开始的 M4-P2。
 - 真实 Embedding 的供应商、可发送数据、预算、密钥和网络授权尚未决定；DeepSeek Chat 的历史授权不会自动延伸到 Embedding。
 - 当前 V0 的固定课程只按步骤编号推进，不基于玩家表现动态改变。
 - 当前真实样本仍只有一个病例上的单次探针运行，不足以形成正式成功率、跨病例比较或模型可靠性指标。
-- M2 付费运行已经停止；M3-P0、M3-P1 和 M3 退出审计已完成；M4-P0 规划完成，M4-P1 及以后尚未开始。
+- M2 付费运行已经停止；M3 已完成；M4-P0/P1 已完成，M4-P2 及以后尚未开始。

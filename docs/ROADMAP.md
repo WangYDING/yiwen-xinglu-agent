@@ -27,11 +27,11 @@ Word 设计总结、`xuanyi-npc-handoff` 和 `docs/algorithm-experiment-plan-v0.
 | M3-P1：stdio 集成验证 | 已完成 | 独立 Python 子进程启动、9 工具发现、调用、拒绝零写入、磁盘恢复、重启、正常关闭、错误启动隔离 |
 | M3：最小 MCP 工具层 | 已完成 | P0/P1 的 15 项退出条件全部通过；完整结论见 `docs/M3_EXIT_AUDIT.md` |
 | M4-P0：V1 基础长期记忆规划冻结 | 已完成 | 来源事件允许列表、SQLite 权威存储、幂等/删除/重建、派生向量、基础 Top-K、安全上下文和离线 Gold 规划 |
-| M4-P1：事件投影与持久化 | 未开始 | 待实现确定性投影、MemoryEvent 来源链和 SQLite Repository |
+| M4-P1：事件投影与持久化 | 已完成 | 公开来源收据、三类确定性投影、SQLite Schema v1、幂等/冲突、生命周期、故障窗口与显式协调 |
 | M4-P2：Embedding 与基础 Top-K | 未开始 | 待实现可替换 Adapter、确定性 Fake、派生向量和进程内余弦检索 |
 | M4-P3：V1 Agent 安全上下文 | 未开始 | 待实现权限过滤的只读 MemoryView；固定课程保持不变 |
 | M4-P4：离线记忆 Gold 与安全评测 | 未开始 | 待实现严格场景、确定性评测器和真实离线指标 |
-| M4：V1 基础长期记忆 | 进行中 | 仅 P0 文档规划完成；尚无数据库、Embedding、检索或 Agent 接入 |
+| M4：V1 基础长期记忆 | 进行中 | P0/P1 已完成；尚无 Embedding、Top-K、V1 Agent 上下文或 Gold 指标 |
 | M5 及以后 | 未开始 | 自适应教学、Reflection、界面、多 Agent 等均未开始 |
 
 ## M2a 完成边界
@@ -126,6 +126,20 @@ M4-P0 已在不修改运行代码的前提下冻结 V1 基础长期记忆架构�
 6. V1 只读记忆且继续固定课程；V0 不初始化记忆库、不调用 Embedding、不读取长期记忆；`MemoryType.REFLECTION` 不在 V1 自动投影范围；
 7. 离线 Gold 已规划召回、无关排除、跨玩家隔离、空结果、幂等、删除/失效、稳定并列、注入文本、隐藏信息、V0 零读取和 V1 零写入等场景。
 
-详细架构见 `docs/M4_MEMORY_PLAN.md`，评测契约见 `docs/M4_MEMORY_EVALUATION_PLAN.md`。M4-P0 只证明规划已经冻结；M4-P1 尚未开始，仓库中仍没有 SQLite 记忆库、Embedding Adapter、向量检索或 V1 Prompt 集成。
+详细架构见 `docs/M4_MEMORY_PLAN.md`，评测契约见 `docs/M4_MEMORY_EVALUATION_PLAN.md`。
+
+## M4-P1 完成边界与下一步
+
+M4-P1 已在不修改 V0、MCP 和病例事件模型的前提下完成：
+
+1. 只从成功调查、诊断和处置后的权限过滤公开视图生成严格 `VerifiedMemorySource`；原始事件真值、正确性、评分、根因、未发现线索和隐藏门槛不保存也不参与哈希；
+2. 调查与诊断投影为 `EPISODIC`，处置的公开可观察结果投影为 `LEARNING`；错误诊断只保存“玩家曾提交该公开假设”，不会升级成世界事实；
+3. SQLite Schema v1 使用 `memory_source_receipts`、`memory_events`、`memory_lifecycle_events`、`memory_tombstones` 和 `memory_schema` 五张表；不预建 Embedding 表；
+4. 玩家作用域稳定键、规范 JSON、UTC、SHA-256 和唯一约束保证幂等；同键不同公开负载明确返回 `projection_conflict`，不同 Episode 不合并；
+5. 更正创建独立替代记忆并使旧记录 `superseded`，失效保留审计内容，应用级隐私硬删除原子清除目标及其更正派生链的内容和公开收据，只保留无文本墓碑；
+6. 游戏 JSON 状态先保存，SQLite 后投影；前者失败时记忆写入为 0，后者失败时返回 `memory_projection_pending`，显式协调只从已提交会话动作历史补齐且重复运行幂等；
+7. V0 不构造或访问 Memory Repository，`AgentAction` 和冻结的 9 个 MCP 工具仍无永久记忆写入口。
+
+隐私硬删除保证限于应用数据库、Repository API 和投影重建；不承诺清除外部备份、文件系统历史或提供取证级物理擦除。M4-P2 是下一阶段，但尚未开始；P1 没有实现 Embedding、Fake/真实向量、Top-K、Prompt 接入、关系/技能更新或任何外部模型调用。
 
 V1 只增加基础向量 Top-K 长期记忆并保持固定课程；V2 才使用多因素记忆排序、自适应教学和 Reflection。三个产品版本始终启用 `AgentContextFilter`，模型始终不能直接写永久记忆或关键状态。真实 Embedding 的供应商、数据发送边界、预算和网络调用必须另行决定并授权。

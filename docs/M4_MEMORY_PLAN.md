@@ -5,8 +5,8 @@
 - **规划日期**：2026-08-07
 - **规划基线**：`2c78dadbab19ee724bfc7595e2256b14314c427c`
 - **适用版本**：V1（基础向量 Top-K 长期记忆 + 固定课程）
-- **当前状态**：M4-P0 规划冻结；M4-P1 尚未开始
-- **实现状态**：本文只冻结契约、存储、检索、安全和验收边界，没有实现数据库、Embedding、向量检索或 Agent 接入
+- **当前状态**：M4-P0 与 M4-P1 已完成；M4-P2 尚未开始
+- **实现状态**：已实现确定性公开事件投影、SQLite Schema v1、生命周期和显式协调恢复；尚未实现 Embedding、向量检索或 Agent 接入
 
 M4 的目标是在不改变 V0 病例引擎、固定课程、工具和安全边界的前提下，为 V1 增加跨 Episode、来源可追溯的只读长期记忆。V1 不实现多因素排序、自适应课程、Reflection、关系或技能自动成长，也不允许模型直接写永久状态。
 
@@ -14,7 +14,7 @@ M4 的目标是在不改变 V0 病例引擎、固定课程、工具和安全边�
 
 | 现有组件 | 当前事实 | 对 M4 的约束 |
 |---|---|---|
-| `MemoryEvent` | 已有类型、内容、重要度、病例关联和关系影响字段；没有来源事件、来源会话、修订、投影版本、内容哈希或生命周期状态 | P1 必须补齐来源链；V1 自动投影不得使用关系影响或 `REFLECTION` |
+| `MemoryEvent` | M0 预留模型保持不变；P1 新增严格 `AuthoritativeMemoryRecord`，补齐来源事件、来源会话、修订、投影版本、内容哈希和生命周期状态 | V1 自动投影不得使用关系影响或 `REFLECTION`；V0 序列化格式不变 |
 | 病例领域事件 | 只有成功的调查、诊断和处置会产生事件；事件含 `session_id`、连续 `sequence` 和时间，没有独立事件 ID 或 `player_id` | 应由应用层结合已提交会话生成稳定来源 ID，不修改 V0 事件语义 |
 | `CaseSessionState` | 保存 `player_id`、连续动作历史和 `revision`，可由领域事件重放 | 可用于核对来源玩家、会话和修订；拒绝动作没有事件，天然不能投影记忆 |
 | `JsonStateStore` | 原子保存玩家与病例会话快照；没有跨 Episode 查询、唯一约束、迁移或记忆索引 | 继续作为 V0 游戏状态存储，不承担长期记忆查询；M4 另建 SQLite 记忆库 |
@@ -23,7 +23,14 @@ M4 的目标是在不改变 V0 病例引擎、固定课程、工具和安全边�
 | `V1_CONFIG` | 已冻结为 `PERSISTENT_MEMORY + VECTOR_TOP_K + FIXED + Reflection disabled` | M4 不改变课程策略，不引入多因素排序或 Reflection |
 | `AgentAction` / MCP | 没有 `record_memory`，只包含既有读、调查、诊断和处置工具 | M4 不增加任何模型可调用的永久记忆写工具 |
 
-现有 `MemoryEvent` 是 M0 的预留模型，不是已运行的长期记忆系统。P1 可以在没有真实记忆迁移负担的前提下扩展其来源契约，但必须保留严格 Schema、明确错误和现有 V0 行为。
+现有 `MemoryEvent` 仍是 M0 的预留模型。P1 没有修改它或 V0 状态格式，而是通过显式 V1 组装引入 `VerifiedMemorySource`、`AuthoritativeMemoryRecord` 和 `SQLiteMemoryRepository`；这避免了虚假的旧数据迁移，也保持 V0 行为不变。
+
+### 2.1 M4-P1 实现检查点
+
+- `DeterministicMemoryProjector` 只接受三类已提交领域事件，并先构造禁止未知字段的公开视图；
+- `SQLiteMemoryRepository` 的 Schema 版本为 1，权威表为 `memory_schema`、`memory_source_receipts`、`memory_events`、`memory_lifecycle_events` 和 `memory_tombstones`；
+- `V1MemoryCoordinator` 显式执行“JSON 状态成功保存 → SQLite 投影”，并提供从已提交会话动作历史补齐 pending 投影的协调边界；
+- Schema v1 不包含 `memory_embeddings`，也没有 Embedding、Top-K、Prompt 或 MCP 记忆工具；这些仍属于后续阶段。
 
 ## 3. 冻结的单向安全管道
 
@@ -103,11 +110,11 @@ P1 应扩展现有 `MemoryEvent` 或引入与之等价的严格版本化记录�
 
 推荐最小表：
 
-- `memory_source_receipts`：稳定来源 ID、玩家、会话、序号、修订、事件类型、允许列表后的公开投影负载、原事件哈希和接收时间；不保存隐藏字段；
+- `memory_source_receipts`：稳定来源 ID、玩家、会话、序号、修订、事件类型、允许列表后的公开规范负载、该公开负载的 SHA-256 和接收时间；不保存、序列化或哈希原始事件负载及隐藏字段；
 - `memory_events`：权威 `MemoryEvent` 内容、来源链、状态、内容哈希和版本；
 - `memory_lifecycle_events`：更正、失效和删除的追加式审计；
 - `memory_tombstones`：隐私硬删除后只保留非内容 ID、哈希、原因码和时间，阻止重建时复活；
-- `memory_embeddings`：可删除、可重建的派生向量，不是事实来源。
+- `memory_embeddings`：P2 才通过迁移新增的可删除、可重建派生向量，不是事实来源；P1 Schema v1 不预建此表。
 
 选择 SQLite 的原因：当前阶段数据量小，但需要跨 Episode 查询、唯一约束、事务、版本迁移和删除审计；这些能力不适合继续叠加在 JSON 快照目录上。SQLite 已能满足需求，无需向量数据库、消息队列或数据库服务。
 
@@ -126,10 +133,10 @@ P1 应扩展现有 `MemoryEvent` 或引入与之等价的严格版本化记录�
 
 所有生命周期操作都来自受信任的应用/管理边界或未来专用领域事件，绝不来自 AgentAction 或模型工具。
 
-- **更正**：不原地改写内容。创建新版本记忆，设置 `supersedes_event_id`，并在同一事务中把旧记录标记为 `superseded`。两条记录和更正原因都可审计，只有新记录可检索。
+- **更正**：不原地改写内容，也不复用原来源 ID。每次更正由可信应用/管理边界提交稳定且唯一的 `operation_id`、固定原因码、目标玩家和被替代记忆 ID；创建具有独立稳定 ID 的替代记忆，设置 `supersedes_event_id`，并在同一事务中把旧记录标记为 `superseded`。相同操作 ID 重放幂等，不同操作不得共用 ID；两条记录和更正原因都可审计，只有新记录可读取为 active。
 - **撤销/失效**：把目标记录标记为 `invalidated`，追加固定原因码和来源；保留内容供审计，但检索必须排除。
 - **普通删除**：等同失效，适用于业务撤回且允许保留审计内容的情况。
-- **隐私硬删除**：删除权威内容、公开来源负载、关联实体和向量，仅保留不含文本的墓碑 ID/哈希/时间/原因码。重建必须识别墓碑，不能恢复被删除内容。
+- **隐私硬删除**：从应用 SQLite 数据库删除权威内容、允许列表后的公开来源负载、关联实体及未来派生内容；Repository API 不再可读取，只保留不含文本的墓碑 ID/哈希/时间/固定原因码。重建必须识别墓碑，不能恢复被删除内容。该保证只覆盖应用数据库和 Repository 行为，不承诺清除外部备份、文件系统历史，也不提供取证级物理擦除。
 - **向量重建**：可随时删除 `memory_embeddings`，从所有 `active` 权威记忆按指定 `embedding_space_id` 重算；不能从向量反推记忆事实。
 - **投影重建**：只从未被硬删除的安全来源收据，以指定 `projection_version` 重跑到空的记忆表；ID 和顺序必须与首次投影一致。来源缺失时停止并报告不完整，禁止由模型补写。
 
@@ -195,7 +202,7 @@ V1 的查询文本由版本化 `MemoryQueryBuilder` 从当前用户消息、公�
 | 阶段 | 输入 | 产物 | 明确不包含 | 退出条件 | 网络/付费 | 失败时停止条件 |
 |---|---|---|---|---|---|---|
 | **M4-P0：规划冻结** | M3 已完成基线；现有事件、状态、过滤器、V1 配置 | 本文、Gold 评测计划、路线图和 ADR | 任何运行代码、数据库、Embedding、向量和 Agent 接入 | 13 项技术决策、单向安全管道、阶段门槛和评测定义完成；全量测试不回退 | 不需要；请求数和费用均为 0 | 文档与现有安全 ADR 冲突且无法通过规划消解；基线或工作树不符合要求 |
-| **M4-P1：事件投影与持久化** | P0 冻结契约；已提交病例事件和安全视图 | `VerifiedMemorySource`、来源 ID、投影策略、扩展 `MemoryEvent`、SQLite Repository、生命周期与协调测试 | Embedding、Top-K、Prompt、Agent/MCP 记忆工具、关系/技能更新 | 允许列表、隐藏字段排除、幂等、冲突、故障窗口、更正/失效/硬删除/重建和玩家隔离全部离线通过；V0 回归通过 | 不需要 | 任一无来源写入、重复记忆、跨玩家写入、隐藏字段落库、删除后复活或 V0 行为变化 |
+| **M4-P1：事件投影与持久化（已完成）** | P0 冻结契约；已提交病例事件和安全视图 | `VerifiedMemorySource`、稳定来源 ID、`AuthoritativeMemoryRecord`、SQLite Repository、生命周期与协调测试 | Embedding、Top-K、Prompt、Agent/MCP 记忆工具、关系/技能更新 | 允许列表、隐藏字段排除、幂等、冲突、故障窗口、更正/失效/硬删除/重建和玩家隔离全部离线通过；V0 回归通过 | 不需要；实际请求与费用为 0 | 任一无来源写入、重复记忆、跨玩家写入、隐藏字段落库、删除后复活或 V0 行为变化 |
 | **M4-P2：Embedding 与基础检索** | P1 的 active 权威记忆和严格检索配置 | 可替换 Adapter、确定性 Fake、派生向量表、进程内余弦 Top-K、稳定并列和重建测试 | 真实供应商调用、多因素排序、Agent Prompt、向量数据库 | 同空间校验、阈值、Top-K、稳定排序、失效排除、向量重建和无网络测试通过；跨玩家候选为 0 | 默认不需要；真实 Adapter/Pilot 必须另行授权 | 向量成为唯一事实来源、排序混入重要度/时间、用量不明、网络未授权或不可重复 |
 | **M4-P3：V1 安全上下文集成** | P2 检索器；现有 `AgentContextFilter`、DoctorAgent 与固定课程 | `MemoryScope`、`MemoryView`、版本化查询构建、V1 只读 Prompt 集成 | 自适应课程、Reflection、关系/能力更新、新工具、真实 LLM 调用 | 检索前玩家隔离、检索后最小视图、注入文本作为数据、V0 零读取、V1 零写入、固定课程不变 | 离线 Fake 不需要；真实模型另行授权 | 任何真值泄漏、跨玩家召回、AgentAction 写记忆、课程顺序受记忆暗改或 V0 Prompt 改变 |
 | **M4-P4：离线 Gold 与指标** | P1–P3 能力；合成跨 Episode Gold | 严格场景 Schema、确定性评测器、Precision/Recall/F1/FMR、安全与规模报告 | 真实成功率、付费模型数据、自适应教学或 Reflection | 全部 Gold 可重复；跨玩家串扰=0、非法永久写入=0；失败分类、延迟和存储规模可审计；不预填效果 | 不需要 | 安全硬门槛非 0、同输入结果不稳定、评测真值进入 Prompt 或 Fake 指标被写成真实效果 |

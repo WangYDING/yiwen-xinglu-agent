@@ -6,6 +6,7 @@ from .diagnosis_readiness import (
     FixedV0DiagnosisReadinessPolicy,
 )
 from .mcp_facade import MCPApplicationResult, MCPApplicationService
+from .memory_coordination import MemoryProjectionRepository, V1MemoryCoordinator
 from .views import (
     AgentContextFilter,
     AvailableSkillView,
@@ -24,6 +25,8 @@ __all__ = [
     "FixedV0DiagnosisReadinessPolicy",
     "MCPApplicationResult",
     "MCPApplicationService",
+    "MemoryProjectionRepository",
+    "V1MemoryCoordinator",
     "AgentContextFilter",
     "AvailableSkillView",
     "CaseObservation",

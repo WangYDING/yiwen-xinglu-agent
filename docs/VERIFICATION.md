@@ -252,3 +252,20 @@ M3 工程里程碑完成。M4 及以后尚未开始。
 - **外部调用**：DeepSeek `/models` 0 次、Chat 0 次、Embedding 0 次、费用 0 CNY。
 
 M4-P0 只完成文档与规划冻结。M4-P1 尚未开始；真实 Embedding 的供应商、数据发送边界、预算、密钥和网络授权仍需在未来单独决定。
+
+## 2026-08-07：M4-P1 确定性事件投影与 SQLite 持久化
+
+- **实现基线**：`cb6d84a821ae98c54eed204f48d2407bc912474a`；开始时 HEAD 精确匹配且工作树干净。
+- **公开来源边界**：`VerifiedMemorySource` 只保存允许列表过滤后的规范公开负载及其 SHA-256。调查、诊断和处置投影都先从提交后的安全公开视图重建；测试确认 `diagnosis_correct`、数值评分、根因、未发现线索、隐藏门槛和隐藏哨兵不进入收据、记忆、哈希输入、SQLite 文件或错误输出。
+- **三类投影**：成功调查生成 `EPISODIC / verified_case_investigation`，只含公开调查和新发现线索；成功诊断生成 `EPISODIC / verified_diagnosis_submission`，只记录玩家曾提交的公开假设及实际引用的已发现证据；成功处置生成 `LEARNING / verified_treatment_observation`，只含公开处置和玩家可观察结果。错误诊断不被保存为世界事实，其他来源默认拒绝且零写入。
+- **SQLite Schema v1**：使用标准库 `sqlite3`，显式初始化 `memory_schema`、`memory_source_receipts`、`memory_events`、`memory_lifecycle_events` 和 `memory_tombstones`。玩家作用域稳定键包含 `player_id`；Schema v1 不包含 `memory_embeddings`，模块导入不建文件、不访问网络。
+- **幂等与隔离**：同玩家、来源、投影版本和序号重复消费只保留一条收据和记忆；同键不同公开哈希返回 `projection_conflict` 且不覆盖；不同 Episode 不合并；两个玩家即使复用同一会话 ID 也各自独立，跨玩家读取或变更被拒绝。
+- **生命周期**：更正使用稳定操作 ID、固定原因码和可信边界，在同一事务中新建独立替代记忆并使旧记录 `superseded`；失效记录为 `invalidated`；隐私硬删除原子清除目标及更正派生链的权威内容、公开收据和关联实体，只保留无文本墓碑，墓碑阻止投影重建复活。相同操作重放幂等，不同内容复用操作 ID 明确冲突，注入的中途失败会整体回滚。
+- **删除保证边界**：测试证明应用数据库表、Repository API 和投影重建不再提供被硬删除内容；不声称清除外部备份、文件系统历史或进行取证级物理擦除。
+- **提交与协调窗口**：显式 `V1MemoryCoordinator` 坚持 JSON 游戏状态先保存、SQLite 后投影。JSON 保存失败时 SQLite 写入为 0；状态已保存而投影失败时返回 `memory_projection_pending`，游戏状态保留；显式协调只从已提交会话动作历史补齐，重复协调幂等，缺失公开来源时停止而不由模型文本补写。
+- **专项测试**：M4-P1 投影、Repository 和协调共 44 passed；覆盖三类公开快照、禁止来源、规范 ID/JSON/UTC/hash、隐藏哨兵、冲突、投影/更正/硬删除事务回滚、玩家隔离、更正/失效/硬删除/墓碑、故障窗口、协调、伪造来源拒绝、导入副作用和 V0 零 Repository 访问。
+- **全量与回归**：226 passed；P0 Fake LLM 3 场景/6 轨迹全部符合预期；M3-P0/P1 共 22 passed；无 LLM Demo 为 `resolved / 100`。
+- **接口边界**：M4-P1 只通过显式 V1 组装启用，V0 不构造或访问 Repository；`AgentAction` 和冻结的 9 个 MCP 工具没有永久记忆写入口。
+- **外部调用与范围**：DeepSeek `/models` 0 次、Chat 0 次、Embedding 0 次、费用 0 CNY。未实现 Fake/真实向量、Top-K、Agent Prompt 接入、新 MCP 工具、关系/技能更新、Reflection、HTTP、远程数据库或后台队列。
+
+M4-P1 完成，M4 整体仍在进行中。M4-P2 尚未开始；任何真实 Embedding 供应商、数据发送、密钥、预算和网络调用仍需单独决定与授权。
