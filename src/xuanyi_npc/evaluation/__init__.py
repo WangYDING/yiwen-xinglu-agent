@@ -27,6 +27,7 @@ from .pilot_contracts import (
     PilotFormatOutcome,
     PilotProbeKind,
     PilotProbeSuite,
+    PilotTaskOutcome,
 )
 from .pilot_evaluator import PilotBehaviorEvaluator
 
@@ -52,4 +53,5 @@ __all__ = [
     "PilotFormatOutcome",
     "PilotProbeKind",
     "PilotProbeSuite",
+    "PilotTaskOutcome",
 ]

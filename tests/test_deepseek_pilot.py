@@ -6,6 +6,7 @@ from xuanyi_npc.agents import (
     DeepSeekModelDiscovery,
     DeepSeekRequestBudgetGuard,
     DeepSeekRequestReservation,
+    DeepSeekTimeoutError,
     DeepSeekUsageUnavailableError,
     LLMRequest,
     LLMResponse,
@@ -15,9 +16,15 @@ from xuanyi_npc.application.deepseek_pilot import (
     FROZEN_PILOT_PROBE_IDS,
     DeepSeekPilotRunResult,
     DeepSeekPilotRunner,
+    PilotRunMode,
     PilotRunStatus,
 )
-from xuanyi_npc.evaluation import ModelUsage, load_deepseek_pilot_pricing
+from xuanyi_npc.evaluation import (
+    ModelUsage,
+    PilotFormatOutcome,
+    PilotTaskOutcome,
+    load_deepseek_pilot_pricing,
+)
 from xuanyi_npc.evaluation.dev_contracts import ScriptedActionOutput
 from xuanyi_npc.evaluation.dev_runner import load_dev_suite
 
@@ -89,6 +96,24 @@ class CostedScriptAdapter:
         return LLMResponse(content=self._responses.popleft(), usage=usage)
 
 
+class TimeoutOnceAdapter(CostedScriptAdapter):
+    def complete(self, request: LLMRequest) -> LLMResponse:
+        self.request_budget.reserve(
+            DeepSeekRequestReservation(
+                input_token_upper_bound=100,
+                output_token_upper_bound=20,
+                maximum_cost_cny=self._request_reservation_cost,
+            )
+        )
+        self.chat_calls += 1
+        self.request_budget.halt_unknown_usage()
+        raise DeepSeekTimeoutError(
+            "offline timeout",
+            abort_episode=True,
+            latency_ms=180_000.0,
+        )
+
+
 def correct_episode_responses() -> list[str]:
     suite = load_dev_suite()
     script = suite.scripts["correct_case"]
@@ -133,6 +158,57 @@ def test_pilot_budget_stop_preserves_completed_episode_checkpoint(tmp_path) -> N
         checkpoint.read_text(encoding="utf-8")
     )
     assert restored == result
+
+
+def test_standard_only_mode_runs_one_probe_then_exits(tmp_path) -> None:
+    adapter = CostedScriptAdapter(
+        correct_episode_responses(),
+        budget="0.03",
+    )
+
+    result = DeepSeekPilotRunner(
+        adapter,
+        run_mode=PilotRunMode.STANDARD_ONLY,
+    ).run(tmp_path / "standard_only.json")
+
+    assert result.status is PilotRunStatus.COMPLETED
+    assert result.execution_config.run_mode is PilotRunMode.STANDARD_ONLY
+    assert tuple(record.probe_id for record in result.completed_episodes) == (
+        "pilot_standard_completion_001",
+    )
+    assert result.unstarted_probe_ids == ()
+    assert adapter.discovery_calls == 1
+    assert adapter.chat_calls == 8
+
+
+def test_standard_only_timeout_stops_without_other_probes(tmp_path) -> None:
+    adapter = TimeoutOnceAdapter(
+        correct_episode_responses(),
+        budget="0.03",
+    )
+
+    result = DeepSeekPilotRunner(
+        adapter,
+        run_mode=PilotRunMode.STANDARD_ONLY,
+    ).run(tmp_path / "standard_only_timeout.json")
+
+    assert result.status is PilotRunStatus.USAGE_UNAVAILABLE
+    assert len(result.completed_episodes) == 1
+    record = result.completed_episodes[0]
+    assert record.probe_id == "pilot_standard_completion_001"
+    assert record.episode.steps == ()
+    assert record.episode.events == ()
+    assert record.episode.final_session == record.episode.initial_session
+    assert record.episode.failure_code == DeepSeekTimeoutError.code
+    assert record.episode.failure_latency_ms == 180_000.0
+    assert record.evaluation.task_outcome is PilotTaskOutcome.INCONCLUSIVE
+    assert record.evaluation.task_passed is None
+    assert record.evaluation.format_outcome is PilotFormatOutcome.NOT_OBSERVED
+    assert record.evaluation.failure_categories == ()
+    assert result.unstarted_probe_ids == ()
+    assert adapter.discovery_calls == 1
+    assert adapter.chat_calls == 1
+    assert adapter.request_budget.halted is True
 
 
 def test_pilot_model_unavailable_stops_before_any_chat_request(tmp_path) -> None:

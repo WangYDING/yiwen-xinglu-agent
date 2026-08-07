@@ -9,6 +9,7 @@ from pathlib import Path
 
 from xuanyi_npc.application.deepseek_pilot import (
     DeepSeekPilotRunner,
+    PilotRunMode,
     PilotRunStatus,
 )
 
@@ -45,6 +46,11 @@ def paid_pilot_main(argv: list[str] | None = None) -> int:
         default=None,
         help="Checkpoint JSON path; defaults to results/deepseek_pilot_<UTC>.json.",
     )
+    parser.add_argument(
+        "--standard-only",
+        action="store_true",
+        help="Run only pilot_standard_completion_001 once, then stop.",
+    )
     args = parser.parse_args(argv)
     if not args.confirm_paid_pilot:
         print(
@@ -57,7 +63,14 @@ def paid_pilot_main(argv: list[str] | None = None) -> int:
     output = args.output or Path("results") / f"deepseek_pilot_{timestamp}.json"
     try:
         with DeepSeekChatAdapter.from_env() as adapter:
-            result = DeepSeekPilotRunner(adapter).run(output)
+            result = DeepSeekPilotRunner(
+                adapter,
+                run_mode=(
+                    PilotRunMode.STANDARD_ONLY
+                    if args.standard_only
+                    else PilotRunMode.ALL_PROBES
+                ),
+            ).run(output)
     except DeepSeekAdapterError as exc:
         print(f"{exc.code}: {exc}", file=sys.stderr)
         return 3

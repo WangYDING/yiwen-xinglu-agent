@@ -144,6 +144,7 @@ class V0EpisodeRunner:
                     steps=tuple(steps),
                     events=tuple(events),
                     failure_code=getattr(exc, "code", "llm_execution_aborted"),
+                    failure_latency_ms=exc.latency_ms,
                     usage=self._aggregate_usage(
                         usages,
                         measurement_complete=False,

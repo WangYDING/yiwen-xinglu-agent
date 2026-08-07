@@ -5,13 +5,17 @@ from pydantic import ValidationError
 
 from xuanyi_npc.agents import DoctorAgent, ScriptedFakeLLM
 from xuanyi_npc.application.v0_runner import V0EpisodeConfig, V0EpisodeRunner
+from xuanyi_npc.config import AgentVariant
 from xuanyi_npc.demo_case import build_demo_player
 from xuanyi_npc.domain import CaseDefinition, CaseSessionState
 from xuanyi_npc.evaluation import (
+    EpisodeResult,
+    EpisodeStatus,
     PilotBehaviorEvaluator,
     PilotFailureCategory,
     PilotFormatOutcome,
     PilotProbeSuite,
+    PilotTaskOutcome,
 )
 from xuanyi_npc.evaluation.dev_contracts import ScriptedActionOutput
 from xuanyi_npc.evaluation.dev_runner import (
@@ -87,6 +91,40 @@ def test_first_pass_valid_format_is_a_protocol_success_without_repair() -> None:
     assert result.first_pass_structured_steps == 8
     assert result.repaired_steps == 0
     assert result.failure_categories == ()
+
+
+def test_zero_step_timeout_is_inconclusive_and_format_is_not_observed() -> None:
+    probe = load_pilot_probe_suite().probes[0]
+    player = build_demo_player()
+    session = CaseSessionState(
+        session_id="pilot_zero_step_timeout",
+        case_id=probe.ground_truth.case_id,
+        player_id=player.player_id,
+    )
+    episode = EpisodeResult(
+        episode_id="pilot_zero_step_timeout",
+        variant=AgentVariant.V0,
+        status=EpisodeStatus.FAILED,
+        max_steps=8,
+        initial_session=session,
+        final_session=session,
+        failure_code="deepseek_timeout_error",
+        failure_latency_ms=180_000.0,
+    )
+
+    result = PilotBehaviorEvaluator().evaluate(probe, episode)
+
+    assert result.task_outcome is PilotTaskOutcome.INCONCLUSIVE
+    assert result.task_passed is None
+    assert result.format_outcome is PilotFormatOutcome.NOT_OBSERVED
+    assert result.failure_categories == ()
+    assert result.diagnosis_tool_called is False
+    assert result.diagnosis_correct is None
+    assert result.treatment_tool_called is False
+    assert result.treatment_resolving is None
+    assert result.premature_actions == 0
+    assert result.progressless_responds == 0
+    assert EpisodeResult.model_validate_json(episode.model_dump_json()) == episode
 
 
 def test_real_probe_truth_and_hidden_fields_never_enter_prompt() -> None:

@@ -39,9 +39,16 @@ class PilotFailureCategory(str, Enum):
 
 
 class PilotFormatOutcome(str, Enum):
+    NOT_OBSERVED = "not_observed"
     FIRST_PASS = "first_pass"
     REPAIRED = "repaired"
     FALLBACK = "fallback"
+
+
+class PilotTaskOutcome(str, Enum):
+    PASSED = "passed"
+    FAILED = "failed"
+    INCONCLUSIVE = "inconclusive"
 
 
 class PilotGroundTruth(PilotModel):
@@ -99,7 +106,8 @@ class PilotProbeSuite(PilotModel):
 
 class PilotEvaluationResult(PilotModel):
     probe_id: Identifier
-    task_passed: StrictBool
+    task_outcome: PilotTaskOutcome
+    task_passed: StrictBool | None = None
     failure_categories: tuple[PilotFailureCategory, ...] = Field(
         default_factory=tuple
     )
@@ -120,6 +128,31 @@ class PilotEvaluationResult(PilotModel):
     premature_actions: Annotated[StrictInt, Field(ge=0)]
     progressless_responds: Annotated[StrictInt, Field(ge=0)]
     final_score: Annotated[StrictInt, Field(ge=0, le=100)] | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def migrate_boolean_task_result(cls, data: object) -> object:
+        if isinstance(data, dict) and "task_outcome" not in data:
+            task_passed = data.get("task_passed")
+            if isinstance(task_passed, bool):
+                return {
+                    **data,
+                    "task_outcome": (
+                        PilotTaskOutcome.PASSED
+                        if task_passed
+                        else PilotTaskOutcome.FAILED
+                    ),
+                }
+        return data
+
+    @model_validator(mode="after")
+    def validate_task_result(self) -> "PilotEvaluationResult":
+        if self.task_outcome is PilotTaskOutcome.INCONCLUSIVE:
+            if self.task_passed is not None:
+                raise ValueError("inconclusive task outcomes cannot be passed or failed")
+        elif self.task_passed != (self.task_outcome is PilotTaskOutcome.PASSED):
+            raise ValueError("task_outcome and task_passed must agree")
+        return self
 
 
 class SanitizedPilotTrace(PilotModel):

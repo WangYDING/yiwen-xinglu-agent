@@ -116,6 +116,7 @@ class EpisodeResult(DomainModel):
     events: tuple[CaseEvent, ...] = Field(default_factory=tuple)
     score_breakdown: ScoreBreakdown | None = None
     failure_code: Identifier | None = None
+    failure_latency_ms: Annotated[StrictFloat, Field(ge=0)] | None = None
     usage: ModelUsage | None = None
 
     @model_validator(mode="after")
@@ -181,6 +182,8 @@ class EpisodeResult(DomainModel):
                 raise ValueError("completed episodes require score_breakdown")
             if self.failure_code is not None:
                 raise ValueError("completed episodes cannot have failure_code")
+            if self.failure_latency_ms is not None:
+                raise ValueError("completed episodes cannot have failure latency")
             if self.score_breakdown.total != self.final_session.score:
                 raise ValueError("score_breakdown must match final session score")
         elif self.status is EpisodeStatus.MAX_STEPS_REACHED:
@@ -190,6 +193,8 @@ class EpisodeResult(DomainModel):
                 raise ValueError("a completed session is not a max-step termination")
             if self.score_breakdown is not None:
                 raise ValueError("max-step termination cannot have a final score")
+            if self.failure_latency_ms is not None:
+                raise ValueError("max-step termination cannot have failure latency")
         elif self.status is EpisodeStatus.FAILED:
             if self.failure_code is None:
                 raise ValueError("failed episodes require failure_code")

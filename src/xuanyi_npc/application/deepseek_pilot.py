@@ -61,6 +61,11 @@ class PilotRunStatus(str, Enum):
     MODEL_UNAVAILABLE = "model_unavailable"
 
 
+class PilotRunMode(str, Enum):
+    ALL_PROBES = "all_probes"
+    STANDARD_ONLY = "standard_only"
+
+
 class PilotEpisodeRecord(DomainModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -75,6 +80,7 @@ class PilotExecutionConfig(DomainModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     provider: Literal["deepseek"] = "deepseek"
+    run_mode: PilotRunMode = PilotRunMode.ALL_PROBES
     base_url: NonEmptyText
     requested_model: NonEmptyText
     prompt_version: NonEmptyText
@@ -121,7 +127,7 @@ class DeepSeekPilotRunResult(DomainModel):
 
 
 class DeepSeekPilotRunner:
-    """Run exactly one Episode for each frozen behavior probe after discovery."""
+    """Run the selected frozen behavior probes once after model discovery."""
 
     def __init__(
         self,
@@ -130,11 +136,13 @@ class DeepSeekPilotRunner:
         pricing: DeepSeekPilotPricing | None = None,
         probe_path: Path | str = DEFAULT_PILOT_PROBE_PATH,
         case_path: Path | str = DEFAULT_CASE_PATH,
+        run_mode: PilotRunMode = PilotRunMode.ALL_PROBES,
     ) -> None:
         self.adapter = adapter
         self.pricing = pricing or load_deepseek_pilot_pricing()
         self.probe_path = Path(probe_path)
         self.case_path = Path(case_path)
+        self.run_mode = run_mode
         self._validate_policy()
 
     def run(self, checkpoint_path: Path | str | None = None) -> DeepSeekPilotRunResult:
@@ -142,9 +150,15 @@ class DeepSeekPilotRunner:
         case = CaseDefinition.model_validate_json(
             self.case_path.read_text(encoding="utf-8")
         )
-        probe_ids = tuple(probe.probe_id for probe in suite.probes)
-        if probe_ids != FROZEN_PILOT_PROBE_IDS:
+        frozen_probe_ids = tuple(probe.probe_id for probe in suite.probes)
+        if frozen_probe_ids != FROZEN_PILOT_PROBE_IDS:
             raise ValueError("Pilot suite must contain only the frozen behavior probes")
+        selected_probes = (
+            suite.probes[:1]
+            if self.run_mode is PilotRunMode.STANDARD_ONLY
+            else suite.probes
+        )
+        probe_ids = tuple(probe.probe_id for probe in selected_probes)
 
         discovery = self.adapter.discover_models()
         if not discovery.configured_model_available:
@@ -162,7 +176,7 @@ class DeepSeekPilotRunner:
         budget = self.adapter.request_budget
         records: list[PilotEpisodeRecord] = []
 
-        for index, probe in enumerate(suite.probes):
+        for index, probe in enumerate(selected_probes):
             pending = probe_ids[index:]
             if not budget.can_start_episode:
                 result = self._result(
@@ -276,6 +290,7 @@ class DeepSeekPilotRunner:
         return DeepSeekPilotRunResult(
             status=status,
             execution_config=PilotExecutionConfig(
+                run_mode=self.run_mode,
                 base_url=self.adapter.config.base_url,
                 requested_model=self.adapter.config.model,
                 prompt_version=DoctorAgentConfig().prompt_version,

@@ -9,6 +9,7 @@ from .pilot_contracts import (
     PilotEvaluationResult,
     PilotFailureCategory,
     PilotFormatOutcome,
+    PilotTaskOutcome,
 )
 
 
@@ -33,9 +34,6 @@ class PilotBehaviorEvaluator:
 
         if episode.initial_session.case_id != truth.case_id:
             failures.add(PilotFailureCategory.CASE_MISMATCH)
-        if episode.status is not criteria.expected_status:
-            failures.add(PilotFailureCategory.EPISODE_NOT_COMPLETED)
-
         expected_sequences = tuple(
             range(
                 len(episode.initial_session.action_history) + 1,
@@ -59,6 +57,38 @@ class PilotBehaviorEvaluator:
             replay_consistent = replayed == episode.final_session
             if criteria.require_replay_match and not replay_consistent:
                 failures.add(PilotFailureCategory.EVENT_REPLAY_FAILED)
+
+        if (
+            not episode.steps
+            and episode.failure_code == "deepseek_timeout_error"
+        ):
+            return PilotEvaluationResult(
+                probe_id=probe.probe_id,
+                task_outcome=PilotTaskOutcome.INCONCLUSIVE,
+                task_passed=None,
+                failure_categories=tuple(
+                    sorted(failures, key=lambda item: item.value)
+                ),
+                episode_status=episode.status,
+                format_outcome=PilotFormatOutcome.NOT_OBSERVED,
+                first_pass_structured_steps=0,
+                repaired_steps=0,
+                fallback_steps=0,
+                rejected_steps=0,
+                event_count=len(episode.events),
+                event_sequences_contiguous=contiguous,
+                replay_consistent=replay_consistent,
+                diagnosis_tool_called=False,
+                diagnosis_correct=None,
+                treatment_tool_called=False,
+                treatment_resolving=None,
+                premature_actions=0,
+                progressless_responds=0,
+                final_score=episode.final_session.score,
+            )
+
+        if episode.status is not criteria.expected_status:
+            failures.add(PilotFailureCategory.EPISODE_NOT_COMPLETED)
 
         first_pass = sum(
             step.llm_attempts == 1 and not step.used_fallback
@@ -146,6 +176,11 @@ class PilotBehaviorEvaluator:
         ordered = tuple(sorted(failures, key=lambda item: item.value))
         return PilotEvaluationResult(
             probe_id=probe.probe_id,
+            task_outcome=(
+                PilotTaskOutcome.PASSED
+                if not ordered
+                else PilotTaskOutcome.FAILED
+            ),
             task_passed=not ordered,
             failure_categories=ordered,
             episode_status=episode.status,

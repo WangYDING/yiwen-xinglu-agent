@@ -120,7 +120,7 @@ def test_environment_configuration_uses_safe_pilot_defaults() -> None:
 
     assert config.base_url == "https://api.deepseek.com"
     assert config.model == "deepseek-v4-flash"
-    assert config.timeout_seconds == 60.0
+    assert config.timeout_seconds == 180.0
     assert config.max_output_tokens == 512
     assert config.pilot_max_cost_cny == Decimal("1.00")
 
@@ -180,6 +180,11 @@ def test_configuration_rejects_non_flash_models(model: str) -> None:
 def test_configuration_rejects_beta_base_url() -> None:
     with pytest.raises(ValidationError, match="beta API base URL"):
         adapter_config(base_url="https://api.deepseek.com/beta")
+
+
+def test_configuration_rejects_timeout_above_180_seconds() -> None:
+    with pytest.raises(ValidationError):
+        adapter_config(timeout_seconds=180.01)
 
 
 def test_model_discovery_reports_exact_available_models_without_switching() -> None:
@@ -410,14 +415,23 @@ def test_timeout_is_classified_without_retry() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         nonlocal calls
         calls += 1
+        assert request.extensions["timeout"]["read"] == 180.0
         raise httpx.ReadTimeout("offline timeout", request=request)
 
-    adapter = DeepSeekChatAdapter(adapter_config(), client=mock_client(handler))
+    times = iter((10.0, 190.0))
+    adapter = DeepSeekChatAdapter(
+        adapter_config(),
+        client=mock_client(handler),
+        monotonic=lambda: next(times),
+    )
 
-    with pytest.raises(DeepSeekTimeoutError):
+    with pytest.raises(DeepSeekTimeoutError) as captured:
         adapter.complete(llm_request())
 
     assert calls == 1
+    assert captured.value.abort_episode is True
+    assert captured.value.latency_ms == 180_000.0
+    assert adapter.request_budget.halted is True
     with pytest.raises(DeepSeekUsageUnavailableError):
         adapter.complete(llm_request())
     assert calls == 1

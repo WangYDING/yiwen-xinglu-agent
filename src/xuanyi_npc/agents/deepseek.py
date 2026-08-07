@@ -229,7 +229,7 @@ class DeepSeekAdapterConfig(DomainModel):
     api_key: SecretStr = Field(min_length=1)
     base_url: NonEmptyText = "https://api.deepseek.com"
     model: Literal["deepseek-v4-flash"] = "deepseek-v4-flash"
-    timeout_seconds: Annotated[float, Field(gt=0, le=600)] = 60.0
+    timeout_seconds: Annotated[float, Field(gt=0, le=180)] = 180.0
     max_output_tokens: Annotated[int, Field(ge=1, le=384_000)] = 512
     pilot_max_cost_cny: Annotated[Decimal, Field(gt=0)] = Decimal("1.00")
 
@@ -260,7 +260,7 @@ class DeepSeekAdapterConfig(DomainModel):
             )
         try:
             timeout_seconds = float(
-                source.get("DEEPSEEK_TIMEOUT_SECONDS", "60")
+                source.get("DEEPSEEK_TIMEOUT_SECONDS", "180")
             )
             max_output_tokens = int(
                 source.get("DEEPSEEK_MAX_OUTPUT_TOKENS", "512")
@@ -425,8 +425,8 @@ class DeepSeekChatAdapter:
         reservation = self._reservation_for_payload(request_payload)
         self.request_budget.reserve(reservation)
         usage_settled = False
+        started = self._monotonic()
         try:
-            started = self._monotonic()
             response = self._send(
                 "POST",
                 "/chat/completions",
@@ -469,6 +469,11 @@ class DeepSeekChatAdapter:
 
             return LLMResponse(content=content, usage=usage)
         except Exception as exc:
+            if isinstance(exc, DeepSeekTimeoutError):
+                exc.latency_ms = max(
+                    0.0,
+                    float((self._monotonic() - started) * 1000),
+                )
             if not usage_settled:
                 self.request_budget.halt_unknown_usage()
                 if isinstance(exc, LLMAdapterError):

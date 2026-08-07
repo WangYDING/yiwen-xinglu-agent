@@ -56,10 +56,14 @@ class LLMAdapterError(RuntimeError):
         *,
         usage: ModelUsage | None = None,
         abort_episode: bool = False,
+        latency_ms: float | None = None,
     ) -> None:
+        if latency_ms is not None and latency_ms < 0:
+            raise ValueError("adapter error latency cannot be negative")
         super().__init__(message)
         self.usage = usage
         self.abort_episode = abort_episode
+        self.latency_ms = latency_ms
         self.prior_usages: tuple[ModelUsage, ...] = ()
 
 
