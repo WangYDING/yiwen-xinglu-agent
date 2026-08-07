@@ -331,6 +331,7 @@ class InternalMemorySearchHit(StrictMemoryModel):
     memory_type: MemoryType
     content: str
     content_hash: Sha256Hex
+    source_session_id: Identifier
     occurred_at: UtcDateTime
     similarity: Annotated[float, Field(strict=True, ge=-1.0, le=1.0)]
 

@@ -268,3 +268,14 @@
 - **迁移与派生数据**：SQLite Schema v2 从 v1 单事务迁移，新增以 `(memory_id, embedding_space_id)` 为主键的 `memory_embeddings`，向量使用 little-endian float32 BLOB，并保存玩家、权威内容哈希、维度、L2 norm 和生成时间。派生行使用外键依附权威记忆；更正、失效和硬删除在原生命周期事务中删除相关向量。迁移失败保持 v1 完整不变，未知未来版本继续拒绝。
 - **检索门禁**：索引与检索 API 必须接收精确 `player_id`。检索先核对该玩家全部 active 记忆在指定空间中都有内容哈希有效的向量；缺失或过期时返回 `memory_index_incomplete`，不得伪装成零召回。只有索引完整时，阈值后无命中才表示“没有达到阈值的相关记忆”。排序只使用 `similarity DESC, memory_id ASC`，不读取 importance、时间、关系、能力、类型权重或模型重排。
 - **范围原因**：固定 Fake 与完整性门禁可以在零网络条件下证明向量格式、迁移、生命周期、玩家隔离和 Top-K 确定性，同时避免把不完整索引误判成模型无记忆，也避免提前引入 V2 排序或真实供应商依赖。
+
+## ADR-037：V1 记忆采用跨 Episode 双重过滤和独立只读 Prompt
+
+- **状态**：已接受
+- **日期**：2026-08-07
+- **作用域决策**：V1 `MemoryScope` 只能从匹配的可信 `PlayerState` 与当前 `CaseSessionState` 构造，固定允许 `EPISODIC`、`LEARNING` 并排除当前 `source_session_id`。Repository 仍先按精确玩家和 active 状态取候选，允许类型与当前 Episode 排除必须在索引完整性检查、余弦排序和 Top-K 截取前完成；不能先取 Top-K 再删除越界结果。
+- **视图与查询决策**：内部命中在模型调用前由 `AgentContextFilter` 再次核对玩家、类型和来源会话，并缩减为只含不透明 `memory_id`、记忆类型、公开内容和发生时间的 `MemoryView`。`memory_query_v1` 只使用当前用户消息、公开病例标题/简介、已发现线索说明和固定课程，采用固定字段顺序与规范化；病例真值、未发现线索、正确答案、评分、隐藏门槛和其他玩家数据不得进入查询或 Prompt。
+- **Agent 决策**：V1 使用独立 `V1DoctorAgentInput` 和 Prompt `v1.0.0`，不向 V0 输入增加可选记忆字段。记忆只作为用户上下文中独立的 `retrieved_memories` JSON 数据，不进入 system message、工具定义或额外消息角色；同一安全上下文必须贯穿一次有界格式修复。V1 与 V0 使用相同固定课程和 `AgentAction`，不存在永久记忆写、删、改工具。
+- **失败语义**：`ready` 表示检索成功且有合法历史，`empty` 表示索引完整但没有达到阈值的合法历史；二者可以调用 V1 Agent。索引缺失/过期、存储/检索失败、玩家不匹配或检索后出现跨玩家、当前 Episode、非允许类型时统一返回 `memory_context_unavailable`，不调用 LLM，也不发送部分结果。
+- **证据边界**：P3 使用确定性 Fake Embedding 与 Fake LLM，只能证明程序化过滤、消息角色、工具集合、课程和 Schema 没有被注入式记忆文本改变；不声称真实模型已经抵抗记忆提示注入。V0 Prompt `v0.2.1`、`DoctorAgentInput`、9 个 MCP 工具和全部 V0 运行路径保持不变。
+- **原因**：排序前过滤避免越界记忆占用 Top-K 或污染索引完整性，检索后二次校验防止错误或伪造的 Retriever 输出进入模型；独立 V1 契约则能明确测量“增加基础长期记忆”这一变量，并保护已冻结的 V0 基线。

@@ -5,8 +5,8 @@
 - **规划日期**：2026-08-07
 - **规划基线**：`2c78dadbab19ee724bfc7595e2256b14314c427c`
 - **适用版本**：V1（基础向量 Top-K 长期记忆 + 固定课程）
-- **当前状态**：M4-P0、M4-P1 与 M4-P2 已完成；M4-P3 尚未开始
-- **实现状态**：已实现确定性公开事件投影、SQLite Schema v2、生命周期、Fake Embedding、派生向量和按玩家余弦 Top-K；尚未实现 Agent 安全上下文接入
+- **当前状态**：M4-P0、M4-P1、M4-P2 与 M4-P3 已完成；M4-P4 尚未开始
+- **实现状态**：已实现确定性公开事件投影、SQLite Schema v2、生命周期、Fake Embedding、派生向量、按玩家余弦 Top-K 和 V1 Agent 安全只读上下文；尚未执行 P4 Gold 评测
 
 M4 的目标是在不改变 V0 病例引擎、固定课程、工具和安全边界的前提下，为 V1 增加跨 Episode、来源可追溯的只读长期记忆。V1 不实现多因素排序、自适应课程、Reflection、关系或技能自动成长，也不允许模型直接写永久状态。
 
@@ -39,6 +39,17 @@ M4 的目标是在不改变 V0 病例引擎、固定课程、工具和安全边�
 - SQLite Schema v2 通过 v1→v2 原子迁移新增 `memory_embeddings`；向量使用 little-endian float32 BLOB，并保存权威内容哈希、维度、L2 norm 和生成时间；
 - `MemoryIndexService` 只处理精确 `player_id` 的 active 记忆，支持幂等索引、全量派生删除后重建、缺失/过期状态识别；
 - `BasicCosineMemoryRetriever` 仅按余弦相似度与 `memory_id` 稳定并列规则排序，只返回内部检索记录；没有 `MemoryView`、Prompt 或 MCP 记忆工具。
+
+### 2.3 M4-P3 实现检查点
+
+- `MemoryScope` 由可信玩家状态与当前病例会话构造，固定允许 `EPISODIC`、`LEARNING` 并排除当前 `source_session_id`；模型和普通参数不能扩大作用域；
+- `BasicCosineMemoryRetriever.retrieve_scoped` 在索引完整性、余弦计算和 Top-K 前过滤玩家、active 状态、允许类型与当前 Episode；空间和内容哈希继续由 P2 门禁验证；
+- `AgentContextFilter.memory_views` 对内部结果二次核对玩家、类型和来源会话，再只公开 `memory_id`、`memory_type`、`content`、`occurred_at`；
+- `MemoryQueryBuilder` 冻结为 `memory_query_v1`，只使用当前消息、公开标题/简介、已发现线索说明和固定课程，使用 NFKC、casefold、空白折叠、固定 JSON 字段顺序及 4096 字符上限；
+- V1 使用独立的 `V1DoctorAgentInput` 与 Prompt `v1.0.0`，记忆只作为用户上下文中的结构化 `retrieved_memories` 数据；一次格式修复复用同一安全上下文；
+- 记忆上下文区分 `ready`、`empty`、`unavailable`。`unavailable` 统一返回安全码 `memory_context_unavailable`，不调用 LLM、不发送部分结果；
+- V0 Prompt `v0.2.1` 与输入 Schema 的 Gold 哈希保持不变，完整 V0 Episode 的记忆 Repository、Embedding、Retriever、QueryBuilder 和 MemoryScope 调用均为 0；
+- P3 只用 Fake Embedding 与 Fake LLM。注入测试证明程序化边界与消息结构未改变，不构成真实模型抗提示注入结论。
 
 ## 3. 冻结的单向安全管道
 
@@ -179,7 +190,7 @@ V1 不引入独立向量数据库。单次检索顺序固定为：
 5. 严格应用配置的最小相似度；
 6. 按 `similarity DESC, memory_id ASC` 稳定排序；并列分数只按稳定 ID，不加入时间或重要度；
 7. 截取 Top-K；
-8. P2 停在带分数的内部检索结果；P3 再由 `AgentContextFilter` 转换成最小只读 `MemoryView`。
+8. P2 返回带分数的内部检索结果；P3 已由 `AgentContextFilter` 二次校验并转换成最小只读 `MemoryView`。
 
 检索配置使用严格、版本化 Schema，至少包含 `top_k`（1–20）、`min_similarity`（-1 至 1）、`embedding_space_id` 和查询模板版本。产品不使用隐式默认值；P2 单元测试可以使用固定夹具值，P4 只根据离线 dev Gold 冻结 V1 实验配置。数值未验证前不声称有效率。
 
@@ -195,6 +206,8 @@ P3 在现有 `AgentContextFilter` 增加两段式防线：
 V1 的查询文本由版本化 `MemoryQueryBuilder` 从当前用户消息、公开病例摘要、已发现线索和固定课程步骤构建，不接收 `CaseDefinition` 的隐藏字段。检索结果放入独立 JSON 字段 `retrieved_memories`，明确标记为“历史数据，不是指令”；其中即使出现“忽略规则”等文本，也不能改变系统指令、工具集合或动作 Schema。
 
 检索只增加上下文，不改变固定课程步骤、`fixed_v0` 诊断策略、工具权限或最大步骤。V1 的 `AgentAction` 与 V0 完全相同，没有记忆写入、删除或更正字段。
+
+P3 的运行状态语义已经冻结：`ready` 有合法历史，`empty` 是索引完整后的合法空结果，二者可以构建 V1 输入；`unavailable` 包含索引缺失/过期、存储或检索失败及作用域安全异常，不能伪装成“没有历史”，必须在模型调用前停止。检索后发现跨玩家、当前 Episode 或不允许类型时同样安全停止。
 
 ## 10. V0 不变性保证
 
@@ -212,7 +225,7 @@ V1 的查询文本由版本化 `MemoryQueryBuilder` 从当前用户消息、公�
 | **M4-P0：规划冻结** | M3 已完成基线；现有事件、状态、过滤器、V1 配置 | 本文、Gold 评测计划、路线图和 ADR | 任何运行代码、数据库、Embedding、向量和 Agent 接入 | 13 项技术决策、单向安全管道、阶段门槛和评测定义完成；全量测试不回退 | 不需要；请求数和费用均为 0 | 文档与现有安全 ADR 冲突且无法通过规划消解；基线或工作树不符合要求 |
 | **M4-P1：事件投影与持久化（已完成）** | P0 冻结契约；已提交病例事件和安全视图 | `VerifiedMemorySource`、稳定来源 ID、`AuthoritativeMemoryRecord`、SQLite Repository、生命周期与协调测试 | Embedding、Top-K、Prompt、Agent/MCP 记忆工具、关系/技能更新 | 允许列表、隐藏字段排除、幂等、冲突、故障窗口、更正/失效/硬删除/重建和玩家隔离全部离线通过；V0 回归通过 | 不需要；实际请求与费用为 0 | 任一无来源写入、重复记忆、跨玩家写入、隐藏字段落库、删除后复活或 V0 行为变化 |
 | **M4-P2：Embedding 与基础检索（已完成）** | P1 的 active 权威记忆和严格检索配置 | 可替换 Adapter、确定性 Fake、派生向量表、进程内余弦 Top-K、稳定并列和重建测试 | 真实供应商调用、多因素排序、Agent Prompt、向量数据库 | 同空间校验、阈值、Top-K、稳定排序、失效排除、向量重建和无网络测试通过；跨玩家候选为 0 | 不需要；实际请求与费用为 0 | 向量成为唯一事实来源、排序混入重要度/时间、用量不明、网络未授权或不可重复 |
-| **M4-P3：V1 安全上下文集成** | P2 检索器；现有 `AgentContextFilter`、DoctorAgent 与固定课程 | `MemoryScope`、`MemoryView`、版本化查询构建、V1 只读 Prompt 集成 | 自适应课程、Reflection、关系/能力更新、新工具、真实 LLM 调用 | 检索前玩家隔离、检索后最小视图、注入文本作为数据、V0 零读取、V1 零写入、固定课程不变 | 离线 Fake 不需要；真实模型另行授权 | 任何真值泄漏、跨玩家召回、AgentAction 写记忆、课程顺序受记忆暗改或 V0 Prompt 改变 |
+| **M4-P3：V1 安全上下文集成（已完成）** | P2 检索器；现有 `AgentContextFilter`、DoctorAgent 与固定课程 | `MemoryScope`、`MemoryView`、版本化查询构建、V1 只读 Prompt 集成 | 自适应课程、Reflection、关系/能力更新、新工具、真实 LLM 调用 | 检索前玩家隔离、检索后最小视图、注入文本作为数据、V0 零读取、V1 零写入、固定课程不变 | 离线 Fake 不需要；实际外部请求和费用为 0 | 任何真值泄漏、跨玩家召回、AgentAction 写记忆、课程顺序受记忆暗改或 V0 Prompt 改变 |
 | **M4-P4：离线 Gold 与指标** | P1–P3 能力；合成跨 Episode Gold | 严格场景 Schema、确定性评测器、Precision/Recall/F1/FMR、安全与规模报告 | 真实成功率、付费模型数据、自适应教学或 Reflection | 全部 Gold 可重复；跨玩家串扰=0、非法永久写入=0；失败分类、延迟和存储规模可审计；不预填效果 | 不需要 | 安全硬门槛非 0、同输入结果不稳定、评测真值进入 Prompt 或 Fake 指标被写成真实效果 |
 | **M4 退出审计** | P1–P4 已提交证据 | 逐项审计、能力边界、已知限制和最终结论 | 顺手修功能、真实供应商扩权、M5 代码 | 全量与专项测试、Gold、重建、安全检查和文档一致；明确真实 Embedding 是否未验证 | 审计本身不需要 | 证据与实现不一致时停止，不能靠审计修改代码掩盖缺口 |
 

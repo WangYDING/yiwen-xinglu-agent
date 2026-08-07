@@ -29,9 +29,9 @@ Word 设计总结、`xuanyi-npc-handoff` 和 `docs/algorithm-experiment-plan-v0.
 | M4-P0：V1 基础长期记忆规划冻结 | 已完成 | 来源事件允许列表、SQLite 权威存储、幂等/删除/重建、派生向量、基础 Top-K、安全上下文和离线 Gold 规划 |
 | M4-P1：事件投影与持久化 | 已完成 | 公开来源收据、三类确定性投影、SQLite Schema v1、幂等/冲突、生命周期、故障窗口与显式协调 |
 | M4-P2：Embedding 与基础 Top-K | 已完成 | 供应商无关契约、确定性 64 维 Fake、Schema v2 派生向量、按玩家余弦 Top-K、索引状态与重建 |
-| M4-P3：V1 Agent 安全上下文 | 未开始 | 待实现权限过滤的只读 MemoryView；固定课程保持不变 |
+| M4-P3：V1 Agent 安全上下文 | 已完成 | 跨 Episode MemoryScope、检索前/后过滤、最小 MemoryView、memory_query_v1、独立 V1 Prompt 与安全停止 |
 | M4-P4：离线记忆 Gold 与安全评测 | 未开始 | 待实现严格场景、确定性评测器和真实离线指标 |
-| M4：V1 基础长期记忆 | 进行中 | P0/P1/P2 已完成；尚无 V1 Agent 安全上下文或 Gold 指标 |
+| M4：V1 基础长期记忆 | 进行中 | P0/P1/P2/P3 已完成；尚无 P4 Gold 指标或 M4 退出审计 |
 | M5 及以后 | 未开始 | 自适应教学、Reflection、界面、多 Agent 等均未开始 |
 
 ## M2a 完成边界
@@ -154,6 +154,21 @@ M4-P2 已在不修改 V0、MCP、病例规则或 Agent Prompt 的前提下完成
 6. active 记忆的索引缺失或内容哈希过期返回 `memory_index_incomplete`，不伪装成空召回；删除全部派生向量后可从 active 权威记忆重建一致结果；
 7. Fake Embedding 不生成 `ModelUsage`、Token、成本或供应商指标；本阶段外部请求与费用均为 0。
 
-M4-P3 是下一阶段，但尚未开始。P2 只返回带分数的内部检索记录，未实现 `MemoryView`、`AgentContextFilter` 记忆边界、DoctorAgent/Prompt 接入、真实 Embedding、多因素排序、自适应课程或 Reflection。
+M4-P3 已在 P2 内部检索之上完成安全只读 Agent 上下文，具体边界见下一节。P2 本身仍只负责内部检索，不承担 Prompt 或权限视图职责。
+
+## M4-P3 完成边界与下一步
+
+M4-P3 只增加 V1 只读上下文，不改变 V0、MCP、病例规则或永久记忆写入管道：
+
+1. `MemoryScope` 只能由匹配的可信 `PlayerState` 与当前 `CaseSessionState` 构造，固定允许 `EPISODIC`、`LEARNING`，并排除当前 `source_session_id`；
+2. 精确玩家、active 状态、允许类型、当前 Episode 排除、空间和内容哈希校验都在余弦排序和 Top-K 截取前完成；当前 Episode 或不允许类型的未索引记录不会错误地使历史索引变成不完整；
+3. 检索后由 `AgentContextFilter` 再次验证玩家、类型和来源会话，只输出含 `memory_id`、`memory_type`、`content`、`occurred_at` 的 `MemoryView`；
+4. `memory_query_v1` 只规范化当前用户消息、公开病例标题/简介、已发现线索说明和当前固定课程；固定字段顺序、空字段与 4096 字符上限，超限明确停止；
+5. V1 使用独立 `V1DoctorAgentInput` 和 Prompt `v1.0.0`，记忆只位于用户上下文的结构化 `retrieved_memories` 字段；格式修复继续使用同一份安全上下文；
+6. `ready` 与 `empty` 可以调用 Fake LLM；索引缺失/过期、存储/检索失败或权限结果异常统一为 `memory_context_unavailable`，不调用 LLM、不发送部分结果；
+7. V0 Prompt `v0.2.1`、`DoctorAgentInput`、固定课程、格式修复、降级、`AgentAction` 和 9 个 MCP 工具保持不变，完整 V0 Episode 对 Repository、Embedding、Retriever、QueryBuilder 和 MemoryScope 的调用均为 0；
+8. 提示注入测试只证明记忆文本保持为 JSON 数据，未改变消息角色、工具、课程或 Schema；没有真实模型调用，因此不证明真实模型已经抵抗记忆提示注入。
+
+M4-P4 是下一阶段，但尚未开始。P4 将实现冻结的跨 Episode Gold 场景、确定性指标和安全评测；本轮没有真实 Embedding、真实 LLM、自适应课程、多因素排序或 Reflection。
 
 V1 只增加基础向量 Top-K 长期记忆并保持固定课程；V2 才使用多因素记忆排序、自适应教学和 Reflection。三个产品版本始终启用 `AgentContextFilter`，模型始终不能直接写永久记忆或关键状态。真实 Embedding 的供应商、数据发送边界、预算和网络调用必须另行决定并授权。

@@ -1,6 +1,12 @@
 """Permission-filtered read models safe to place in Agent context."""
 
-from pydantic import ConfigDict, Field, StrictBool, StrictInt
+from __future__ import annotations
+
+from datetime import datetime
+from enum import Enum
+from typing import TYPE_CHECKING
+
+from pydantic import ConfigDict, Field, StrictBool, StrictInt, model_validator
 
 from xuanyi_npc.domain.base import DomainModel, Identifier, NonEmptyText
 from xuanyi_npc.domain.cases import (
@@ -10,6 +16,10 @@ from xuanyi_npc.domain.cases import (
     CaseSessionStatus,
 )
 from xuanyi_npc.domain.player import PlayerState, TeachingStage
+from xuanyi_npc.domain.memory import MemoryType
+
+if TYPE_CHECKING:
+    from xuanyi_npc.memory.embeddings import InternalMemorySearchResult
 
 
 class AgentViewModel(DomainModel):
@@ -81,6 +91,46 @@ class CaseObservation(AgentViewModel):
     available_treatments: tuple[TreatmentOptionView, ...] = Field(default_factory=tuple)
 
 
+V1_READABLE_MEMORY_TYPES = (MemoryType.EPISODIC, MemoryType.LEARNING)
+
+
+class MemoryScope(AgentViewModel):
+    """Trusted cross-Episode retrieval scope; never supplied by a model."""
+
+    player_id: Identifier
+    allowed_memory_types: tuple[MemoryType, ...]
+    excluded_source_session_id: Identifier
+
+    @model_validator(mode="after")
+    def require_frozen_v1_scope(self) -> "MemoryScope":
+        if self.allowed_memory_types != V1_READABLE_MEMORY_TYPES:
+            raise ValueError("V1 memory scope permits only episodic and learning memory")
+        return self
+
+
+class MemoryView(AgentViewModel):
+    """Least-privilege memory data safe to serialize into V1 user context."""
+
+    memory_id: Identifier
+    memory_type: MemoryType
+    content: NonEmptyText
+    occurred_at: datetime
+
+    @model_validator(mode="after")
+    def require_public_v1_memory(self) -> "MemoryView":
+        if self.memory_type not in V1_READABLE_MEMORY_TYPES:
+            raise ValueError("memory type is not readable by V1")
+        if self.occurred_at.tzinfo is None or self.occurred_at.utcoffset() is None:
+            raise ValueError("memory occurred_at must include a timezone")
+        return self
+
+
+class MemoryContextStatus(str, Enum):
+    READY = "ready"
+    EMPTY = "empty"
+    UNAVAILABLE = "unavailable"
+
+
 class ViewContextError(ValueError):
     """Raised when incompatible state is passed to the permission filter."""
 
@@ -103,6 +153,46 @@ class AgentContextFilter:
             teaching_stage=player.teaching_stage,
             available_skills=skills,
         )
+
+    def memory_scope(
+        self,
+        player: PlayerState,
+        session: CaseSessionState,
+    ) -> MemoryScope:
+        if session.player_id != player.player_id:
+            raise ViewContextError("session player_id does not match player state")
+        return MemoryScope(
+            player_id=player.player_id,
+            allowed_memory_types=V1_READABLE_MEMORY_TYPES,
+            excluded_source_session_id=session.session_id,
+        )
+
+    def memory_views(
+        self,
+        scope: MemoryScope,
+        result: InternalMemorySearchResult,
+    ) -> tuple[MemoryView, ...]:
+        """Revalidate internal retrieval output before any model request."""
+
+        if result.player_id != scope.player_id:
+            raise ViewContextError("memory result player does not match trusted scope")
+        views: list[MemoryView] = []
+        for hit in result.hits:
+            if hit.player_id != scope.player_id:
+                raise ViewContextError("memory hit player does not match trusted scope")
+            if hit.memory_type not in scope.allowed_memory_types:
+                raise ViewContextError("memory hit type is outside trusted scope")
+            if hit.source_session_id == scope.excluded_source_session_id:
+                raise ViewContextError("current Episode memory crossed the context boundary")
+            views.append(
+                MemoryView(
+                    memory_id=hit.memory_id,
+                    memory_type=hit.memory_type,
+                    content=hit.content,
+                    occurred_at=hit.occurred_at,
+                )
+            )
+        return tuple(views)
 
     def case_observation(
         self,

@@ -40,6 +40,14 @@ from .llm import (
     LLMRequest,
     LLMResponse,
 )
+from .v1_doctor import (
+    V1_SYSTEM_PROMPT,
+    V1DoctorAgent,
+    V1DoctorAgentConfig,
+    V1DoctorAgentInput,
+    V1DoctorAgentInterface,
+    V1PromptContext,
+)
 
 __all__ = [
     "FIXED_V0_LESSONS",
@@ -76,4 +84,10 @@ __all__ = [
     "LLMRequest",
     "LLMResponse",
     "ScriptedFakeLLM",
+    "V1_SYSTEM_PROMPT",
+    "V1DoctorAgent",
+    "V1DoctorAgentConfig",
+    "V1DoctorAgentInput",
+    "V1DoctorAgentInterface",
+    "V1PromptContext",
 ]

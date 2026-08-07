@@ -284,3 +284,17 @@ M4-P1 完成，M4 整体仍在进行中。M4-P2 尚未开始；任何真实 Embe
 - **接口与外部边界**：V0 对 Repository、Embedding、索引和检索调用均为 0；P2 只返回内部检索记录与分数，没有进入 `AgentContextFilter`、DoctorAgent、Prompt 或 MCP。DeepSeek `/models` 0 次、Chat 0 次、真实 Embedding 0 次，费用 0 CNY；没有读取真实 API Key。
 
 M4-P2 完成，M4 整体仍在进行中。M4-P3 尚未开始；真实 Embedding 供应商、数据发送、密钥、预算和网络调用仍需单独决定与授权。
+
+## 2026-08-07：M4-P3 V1 Agent 安全只读记忆上下文
+
+- **实现基线**：`c628f49d393e2cab89943d2494842e67653ee76c`；开始时 HEAD 精确匹配且工作树干净，基线全量 252 passed。
+- **跨 Episode 作用域**：`MemoryScope` 只由匹配的可信玩家与当前会话构造，固定允许 `EPISODIC`、`LEARNING` 并排除当前 `source_session_id`。精确玩家、active 状态、允许类型与当前 Episode 排除先于索引完整性、余弦排序和 Top-K；其他玩家高相似度诱饵、当前 Episode 记录和不允许类型候选均为 0。
+- **最小公开视图**：检索后再次核对结果玩家、类型和来源会话，再输出字段严格为 `memory_id`、`memory_type`、`content`、`occurred_at` 的 `MemoryView`。伪造跨玩家、当前 Episode 或非允许类型结果会在 LLM 调用前停止，不返回部分记忆。
+- **查询与 Prompt**：`memory_query_v1` 固定只使用当前用户消息、公开病例标题/简介、已发现线索说明和固定课程，采用 NFKC、casefold、空白折叠、固定 JSON 字段顺序、明确空字段和 4096 字符上限。V1 Prompt 版本为 `v1.0.0`，记忆只位于用户上下文的结构化 `retrieved_memories` 字段；格式修复保留完全相同的安全记忆上下文。
+- **状态与停止门禁**：`ready` 有合法历史、`empty` 是完整索引下的合法空结果，均可调用 Fake LLM；索引缺失/过期、存储/检索失败或权限异常返回 `memory_context_unavailable`，不调用 LLM、不发送部分结果。
+- **V0 不变性**：V0 system Prompt `v0.2.1`、`DoctorAgentInput` 和 `AgentAction` Schema 的 Gold SHA-256 与 P3 前一致。完整 8 步 V0 Fake Episode 为 `resolved / 100`，且对 MemoryScope、Repository、Embedding、Retriever 和 QueryBuilder 的调用均为 0；9 个 MCP 工具未变。
+- **提示注入证据边界**：测试确认注入式记忆文本经过 JSON 转义后仍是用户上下文中的字符串数据，不会新增 system/tool 消息、改变工具集合、固定课程或 `AgentAction` Schema。未调用真实模型，因此不声称真实模型已经抵抗记忆提示注入。
+- **专项与全量回归**：M4-P3 新增 20 项测试；P3 两个专项文件 19 passed，另有 1 项完整 V0 零记忆调用回归；全量 272 passed。M4-P2 26 项、M4-P1 44 项、M3 MCP P0/P1 22 项均继续通过；P0 Fake LLM 3 场景/6 轨迹和无 LLM Demo 继续按历史预期通过；`git diff --check` 通过。
+- **外部调用与范围**：DeepSeek `/models` 0 次、Chat 0 次、真实 Embedding 0 次、费用 0 CNY；没有读取真实 API Key。未实现 P4 Gold 指标、真实 Embedding、真实模型 Pilot、自适应课程、多因素排序、Reflection、新 MCP 工具、HTTP、部署或界面。
+
+M4-P3 完成，M4 整体仍在进行中。M4-P4 尚未开始；真实 Embedding 与真实 V1 模型行为仍需未来独立决策、预算和网络授权。

@@ -6,6 +6,7 @@ import math
 from datetime import datetime, timezone
 from typing import Callable, Protocol
 
+from xuanyi_npc.domain.memory import MemoryType
 from xuanyi_npc.memory.contracts import AuthoritativeMemoryRecord
 from xuanyi_npc.memory.embeddings import (
     DerivedEmbeddingRecord,
@@ -28,6 +29,8 @@ from xuanyi_npc.memory.errors import (
     EmbeddingSpaceMismatchError,
     MemoryIndexIncompleteError,
 )
+
+from .views import MemoryScope
 
 
 class MemoryVectorRepository(Protocol):
@@ -77,6 +80,18 @@ class MemoryIndexService:
 
     def inspect_index(self, *, player_id: str) -> MemoryIndexState:
         active = self._active_memories(player_id)
+        return self.inspect_candidates(player_id=player_id, memories=active)
+
+    def inspect_candidates(
+        self,
+        *,
+        player_id: str,
+        memories: tuple[AuthoritativeMemoryRecord, ...],
+    ) -> MemoryIndexState:
+        """Inspect only an already permission-filtered candidate set."""
+
+        if any(memory.player_id != player_id for memory in memories):
+            raise ValueError("memory candidate player does not match retrieval player")
         embeddings = self.repository.list_embeddings(
             player_id=player_id,
             embedding_space_id=self.adapter.embedding_space_id,
@@ -85,7 +100,7 @@ class MemoryIndexService:
         missing: list[str] = []
         stale: list[str] = []
         valid_count = 0
-        for memory in active:
+        for memory in memories:
             embedding = by_memory_id.get(memory.memory_id)
             if embedding is None:
                 missing.append(memory.memory_id)
@@ -100,17 +115,17 @@ class MemoryIndexService:
             valid_count += 1
         status = (
             MemoryIndexStatus.NO_ACTIVE_MEMORY
-            if not active
+            if not memories
             else (
                 MemoryIndexStatus.COMPLETE
-                if not missing and not stale and valid_count == len(active)
+                if not missing and not stale and valid_count == len(memories)
                 else MemoryIndexStatus.INCOMPLETE
             )
         )
         return MemoryIndexState(
             player_id=player_id,
             embedding_space_id=self.adapter.embedding_space_id,
-            active_memory_count=len(active),
+            active_memory_count=len(memories),
             valid_embedding_count=valid_count,
             missing_memory_ids=tuple(sorted(missing)),
             stale_memory_ids=tuple(sorted(stale)),
@@ -221,11 +236,58 @@ class BasicCosineMemoryRetriever:
         query_text: str,
         config: MemoryRetrievalConfig,
     ) -> InternalMemorySearchResult:
+        return self._retrieve(
+            player_id=player_id,
+            query_text=query_text,
+            config=config,
+        )
+
+    def retrieve_scoped(
+        self,
+        *,
+        scope: MemoryScope,
+        query_text: str,
+        config: MemoryRetrievalConfig,
+    ) -> InternalMemorySearchResult:
+        """Retrieve cross-Episode V1 candidates after mandatory pre-filtering."""
+
+        return self._retrieve(
+            player_id=scope.player_id,
+            query_text=query_text,
+            config=config,
+            allowed_memory_types=scope.allowed_memory_types,
+            excluded_source_session_id=scope.excluded_source_session_id,
+        )
+
+    def _retrieve(
+        self,
+        *,
+        player_id: str,
+        query_text: str,
+        config: MemoryRetrievalConfig,
+        allowed_memory_types: tuple[MemoryType, ...] | None = None,
+        excluded_source_session_id: str | None = None,
+    ) -> InternalMemorySearchResult:
         if config.embedding_space_id != self.adapter.embedding_space_id:
             raise EmbeddingSpaceMismatchError(
                 "retrieval config and embedding adapter spaces do not match"
             )
-        state = self.index_service.inspect_index(player_id=player_id)
+        memories = tuple(
+            memory
+            for memory in self.repository.list_memories(
+                player_id=player_id,
+                include_inactive=False,
+            )
+            if (
+                allowed_memory_types is None
+                or memory.memory_type in allowed_memory_types
+            )
+            and memory.source_session_id != excluded_source_session_id
+        )
+        state = self.index_service.inspect_candidates(
+            player_id=player_id,
+            memories=memories,
+        )
         normalized_query = normalize_embedding_text(query_text)
         if state.status is MemoryIndexStatus.INCOMPLETE:
             raise MemoryIndexIncompleteError(
@@ -241,10 +303,6 @@ class BasicCosineMemoryRetriever:
                 index_state=state,
             )
 
-        memories = self.repository.list_memories(
-            player_id=player_id,
-            include_inactive=False,
-        )
         embeddings = self.repository.list_embeddings(
             player_id=player_id,
             embedding_space_id=config.embedding_space_id,
@@ -281,6 +339,7 @@ class BasicCosineMemoryRetriever:
                     memory_type=memory.memory_type,
                     content=memory.content,
                     content_hash=memory.content_hash,
+                    source_session_id=memory.source_session_id,
                     occurred_at=memory.occurred_at,
                     similarity=similarity,
                 )

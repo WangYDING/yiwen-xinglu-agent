@@ -12,6 +12,10 @@ from xuanyi_npc.application.v0_tools import (
     InvalidToolArgumentsError,
     V0ToolExecutor,
 )
+from xuanyi_npc.application import AgentContextFilter, BasicCosineMemoryRetriever
+from xuanyi_npc.application.memory_context import MemoryQueryBuilder
+from xuanyi_npc.memory import DeterministicFakeEmbedding
+from xuanyi_npc.storage import SQLiteMemoryRepository
 from xuanyi_npc.domain import (
     AgentAction,
     AgentActionType,
@@ -159,6 +163,45 @@ def test_fake_llm_runs_complete_v0_episode_through_rule_engine(
     )
     assert '"can_submit_diagnosis": false' in first_prompt
     assert '"can_submit_diagnosis": true' in diagnosis_prompt
+
+
+def test_v0_complete_episode_never_touches_any_v1_memory_boundary(
+    monkeypatch: pytest.MonkeyPatch,
+    case_definition: CaseDefinition,
+    qualified_player_state: PlayerState,
+) -> None:
+    def forbidden(*args, **kwargs):
+        del args, kwargs
+        raise AssertionError("V0 crossed a V1 memory boundary")
+
+    monkeypatch.setattr(AgentContextFilter, "memory_scope", forbidden)
+    monkeypatch.setattr(BasicCosineMemoryRetriever, "retrieve", forbidden)
+    monkeypatch.setattr(BasicCosineMemoryRetriever, "retrieve_scoped", forbidden)
+    monkeypatch.setattr(MemoryQueryBuilder, "build", forbidden)
+    monkeypatch.setattr(DeterministicFakeEmbedding, "embed", forbidden)
+    monkeypatch.setattr(SQLiteMemoryRepository, "list_memories", forbidden)
+    fake = ScriptedFakeLLM(completed_case_script())
+    runner = V0EpisodeRunner(
+        DoctorAgent(fake),
+        clock=StepClock(),
+        config=V0EpisodeConfig(max_steps=8),
+    )
+    initial = initial_session(
+        case_definition,
+        qualified_player_state,
+        "v0_memory_zero_calls",
+    )
+
+    episode = runner.run(
+        "episode_v0_memory_zero_calls",
+        case_definition,
+        qualified_player_state,
+        initial,
+        "继续固定课程。",
+    )
+
+    assert episode.status is EpisodeStatus.COMPLETED
+    assert episode.final_session.score == 100
 
 
 def test_rule_rejection_is_recorded_without_state_change_or_hidden_error_detail(
