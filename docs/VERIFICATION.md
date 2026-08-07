@@ -269,3 +269,18 @@ M4-P0 只完成文档与规划冻结。M4-P1 尚未开始；真实 Embedding 的
 - **外部调用与范围**：DeepSeek `/models` 0 次、Chat 0 次、Embedding 0 次、费用 0 CNY。未实现 Fake/真实向量、Top-K、Agent Prompt 接入、新 MCP 工具、关系/技能更新、Reflection、HTTP、远程数据库或后台队列。
 
 M4-P1 完成，M4 整体仍在进行中。M4-P2 尚未开始；任何真实 Embedding 供应商、数据发送、密钥、预算和网络调用仍需单独决定与授权。
+
+## 2026-08-07：M4-P2 确定性 Fake Embedding 与基础余弦 Top-K
+
+- **实现基线**：`da196d02b3618b72f5ca53f343c16486901a308d`；开始时 HEAD 精确匹配且工作树干净。
+- **Embedding 契约**：新增供应商无关、禁止未知字段的版本化请求与批次结果、派生向量、检索配置、内部检索结果和索引状态。空文本、超长文本、数量/顺序不符、维度不符、NaN、正负无穷和零范数都明确拒绝。
+- **确定性 Fake**：算法版本 `fake_sha256_token_buckets_v1`，NFKC + casefold + 空白收敛，中文单字/Unicode 词/标点固定分词，SHA-256 映射 64 维非负特征桶并 L2 归一化；空间 ID 为 `fake_sha256_token_buckets_v1_d64`。单条/批次和独立子进程结果逐元素一致；不创建 `ModelUsage`，不伪造 Token、成本或供应商指标。
+- **SQLite Schema v2**：v1→v2 在单事务中新增 `memory_embeddings`，v1 权威记忆、来源收据、生命周期和墓碑逐表保持不变；注入迁移失败后 Schema 仍为 v1 且无半成品表，重复初始化幂等，未来版本安全拒绝。
+- **向量格式与权威边界**：主键为 `(memory_id, embedding_space_id)`，保存精确 `player_id`、权威 `content_hash`、维度、little-endian float32 BLOB、L2 norm 和 UTC 生成时间；BLOB 长度必须等于维度乘 4，解码后再校验有限值和范数。外键使派生向量不能脱离权威记忆存在。
+- **索引、隔离和生命周期**：索引 API 要求精确 `player_id`，仅生成和返回 active 记忆的向量。玩家 B 的高相似度诱饵在 SQLite 候选阶段被排除；跨玩家候选为 0。更正、失效和硬删除在同一生命周期事务内删除派生向量，注入失败会连同向量变更回滚；墓碑不能重建内容。
+- **Top-K 语义**：SQLite 先按玩家和 active 状态过滤，再核对空间与内容哈希，使用同一 Adapter 生成查询向量，应用 `similarity >= min_similarity`，按 `similarity DESC, memory_id ASC` 排序后截取 1–20 的 Top-K。importance、时间、关系、能力、记忆类型和模型重排都不参与计分。
+- **索引完整性**：存在 active 记忆但派生向量缺失或过期时返回 `memory_index_incomplete`，不返回伪空结果；只有无 active 记忆或完整索引中无记忆达阈值时才返回真空结果。删除全部派生向量后可从 active 权威记忆重建，重建前后检索结果一致。
+- **专项与全量回归**：M4-P2 新增 26 项专项测试；M4-P1 44 项回归通过；全量 252 passed；M3 MCP P0/P1 共 22 passed；P0 Fake LLM 3 场景/6 轨迹结果符合预期；无 LLM Demo 为 `resolved / 100`；`git diff --check` 通过。
+- **接口与外部边界**：V0 对 Repository、Embedding、索引和检索调用均为 0；P2 只返回内部检索记录与分数，没有进入 `AgentContextFilter`、DoctorAgent、Prompt 或 MCP。DeepSeek `/models` 0 次、Chat 0 次、真实 Embedding 0 次，费用 0 CNY；没有读取真实 API Key。
+
+M4-P2 完成，M4 整体仍在进行中。M4-P3 尚未开始；真实 Embedding 供应商、数据发送、密钥、预算和网络调用仍需单独决定与授权。

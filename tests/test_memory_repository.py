@@ -141,7 +141,7 @@ def hard_delete_operation(
     )
 
 
-def test_repository_requires_explicit_initialization_and_creates_only_p1_tables(
+def test_repository_requires_explicit_initialization_and_creates_schema_v2_tables(
     tmp_path: Path,
 ) -> None:
     database_path = tmp_path / "nested" / "memory.sqlite3"
@@ -161,9 +161,9 @@ def test_repository_requires_explicit_initialization_and_creates_only_p1_tables(
             )
         }
 
-    assert repository.schema_version() == MEMORY_SCHEMA_VERSION == 1
+    assert repository.schema_version() == MEMORY_SCHEMA_VERSION == 2
     assert repository.REQUIRED_TABLES.issubset(tables)
-    assert "memory_embeddings" not in tables
+    assert "memory_embeddings" in tables
 
 
 def test_authoritative_projection_round_trip_contains_full_source_chain(
@@ -207,6 +207,7 @@ def test_duplicate_projection_is_idempotent_with_one_receipt_and_memory(
     assert first.disposition is ProjectionWriteDisposition.CREATED
     assert second.disposition is ProjectionWriteDisposition.IDEMPOTENT
     assert memory_repository.table_counts() == {
+        "memory_embeddings": 0,
         "memory_events": 1,
         "memory_lifecycle_events": 0,
         "memory_source_receipts": 1,
@@ -463,6 +464,7 @@ def test_hard_delete_removes_application_content_and_leaves_non_content_tombston
             projection_ordinal=source.projection_ordinal,
         )
     assert memory_repository.table_counts() == {
+        "memory_embeddings": 0,
         "memory_events": 0,
         "memory_lifecycle_events": 1,
         "memory_source_receipts": 0,
@@ -573,6 +575,7 @@ def test_hard_delete_transaction_failure_restores_content_and_audit_tables(
         projection_ordinal=source.projection_ordinal,
     ) == source
     assert repository.table_counts() == {
+        "memory_embeddings": 0,
         "memory_events": 1,
         "memory_lifecycle_events": 0,
         "memory_source_receipts": 1,
@@ -777,6 +780,7 @@ def test_forbidden_sources_are_default_denied_with_zero_writes(
         )
 
     assert memory_repository.table_counts() == {
+        "memory_embeddings": 0,
         "memory_events": 0,
         "memory_lifecycle_events": 0,
         "memory_source_receipts": 0,

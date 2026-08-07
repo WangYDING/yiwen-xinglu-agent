@@ -7,6 +7,11 @@ from .diagnosis_readiness import (
 )
 from .mcp_facade import MCPApplicationResult, MCPApplicationService
 from .memory_coordination import MemoryProjectionRepository, V1MemoryCoordinator
+from .memory_retrieval import (
+    BasicCosineMemoryRetriever,
+    MemoryIndexService,
+    MemoryVectorRepository,
+)
 from .views import (
     AgentContextFilter,
     AvailableSkillView,
@@ -26,6 +31,9 @@ __all__ = [
     "MCPApplicationResult",
     "MCPApplicationService",
     "MemoryProjectionRepository",
+    "MemoryVectorRepository",
+    "MemoryIndexService",
+    "BasicCosineMemoryRetriever",
     "V1MemoryCoordinator",
     "AgentContextFilter",
     "AvailableSkillView",

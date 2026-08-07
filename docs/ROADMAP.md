@@ -28,10 +28,10 @@ Word 设计总结、`xuanyi-npc-handoff` 和 `docs/algorithm-experiment-plan-v0.
 | M3：最小 MCP 工具层 | 已完成 | P0/P1 的 15 项退出条件全部通过；完整结论见 `docs/M3_EXIT_AUDIT.md` |
 | M4-P0：V1 基础长期记忆规划冻结 | 已完成 | 来源事件允许列表、SQLite 权威存储、幂等/删除/重建、派生向量、基础 Top-K、安全上下文和离线 Gold 规划 |
 | M4-P1：事件投影与持久化 | 已完成 | 公开来源收据、三类确定性投影、SQLite Schema v1、幂等/冲突、生命周期、故障窗口与显式协调 |
-| M4-P2：Embedding 与基础 Top-K | 未开始 | 待实现可替换 Adapter、确定性 Fake、派生向量和进程内余弦检索 |
+| M4-P2：Embedding 与基础 Top-K | 已完成 | 供应商无关契约、确定性 64 维 Fake、Schema v2 派生向量、按玩家余弦 Top-K、索引状态与重建 |
 | M4-P3：V1 Agent 安全上下文 | 未开始 | 待实现权限过滤的只读 MemoryView；固定课程保持不变 |
 | M4-P4：离线记忆 Gold 与安全评测 | 未开始 | 待实现严格场景、确定性评测器和真实离线指标 |
-| M4：V1 基础长期记忆 | 进行中 | P0/P1 已完成；尚无 Embedding、Top-K、V1 Agent 上下文或 Gold 指标 |
+| M4：V1 基础长期记忆 | 进行中 | P0/P1/P2 已完成；尚无 V1 Agent 安全上下文或 Gold 指标 |
 | M5 及以后 | 未开始 | 自适应教学、Reflection、界面、多 Agent 等均未开始 |
 
 ## M2a 完成边界
@@ -140,6 +140,20 @@ M4-P1 已在不修改 V0、MCP 和病例事件模型的前提下完成：
 6. 游戏 JSON 状态先保存，SQLite 后投影；前者失败时记忆写入为 0，后者失败时返回 `memory_projection_pending`，显式协调只从已提交会话动作历史补齐且重复运行幂等；
 7. V0 不构造或访问 Memory Repository，`AgentAction` 和冻结的 9 个 MCP 工具仍无永久记忆写入口。
 
-隐私硬删除保证限于应用数据库、Repository API 和投影重建；不承诺清除外部备份、文件系统历史或提供取证级物理擦除。M4-P2 是下一阶段，但尚未开始；P1 没有实现 Embedding、Fake/真实向量、Top-K、Prompt 接入、关系/技能更新或任何外部模型调用。
+隐私硬删除保证限于应用数据库、Repository API 和投影重建；不承诺清除外部备份、文件系统历史或提供取证级物理擦除。P1 不包含 Embedding 或检索，这些已由后续 P2 以派生、可删除、可重建的边界实现。
+
+## M4-P2 完成边界与下一步
+
+M4-P2 已在不修改 V0、MCP、病例规则或 Agent Prompt 的前提下完成：
+
+1. 供应商无关、严格版本化的 Embedding 请求/批次结果、派生向量、检索配置和索引状态契约；
+2. `fake_sha256_token_buckets_v1` 使用 NFKC、casefold、固定分词、SHA-256 特征桶和 L2 归一化，维度 64，空间 ID 为 `fake_sha256_token_buckets_v1_d64`；它只用于工程测试，不代表真实语义能力；
+3. SQLite Schema v2 从 v1 单事务迁移，`memory_embeddings` 使用 little-endian float32 BLOB，并依附于权威记忆；迁移失败回滚，未来版本拒绝；
+4. 索引与重建必须提供精确 `player_id`，只处理 active 权威记忆；更正、失效和硬删除在同一生命周期事务中清理派生向量；
+5. V1 基础检索仅使用余弦相似度，按 `similarity DESC, memory_id ASC` 稳定排序；不读取 importance、时间、关系、能力、记忆类型权重或模型重排；
+6. active 记忆的索引缺失或内容哈希过期返回 `memory_index_incomplete`，不伪装成空召回；删除全部派生向量后可从 active 权威记忆重建一致结果；
+7. Fake Embedding 不生成 `ModelUsage`、Token、成本或供应商指标；本阶段外部请求与费用均为 0。
+
+M4-P3 是下一阶段，但尚未开始。P2 只返回带分数的内部检索记录，未实现 `MemoryView`、`AgentContextFilter` 记忆边界、DoctorAgent/Prompt 接入、真实 Embedding、多因素排序、自适应课程或 Reflection。
 
 V1 只增加基础向量 Top-K 长期记忆并保持固定课程；V2 才使用多因素记忆排序、自适应教学和 Reflection。三个产品版本始终启用 `AgentContextFilter`，模型始终不能直接写永久记忆或关键状态。真实 Embedding 的供应商、数据发送边界、预算和网络调用必须另行决定并授权。

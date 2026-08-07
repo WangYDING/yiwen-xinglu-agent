@@ -6,7 +6,11 @@ from pathlib import Path
 import pytest
 
 from xuanyi_npc.agents import DoctorAgent, ScriptedFakeLLM
-from xuanyi_npc.application import V1MemoryCoordinator
+from xuanyi_npc.application import (
+    BasicCosineMemoryRetriever,
+    MemoryIndexService,
+    V1MemoryCoordinator,
+)
 from xuanyi_npc.application.v0_runner import V0EpisodeConfig, V0EpisodeRunner
 from xuanyi_npc.domain import (
     AgentAction,
@@ -18,6 +22,7 @@ from xuanyi_npc.domain import (
     ToolName,
 )
 from xuanyi_npc.memory import (
+    DeterministicFakeEmbedding,
     MemoryCommitStatus,
     MemoryStorageError,
     ProjectionWriteDisposition,
@@ -254,6 +259,21 @@ def test_v0_runner_never_calls_memory_repository(
 
     monkeypatch.setattr(
         SQLiteMemoryRepository,
+        "__init__",
+        forbidden_repository_construction,
+    )
+    monkeypatch.setattr(
+        DeterministicFakeEmbedding,
+        "embed",
+        forbidden_repository_construction,
+    )
+    monkeypatch.setattr(
+        MemoryIndexService,
+        "__init__",
+        forbidden_repository_construction,
+    )
+    monkeypatch.setattr(
+        BasicCosineMemoryRetriever,
         "__init__",
         forbidden_repository_construction,
     )

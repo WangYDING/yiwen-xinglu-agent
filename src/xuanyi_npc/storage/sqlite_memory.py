@@ -40,7 +40,9 @@ from xuanyi_npc.memory.contracts import (
     authoritative_content_payload,
 )
 from xuanyi_npc.memory.errors import (
+    EmbeddingVectorError,
     InvalidMemoryLifecycleError,
+    MemoryEmbeddingConflictError,
     MemoryLifecycleConflictError,
     MemoryNotFoundError,
     MemoryPlayerIsolationError,
@@ -51,10 +53,19 @@ from xuanyi_npc.memory.errors import (
     MemoryTombstonedError,
     ProjectionConflictError,
 )
+from xuanyi_npc.memory.embeddings import (
+    DerivedEmbeddingRecord,
+    EmbeddingWriteDisposition,
+    EmbeddingWriteResult,
+    decode_float32_le,
+    encode_float32_le,
+    vector_l2_norm,
+)
 from xuanyi_npc.memory.projection import DeterministicMemoryProjector
 
 
-MEMORY_SCHEMA_VERSION = 1
+LEGACY_MEMORY_SCHEMA_VERSION = 1
+MEMORY_SCHEMA_VERSION = 2
 CORRECTION_PROJECTION_VERSION = "memory_correction_v1"
 
 _payload_adapter = TypeAdapter(PublicMemoryPayload)
@@ -63,7 +74,7 @@ _payload_adapter = TypeAdapter(PublicMemoryPayload)
 class SQLiteMemoryRepository:
     """Explicitly initialized, single-process SQLite memory authority."""
 
-    REQUIRED_TABLES = frozenset(
+    CORE_TABLES = frozenset(
         {
             "memory_schema",
             "memory_source_receipts",
@@ -72,6 +83,7 @@ class SQLiteMemoryRepository:
             "memory_tombstones",
         }
     )
+    REQUIRED_TABLES = CORE_TABLES | {"memory_embeddings"}
 
     def __init__(
         self,
@@ -103,6 +115,13 @@ class SQLiteMemoryRepository:
                     )
                 self._create_schema(connection)
                 connection.execute(f"PRAGMA user_version = {MEMORY_SCHEMA_VERSION}")
+            elif version == LEGACY_MEMORY_SCHEMA_VERSION:
+                self._verify_schema_version(
+                    connection,
+                    expected_version=LEGACY_MEMORY_SCHEMA_VERSION,
+                    required_tables=self.CORE_TABLES,
+                )
+                self._migrate_v1_to_v2(connection)
             elif version != MEMORY_SCHEMA_VERSION:
                 raise MemorySchemaVersionError("memory schema version is incompatible")
             self._verify_schema(connection)
@@ -113,6 +132,9 @@ class SQLiteMemoryRepository:
         except sqlite3.DatabaseError as exc:
             connection.rollback()
             raise MemoryStoreCorruptionError("memory database is invalid") from exc
+        except Exception as exc:
+            connection.rollback()
+            raise MemoryStorageError("memory schema initialization failed") from exc
         finally:
             connection.close()
 
@@ -179,6 +201,142 @@ class SQLiteMemoryRepository:
         finally:
             connection.close()
 
+    def write_embeddings(
+        self,
+        *,
+        player_id: str,
+        records: tuple[DerivedEmbeddingRecord, ...],
+    ) -> tuple[EmbeddingWriteResult, ...]:
+        """Write one player's derived vectors atomically."""
+
+        if any(record.player_id != player_id for record in records):
+            raise MemoryPlayerIsolationError(
+                "embedding batch contains another player's memory"
+            )
+
+        def transaction(
+            connection: sqlite3.Connection,
+        ) -> tuple[EmbeddingWriteResult, ...]:
+            return tuple(
+                self._upsert_embedding_in_transaction(connection, record)
+                for record in records
+            )
+
+        return self._write_transaction(transaction)
+
+    def replace_embeddings_for_space(
+        self,
+        *,
+        player_id: str,
+        embedding_space_id: str,
+        records: tuple[DerivedEmbeddingRecord, ...],
+    ) -> tuple[EmbeddingWriteResult, ...]:
+        """Atomically rebuild one player's complete derived index for a space."""
+
+        if any(
+            record.player_id != player_id
+            or record.embedding_space_id != embedding_space_id
+            for record in records
+        ):
+            raise MemoryPlayerIsolationError(
+                "embedding rebuild is outside the requested player or space"
+            )
+
+        def transaction(
+            connection: sqlite3.Connection,
+        ) -> tuple[EmbeddingWriteResult, ...]:
+            connection.execute(
+                """
+                DELETE FROM memory_embeddings
+                WHERE player_id = ? AND embedding_space_id = ?
+                """,
+                (player_id, embedding_space_id),
+            )
+            self._fault_point("embedding_rebuild_after_delete")
+            return tuple(
+                self._upsert_embedding_in_transaction(connection, record)
+                for record in records
+            )
+
+        return self._write_transaction(transaction)
+
+    def list_embeddings(
+        self,
+        *,
+        player_id: str,
+        embedding_space_id: str,
+    ) -> tuple[DerivedEmbeddingRecord, ...]:
+        connection = self._connect()
+        try:
+            rows = connection.execute(
+                """
+                SELECT derived.* FROM memory_embeddings AS derived
+                JOIN memory_events AS authority
+                  ON authority.player_id = derived.player_id
+                 AND authority.memory_id = derived.memory_id
+                WHERE derived.player_id = ?
+                  AND derived.embedding_space_id = ?
+                  AND authority.status = ?
+                ORDER BY derived.memory_id ASC
+                """,
+                (player_id, embedding_space_id, MemoryStatus.ACTIVE.value),
+            ).fetchall()
+            return tuple(self._embedding_from_row(row) for row in rows)
+        finally:
+            connection.close()
+
+    def get_embedding(
+        self,
+        *,
+        player_id: str,
+        memory_id: str,
+        embedding_space_id: str,
+    ) -> DerivedEmbeddingRecord:
+        connection = self._connect()
+        try:
+            authority = connection.execute(
+                "SELECT player_id, status FROM memory_events WHERE memory_id = ?",
+                (memory_id,),
+            ).fetchone()
+            if authority is None:
+                raise MemoryNotFoundError("authoritative memory does not exist")
+            if authority["player_id"] != player_id:
+                raise MemoryPlayerIsolationError("memory belongs to another player")
+            if authority["status"] != MemoryStatus.ACTIVE.value:
+                raise MemoryNotFoundError("inactive memory has no available embedding")
+            row = connection.execute(
+                """
+                SELECT * FROM memory_embeddings
+                WHERE player_id = ? AND memory_id = ? AND embedding_space_id = ?
+                """,
+                (player_id, memory_id, embedding_space_id),
+            ).fetchone()
+            if row is None:
+                raise MemoryNotFoundError("derived embedding does not exist")
+            return self._embedding_from_row(row)
+        finally:
+            connection.close()
+
+    def delete_embeddings(
+        self,
+        *,
+        player_id: str,
+        embedding_space_id: str,
+    ) -> int:
+        """Delete only derived vectors for one exact player and space."""
+
+        def transaction(connection: sqlite3.Connection) -> int:
+            cursor = connection.execute(
+                """
+                DELETE FROM memory_embeddings
+                WHERE player_id = ? AND embedding_space_id = ?
+                """,
+                (player_id, embedding_space_id),
+            )
+            return int(cursor.rowcount)
+
+        return self._write_transaction(transaction)
+
     def get_source_receipt(
         self,
         *,
@@ -228,6 +386,10 @@ class SQLiteMemoryRepository:
                 "UPDATE memory_events SET status = ? WHERE memory_id = ?",
                 (MemoryStatus.SUPERSEDED.value, original.memory_id),
             )
+            connection.execute(
+                "DELETE FROM memory_embeddings WHERE memory_id = ?",
+                (original.memory_id,),
+            )
             self._insert_lifecycle(
                 connection,
                 operation,
@@ -266,6 +428,10 @@ class SQLiteMemoryRepository:
             connection.execute(
                 "UPDATE memory_events SET status = ? WHERE memory_id = ?",
                 (MemoryStatus.INVALIDATED.value, target.memory_id),
+            )
+            connection.execute(
+                "DELETE FROM memory_embeddings WHERE memory_id = ?",
+                (target.memory_id,),
             )
             self._insert_lifecycle(connection, operation, replacement_memory_id=None)
             self._fault_point("lifecycle_before_commit")
@@ -571,6 +737,117 @@ class SQLiteMemoryRepository:
             memory_status=memory.status,
         )
 
+    def _upsert_embedding_in_transaction(
+        self,
+        connection: sqlite3.Connection,
+        record: DerivedEmbeddingRecord,
+    ) -> EmbeddingWriteResult:
+        memory = self._memory_for_player(
+            connection.execute(
+                "SELECT * FROM memory_events WHERE memory_id = ?",
+                (record.memory_id,),
+            ).fetchone(),
+            record.player_id,
+        )
+        if memory.status is not MemoryStatus.ACTIVE:
+            raise MemoryEmbeddingConflictError(
+                "only active authoritative memory can be indexed"
+            )
+        if memory.content_hash != record.content_hash:
+            raise MemoryEmbeddingConflictError(
+                "embedding content hash does not match authoritative memory"
+            )
+        declared_dimension = connection.execute(
+            """
+            SELECT dimension FROM memory_embeddings
+            WHERE embedding_space_id = ?
+            LIMIT 1
+            """,
+            (record.embedding_space_id,),
+        ).fetchone()
+        if (
+            declared_dimension is not None
+            and int(declared_dimension["dimension"]) != record.dimension
+        ):
+            raise MemoryEmbeddingConflictError(
+                "embedding space already uses a different fixed dimension"
+            )
+
+        vector_blob = encode_float32_le(record.vector)
+        stored_vector = decode_float32_le(vector_blob, dimension=record.dimension)
+        stored_norm = vector_l2_norm(stored_vector)
+        existing_row = connection.execute(
+            """
+            SELECT * FROM memory_embeddings
+            WHERE memory_id = ? AND embedding_space_id = ?
+            """,
+            (record.memory_id, record.embedding_space_id),
+        ).fetchone()
+        if existing_row is not None:
+            existing = self._embedding_from_row(existing_row)
+            if existing.player_id != record.player_id:
+                raise MemoryPlayerIsolationError(
+                    "embedding identity belongs to another player"
+                )
+            if (
+                existing.content_hash == record.content_hash
+                and existing.dimension == record.dimension
+                and bytes(existing_row["vector_blob"]) == vector_blob
+            ):
+                return EmbeddingWriteResult(
+                    memory_id=record.memory_id,
+                    embedding_space_id=record.embedding_space_id,
+                    disposition=EmbeddingWriteDisposition.IDEMPOTENT,
+                )
+            if existing.content_hash == record.content_hash:
+                raise MemoryEmbeddingConflictError(
+                    "embedding vector conflicts for unchanged authoritative content"
+                )
+            disposition = EmbeddingWriteDisposition.REBUILT
+            connection.execute(
+                """
+                UPDATE memory_embeddings
+                SET player_id = ?, content_hash = ?, dimension = ?,
+                    vector_blob = ?, l2_norm = ?, generated_at = ?
+                WHERE memory_id = ? AND embedding_space_id = ?
+                """,
+                (
+                    record.player_id,
+                    record.content_hash,
+                    record.dimension,
+                    vector_blob,
+                    stored_norm,
+                    utc_text(record.generated_at),
+                    record.memory_id,
+                    record.embedding_space_id,
+                ),
+            )
+        else:
+            disposition = EmbeddingWriteDisposition.CREATED
+            connection.execute(
+                """
+                INSERT INTO memory_embeddings (
+                    memory_id, player_id, embedding_space_id, content_hash,
+                    dimension, vector_blob, l2_norm, generated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    record.memory_id,
+                    record.player_id,
+                    record.embedding_space_id,
+                    record.content_hash,
+                    record.dimension,
+                    vector_blob,
+                    stored_norm,
+                    utc_text(record.generated_at),
+                ),
+            )
+        return EmbeddingWriteResult(
+            memory_id=record.memory_id,
+            embedding_space_id=record.embedding_space_id,
+            disposition=disposition,
+        )
+
     def _correction_projection(
         self,
         original: AuthoritativeMemoryRecord,
@@ -772,19 +1049,41 @@ class SQLiteMemoryRepository:
         return connection
 
     def _verify_schema(self, connection: sqlite3.Connection) -> None:
+        self._verify_schema_version(
+            connection,
+            expected_version=MEMORY_SCHEMA_VERSION,
+            required_tables=self.REQUIRED_TABLES,
+        )
+
+    def _verify_schema_version(
+        self,
+        connection: sqlite3.Connection,
+        *,
+        expected_version: int,
+        required_tables: frozenset[str] | set[str],
+    ) -> None:
         version = int(connection.execute("PRAGMA user_version").fetchone()[0])
         if version == 0:
             raise MemoryStoreNotInitializedError("memory database is not initialized")
-        if version != MEMORY_SCHEMA_VERSION:
+        if version != expected_version:
             raise MemorySchemaVersionError("memory schema version is incompatible")
         tables = self._table_names(connection)
-        if not self.REQUIRED_TABLES.issubset(tables):
+        if not set(required_tables).issubset(tables):
             raise MemoryStoreCorruptionError("memory schema is incomplete")
         row = connection.execute(
             "SELECT version FROM memory_schema WHERE singleton = 1"
         ).fetchone()
-        if row is None or int(row["version"]) != MEMORY_SCHEMA_VERSION:
+        if row is None or int(row["version"]) != expected_version:
             raise MemorySchemaVersionError("memory schema metadata is incompatible")
+
+    def _migrate_v1_to_v2(self, connection: sqlite3.Connection) -> None:
+        self._create_embedding_schema(connection)
+        self._fault_point("migration_after_embedding_table")
+        connection.execute(
+            "UPDATE memory_schema SET version = ? WHERE singleton = 1",
+            (MEMORY_SCHEMA_VERSION,),
+        )
+        connection.execute(f"PRAGMA user_version = {MEMORY_SCHEMA_VERSION}")
 
     @staticmethod
     def _table_names(connection: sqlite3.Connection) -> set[str]:
@@ -896,9 +1195,46 @@ class SQLiteMemoryRepository:
         )
         for statement in statements:
             connection.execute(statement)
+        SQLiteMemoryRepository._create_embedding_schema(connection)
         connection.execute(
             "INSERT INTO memory_schema (singleton, version) VALUES (1, ?)",
             (MEMORY_SCHEMA_VERSION,),
+        )
+
+    @staticmethod
+    def _create_embedding_schema(connection: sqlite3.Connection) -> None:
+        connection.execute(
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_memory_events_player_memory
+            ON memory_events (player_id, memory_id)
+            """
+        )
+        connection.execute(
+            """
+            CREATE TABLE memory_embeddings (
+                memory_id TEXT NOT NULL,
+                player_id TEXT NOT NULL,
+                embedding_space_id TEXT NOT NULL,
+                content_hash TEXT NOT NULL CHECK (length(content_hash) = 64),
+                dimension INTEGER NOT NULL CHECK (dimension BETWEEN 1 AND 4096),
+                vector_blob BLOB NOT NULL CHECK (
+                    typeof(vector_blob) = 'blob'
+                    AND length(vector_blob) = dimension * 4
+                ),
+                l2_norm REAL NOT NULL CHECK (l2_norm > 0),
+                generated_at TEXT NOT NULL,
+                PRIMARY KEY (memory_id, embedding_space_id),
+                FOREIGN KEY (player_id, memory_id)
+                    REFERENCES memory_events (player_id, memory_id)
+                    ON DELETE CASCADE
+            )
+            """
+        )
+        connection.execute(
+            """
+            CREATE INDEX idx_memory_embeddings_player_space
+            ON memory_embeddings (player_id, embedding_space_id)
+            """
         )
 
     def _source_from_row(self, row: sqlite3.Row) -> VerifiedMemorySource:
@@ -956,6 +1292,31 @@ class SQLiteMemoryRepository:
         except (ValidationError, ValueError, TypeError, json.JSONDecodeError) as exc:
             raise MemoryStoreCorruptionError(
                 "stored authoritative memory is invalid"
+            ) from exc
+
+    def _embedding_from_row(self, row: sqlite3.Row) -> DerivedEmbeddingRecord:
+        try:
+            dimension = int(row["dimension"])
+            vector = decode_float32_le(
+                bytes(row["vector_blob"]),
+                dimension=dimension,
+            )
+            stored_norm = float(row["l2_norm"])
+            if not stored_norm > 0.0:
+                raise EmbeddingVectorError("stored embedding norm is invalid")
+            return DerivedEmbeddingRecord(
+                memory_id=row["memory_id"],
+                player_id=row["player_id"],
+                embedding_space_id=row["embedding_space_id"],
+                content_hash=row["content_hash"],
+                dimension=dimension,
+                vector=vector,
+                l2_norm=stored_norm,
+                generated_at=self._parse_time(row["generated_at"]),
+            )
+        except (ValidationError, ValueError, TypeError, EmbeddingVectorError) as exc:
+            raise MemoryStoreCorruptionError(
+                "stored derived embedding is invalid"
             ) from exc
 
     def _memory_for_player(
