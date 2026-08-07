@@ -1,8 +1,11 @@
 from collections import deque
 from decimal import Decimal
 
+import pytest
+
 from xuanyi_npc.agents import (
     DeepSeekAdapterConfig,
+    DeepSeekChatAdapter,
     DeepSeekModelDiscovery,
     DeepSeekRequestBudgetGuard,
     DeepSeekRequestReservation,
@@ -14,6 +17,7 @@ from xuanyi_npc.agents import (
 from xuanyi_npc.agents.deepseek_cli import paid_pilot_main
 from xuanyi_npc.application.deepseek_pilot import (
     FROZEN_PILOT_PROBE_IDS,
+    SAFETY_PILOT_PROBE_IDS,
     DeepSeekPilotRunResult,
     DeepSeekPilotRunner,
     PilotRunMode,
@@ -27,6 +31,7 @@ from xuanyi_npc.evaluation import (
 )
 from xuanyi_npc.evaluation.dev_contracts import ScriptedActionOutput
 from xuanyi_npc.evaluation.dev_runner import load_dev_suite
+from xuanyi_npc.evaluation.pilot_runner import load_pilot_probe_suite
 
 
 class CostedScriptAdapter:
@@ -50,6 +55,7 @@ class CostedScriptAdapter:
         self._usage_available = usage_available
         self.chat_calls = 0
         self.discovery_calls = 0
+        self.requests: list[LLMRequest] = []
         self.request_budget = DeepSeekRequestBudgetGuard(
             self.config.pilot_max_cost_cny
         )
@@ -68,6 +74,7 @@ class CostedScriptAdapter:
         )
 
     def complete(self, request: LLMRequest) -> LLMResponse:
+        self.requests.append(request)
         self.request_budget.reserve(
             DeepSeekRequestReservation(
                 input_token_upper_bound=100,
@@ -98,6 +105,7 @@ class CostedScriptAdapter:
 
 class TimeoutOnceAdapter(CostedScriptAdapter):
     def complete(self, request: LLMRequest) -> LLMResponse:
+        self.requests.append(request)
         self.request_budget.reserve(
             DeepSeekRequestReservation(
                 input_token_upper_bound=100,
@@ -122,6 +130,23 @@ def correct_episode_responses() -> list[str]:
         for output in script.outputs
         if isinstance(output, ScriptedActionOutput)
     ]
+
+
+def probe_initial_message(probe_id: str) -> str:
+    suite = load_pilot_probe_suite()
+    return next(
+        probe.initial_user_message
+        for probe in suite.probes
+        if probe.probe_id == probe_id
+    )
+
+
+def adapter_saw_message(adapter: CostedScriptAdapter, message: str) -> bool:
+    return any(
+        chat_message.content == message
+        for request in adapter.requests
+        for chat_message in request.messages
+    )
 
 
 def test_pilot_budget_stop_preserves_completed_episode_checkpoint(tmp_path) -> None:
@@ -209,6 +234,82 @@ def test_standard_only_timeout_stops_without_other_probes(tmp_path) -> None:
     assert adapter.discovery_calls == 1
     assert adapter.chat_calls == 1
     assert adapter.request_budget.halted is True
+
+
+def test_safety_only_runs_exactly_two_probes_in_fixed_order_and_checkpoints_mode(
+    tmp_path,
+) -> None:
+    adapter = CostedScriptAdapter(
+        correct_episode_responses() * 2,
+        budget="0.05",
+    )
+    checkpoint = tmp_path / "safety_only.json"
+
+    result = DeepSeekPilotRunner(
+        adapter,
+        run_mode=PilotRunMode.SAFETY_ONLY,
+    ).run(checkpoint)
+
+    assert result.status is PilotRunStatus.COMPLETED
+    assert result.execution_config.run_mode is PilotRunMode.SAFETY_ONLY
+    assert (
+        tuple(record.probe_id for record in result.completed_episodes)
+        == SAFETY_PILOT_PROBE_IDS
+    )
+    assert result.unstarted_probe_ids == ()
+    assert adapter.discovery_calls == 1
+    assert adapter.chat_calls == 16
+    assert not adapter_saw_message(
+        adapter,
+        probe_initial_message("pilot_standard_completion_001"),
+    )
+    assert adapter_saw_message(
+        adapter,
+        probe_initial_message("pilot_wrong_induction_resistance_001"),
+    )
+    assert adapter_saw_message(
+        adapter,
+        probe_initial_message("pilot_premature_action_safety_001"),
+    )
+    restored = DeepSeekPilotRunResult.model_validate_json(
+        checkpoint.read_text(encoding="utf-8")
+    )
+    assert restored == result
+    assert restored.execution_config.run_mode is PilotRunMode.SAFETY_ONLY
+
+
+def test_safety_only_first_probe_stop_does_not_start_second(tmp_path) -> None:
+    adapter = TimeoutOnceAdapter(
+        correct_episode_responses() * 2,
+        budget="0.05",
+    )
+
+    result = DeepSeekPilotRunner(
+        adapter,
+        run_mode=PilotRunMode.SAFETY_ONLY,
+    ).run(tmp_path / "safety_only_timeout.json")
+
+    assert result.status is PilotRunStatus.USAGE_UNAVAILABLE
+    assert tuple(record.probe_id for record in result.completed_episodes) == (
+        "pilot_wrong_induction_resistance_001",
+    )
+    assert result.unstarted_probe_ids == (
+        "pilot_premature_action_safety_001",
+    )
+    assert adapter.discovery_calls == 1
+    assert adapter.chat_calls == 1
+    assert adapter_saw_message(
+        adapter,
+        probe_initial_message("pilot_wrong_induction_resistance_001"),
+    )
+    assert not adapter_saw_message(
+        adapter,
+        probe_initial_message("pilot_premature_action_safety_001"),
+    )
+    assert not adapter_saw_message(
+        adapter,
+        probe_initial_message("pilot_standard_completion_001"),
+    )
 
 
 def test_pilot_model_unavailable_stops_before_any_chat_request(tmp_path) -> None:
@@ -309,3 +410,58 @@ def test_paid_pilot_command_refuses_without_explicit_confirmation(
 
     assert exit_code == 2
     assert "Refusing to start" in capsys.readouterr().err
+
+
+def test_safety_only_command_refuses_without_paid_confirmation_before_network(
+    monkeypatch,
+    capsys,
+) -> None:
+    adapter_opened = False
+
+    def fail_if_opened(cls):
+        nonlocal adapter_opened
+        adapter_opened = True
+        raise AssertionError("adapter must not be opened")
+
+    monkeypatch.setattr(
+        DeepSeekChatAdapter,
+        "from_env",
+        classmethod(fail_if_opened),
+    )
+
+    exit_code = paid_pilot_main(["--safety-only"])
+
+    assert exit_code == 2
+    assert "Refusing to start" in capsys.readouterr().err
+    assert adapter_opened is False
+
+
+def test_paid_pilot_run_modes_are_mutually_exclusive_before_network(
+    monkeypatch,
+    capsys,
+) -> None:
+    adapter_opened = False
+
+    def fail_if_opened(cls):
+        nonlocal adapter_opened
+        adapter_opened = True
+        raise AssertionError("adapter must not be opened")
+
+    monkeypatch.setattr(
+        DeepSeekChatAdapter,
+        "from_env",
+        classmethod(fail_if_opened),
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        paid_pilot_main(
+            [
+                "--confirm-paid-pilot",
+                "--standard-only",
+                "--safety-only",
+            ]
+        )
+
+    assert exc_info.value.code == 2
+    assert "not allowed with argument" in capsys.readouterr().err
+    assert adapter_opened is False

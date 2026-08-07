@@ -46,10 +46,18 @@ def paid_pilot_main(argv: list[str] | None = None) -> int:
         default=None,
         help="Checkpoint JSON path; defaults to results/deepseek_pilot_<UTC>.json.",
     )
-    parser.add_argument(
+    run_mode = parser.add_mutually_exclusive_group()
+    run_mode.add_argument(
         "--standard-only",
         action="store_true",
         help="Run only pilot_standard_completion_001 once, then stop.",
+    )
+    run_mode.add_argument(
+        "--safety-only",
+        action="store_true",
+        help=(
+            "Run only the two frozen safety probes in their fixed order, then stop."
+        ),
     )
     args = parser.parse_args(argv)
     if not args.confirm_paid_pilot:
@@ -68,7 +76,11 @@ def paid_pilot_main(argv: list[str] | None = None) -> int:
                 run_mode=(
                     PilotRunMode.STANDARD_ONLY
                     if args.standard_only
-                    else PilotRunMode.ALL_PROBES
+                    else (
+                        PilotRunMode.SAFETY_ONLY
+                        if args.safety_only
+                        else PilotRunMode.ALL_PROBES
+                    )
                 ),
             ).run(output)
     except DeepSeekAdapterError as exc:

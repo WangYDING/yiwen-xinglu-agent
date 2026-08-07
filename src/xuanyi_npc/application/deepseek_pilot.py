@@ -43,6 +43,7 @@ FROZEN_PILOT_PROBE_IDS = (
     "pilot_wrong_induction_resistance_001",
     "pilot_premature_action_safety_001",
 )
+SAFETY_PILOT_PROBE_IDS = FROZEN_PILOT_PROBE_IDS[1:]
 
 
 class DeepSeekPilotAdapter(LLMAdapter, Protocol):
@@ -64,6 +65,7 @@ class PilotRunStatus(str, Enum):
 class PilotRunMode(str, Enum):
     ALL_PROBES = "all_probes"
     STANDARD_ONLY = "standard_only"
+    SAFETY_ONLY = "safety_only"
 
 
 class PilotEpisodeRecord(DomainModel):
@@ -142,7 +144,7 @@ class DeepSeekPilotRunner:
         self.pricing = pricing or load_deepseek_pilot_pricing()
         self.probe_path = Path(probe_path)
         self.case_path = Path(case_path)
-        self.run_mode = run_mode
+        self.run_mode = PilotRunMode(run_mode)
         self._validate_policy()
 
     def run(self, checkpoint_path: Path | str | None = None) -> DeepSeekPilotRunResult:
@@ -153,11 +155,12 @@ class DeepSeekPilotRunner:
         frozen_probe_ids = tuple(probe.probe_id for probe in suite.probes)
         if frozen_probe_ids != FROZEN_PILOT_PROBE_IDS:
             raise ValueError("Pilot suite must contain only the frozen behavior probes")
-        selected_probes = (
-            suite.probes[:1]
-            if self.run_mode is PilotRunMode.STANDARD_ONLY
-            else suite.probes
-        )
+        if self.run_mode is PilotRunMode.STANDARD_ONLY:
+            selected_probes = suite.probes[:1]
+        elif self.run_mode is PilotRunMode.SAFETY_ONLY:
+            selected_probes = suite.probes[1:]
+        else:
+            selected_probes = suite.probes
         probe_ids = tuple(probe.probe_id for probe in selected_probes)
 
         discovery = self.adapter.discover_models()

@@ -151,13 +151,13 @@ $env:PYTHONPATH="src"
 python -m xuanyi_npc.agents.deepseek_cli models
 ```
 
-付费 Pilot 当前暂停，必须再次获得单独授权。授权后的准确命令是：
+标准探针已经完成且不得重跑。剩余两个安全探针当前暂停，必须再次获得单独授权；授权后的固定命令是：
 
 ```bash
-xuanyi-deepseek-pilot --confirm-paid-pilot --output results/deepseek_pilot_review_001.json
+xuanyi-deepseek-pilot --confirm-paid-pilot --safety-only --output results/deepseek_safety_review_001.json
 ```
 
-未安装项目时，在 PowerShell 中先设置 `$env:PYTHONPATH="src"`，再运行 `python -m xuanyi_npc.agents.deepseek_cli pilot --confirm-paid-pilot --output results/deepseek_pilot_review_001.json`；macOS/Linux 使用 `PYTHONPATH=src python -m xuanyi_npc.agents.deepseek_cli pilot --confirm-paid-pilot --output results/deepseek_pilot_review_001.json`。新文件名避免覆盖已保留的首轮原始结果。没有 `--confirm-paid-pilot` 时，程序会在读取 Key 和发起网络请求之前拒绝运行。
+未安装项目时，在 PowerShell 中先设置 `$env:PYTHONPATH="src"`，再运行 `python -m xuanyi_npc.agents.deepseek_cli pilot --confirm-paid-pilot --safety-only --output results/deepseek_safety_review_001.json`；macOS/Linux 使用 `PYTHONPATH=src python -m xuanyi_npc.agents.deepseek_cli pilot --confirm-paid-pilot --safety-only --output results/deepseek_safety_review_001.json`。`--safety-only` 只按冻结顺序各运行一次错误诱导抵抗探针和过早行动安全探针，不会运行标准探针或任何其他探针；它与 `--standard-only` 互斥。新文件名避免覆盖已保留结果。没有 `--confirm-paid-pilot` 时，程序会在读取 Key 和发起网络请求之前拒绝运行。
 
 Pilot 默认保护参数：总预算 1.00 CNY；只运行同一病例的标准完成、错误诱导抵抗、过早诊断/处置安全三探针；每探针 1 次；每个 Episode 最多 8 步；每步最多一次格式修复；单次输出最多 512 Token；Adapter 不进行隐式重试。每次 Chat 发送前，将完整请求 JSON 的 UTF-8 字节数加 4096 Token 协议余量作为输入上界，全部按缓存未命中价计费，再加 512 个输出 Token 的最高费用。只有“已确认成本＋本次最大预留成本不超过 1.00 CNY”才发送；超时、响应缺少用量或用量无法核对时保留该请求的最大预留并立即冻结后续请求。
 
