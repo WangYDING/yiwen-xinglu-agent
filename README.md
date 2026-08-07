@@ -6,7 +6,7 @@
 
 ## 当前状态
 
-**M2 工程里程碑已经完成，M3 尚未开始。** M2a、M2b-P0、M2b-P1a 与 M2b-P1b 已分别验证 Fake LLM 安全闭环、确定性 dev 评测、DeepSeek Adapter/预算门禁，以及真实 `deepseek-v4-flash` 的标准病例闭环和受压安全隔离。M2 退出审计不把两个安全探针的任务失败改写为成功，也不代表模型行为完全可靠或形成正式成功率。
+**M2 工程里程碑已经完成，M3-P0 进程内 MCP 工具契约已经完成，当前停止在 M3-P1 之前。** M2a、M2b-P0、M2b-P1a 与 M2b-P1b 已分别验证 Fake LLM 安全闭环、确定性 dev 评测、DeepSeek Adapter/预算门禁，以及真实 `deepseek-v4-flash` 的标准病例闭环和受压安全隔离。M2 退出审计不把两个安全探针的任务失败改写为成功，也不代表模型行为完全可靠或形成正式成功率。
 
 已经包含：
 
@@ -35,14 +35,17 @@
 - 面向 Agent 的公开诊断候选、调查说明和处置说明；
 - 未知诊断候选由规则层拒绝，错误候选可正常提交并按确定性规则计分；
 - 已完成调查从可用视图消失，伪造重复调查被明确拒绝且不产生事件；
+- 基于官方 MCP Python SDK v2 的 9 个严格工具契约和可注入 Server factory；
+- 复用现有存储、权限过滤、工具执行器、`fixed_v0` 策略和病例引擎的应用 Facade；
+- 使用官方 `Client(server)` 完成纯进程内发现、调用、拒绝不落盘和参考轨迹等价性验证；
 - 全新 Python 3.12 虚拟环境中的安装、测试和 Demo 复现记录；
 - 领域模型、规则边界和持久化测试。
 
-**当前停止在 M3 开始之前**：M2 付费运行和 Prompt 调优已经关闭，标准探针与两个安全探针均不得重跑。M3 需要用户另行明确授权后才能开始编写代码。
+**当前停止在 M3-P1 开始之前**：M2 付费运行和 Prompt 调优已经关闭，标准探针与两个安全探针均不得重跑。M3-P0 不启动 stdio/HTTP 服务，也没有连接真实 MCP Host；M3-P1 stdio 集成验证需要用户另行明确授权。
 
 最终 M2 退出依据包括：标准探针在 8 步内完成正确诊断和处置，终态 `resolved / 100`；`SAFETY_ONLY` 的错误诱导探针抵抗了 `evil_spirit_attack` 暗示并提交正确诊断，但因一次解释性 `respond` 未能处置；过早行动探针的 1 次未知调查和 4 次过早诊断均被规则拒绝，没有状态污染。最新三探针共 24 次 Chat，24/24 首次结构化成功，格式修复、降级和非法状态写入均为 0，事件均连续且可重放。三探针共用一个病例且各运行一次，不是正式成功率样本。
 
-M2 分层结论、数据身份和 M3 入口约束见 [`docs/M2_EXIT_AUDIT.md`](docs/M2_EXIT_AUDIT.md)。项目仍不包含 MCP、长期记忆检索、数据库或交互界面。
+M2 分层结论和数据身份见 [`docs/M2_EXIT_AUDIT.md`](docs/M2_EXIT_AUDIT.md)。项目已经包含最小进程内 MCP 包装，但仍不包含可运行的 stdio/HTTP MCP 服务、长期记忆检索、数据库或交互界面。
 
 ## 设计边界
 
@@ -51,7 +54,7 @@ M2 分层结论、数据身份和 M3 入口约束见 [`docs/M2_EXIT_AUDIT.md`](d
 - Agent 输出必须通过 Pydantic 校验，再由规则层决定是否执行。
 - V0 Agent 只接收权限过滤后的只读视图、最近对话和固定课程。
 - 所有病例状态变化都通过领域命令和事件记录，以支持追踪和回放。
-- 未来 M3 MCP 只能包装现有应用服务，返回结构化安全错误和刷新后的公开选项；不得绕过诊断策略、规则引擎或事件写入，被拒绝调用不得改变状态。
+- M3 MCP 只包装现有应用服务，返回结构化安全错误和刷新后的公开选项；不得绕过诊断策略、规则引擎或事件写入，被拒绝调用不得改变状态。
 
 ## 目录
 
@@ -62,6 +65,7 @@ src/xuanyi_npc/application/ Agent 权限过滤视图
 src/xuanyi_npc/config/   V0、V1、V2 能力配置
 src/xuanyi_npc/engine/   确定性病例引擎
 src/xuanyi_npc/evaluation/ 统一 Episode 结果与确定性 dev 评测器
+src/xuanyi_npc/mcp_server/ 官方 MCP v2 的进程内工具契约与 Server factory
 src/xuanyi_npc/storage/  JSON 状态存储
 data/cases/              结构化病例定义
 data/evaluation/         P0 dev 场景、真实行为探针与脱敏回归轨迹
@@ -119,6 +123,14 @@ python -m xuanyi_npc.evaluation.dev_runner
 
 在 macOS/Linux 中使用 `PYTHONPATH=src python -m xuanyi_npc.evaluation.dev_runner`。输出只有确定性轨迹结果；Fake LLM 的延迟、Token、成本和真实成功率保持“未测量”。
 
+M3-P0 的 MCP 工具层只在测试进程中运行。安装项目后可执行：
+
+```bash
+python -m pytest tests/test_mcp_p0.py
+```
+
+该检查通过官方 `Client(server)` 发现并调用以下冻结工具：`get_player_view`、`get_case_observation`、`observe_patient`、`question_patient`、`inspect_object`、`observe_qi`、`investigate_location`、`submit_diagnosis`、`execute_treatment`。它不会读取 `.env`、调用 DeepSeek、监听端口或启动 stdio/HTTP 服务。
+
 首轮真实 Pilot 的脱敏动作轨迹可以在完全不连网的情况下重评：
 
 ```bash
@@ -157,6 +169,7 @@ M2 真实 Pilot 已结束，不再运行模型发现、标准探针、安全探�
 ## 当前限制
 
 - JSON 存储目前只用于验证状态接口，尚未处理多进程并发。
+- M3-P0 只证明 MCP Schema、应用服务边界和进程内调用；真实 MCP Host、stdio、HTTP/SSE、认证与部署尚未验证。
 - DeepSeek `LLMAdapter` 已通过 MockTransport 离线测试，并有标准探针和安全探针真实数据；单病例各一次不能代表稳定成功率、限流表现或长期成本。
 - M1 只更新病例会话，不更新玩家能力、关系或长期记忆。
 - 评分暂时只计算关键线索、诊断、处置和危险处置惩罚；提示扣分将在教学阶段接入。
@@ -167,4 +180,4 @@ M2 真实 Pilot 已结束，不再运行模型发现、标准探针、安全探�
 - 长期记忆、自适应教学和 Reflection 明确不属于当前 V0 实现。
 - 当前 V0 的固定课程只按步骤编号推进，不基于玩家表现动态改变。
 - 当前真实样本仍只有一个病例上的单次探针运行，不足以形成正式成功率、跨病例比较或模型可靠性指标。
-- M2 付费运行已经停止；MCP（M3）及以后里程碑均未开始，开始 M3 需要新的明确授权。
+- M2 付费运行已经停止；M3-P0 已完成，M3-P1 stdio 集成及以后里程碑均未开始。

@@ -214,3 +214,12 @@
 - **评测限制**：固定病例完整闭环需要 8 个有效动作，探针决策上限同为 8；任一规则拒绝或解释性 `respond` 都会使闭环不可达。该限制只解释步骤效率压力，不修改历史成功条件、最终状态或失败分类。
 - **M3 入口**：M3 尚未开始。后续 MCP 只包装现有应用服务，必须返回安全结构化错误码和刷新后的权限过滤公开选项，不得绕过 `DiagnosisReadinessPolicy`、规则引擎、`AgentContextFilter` 或领域事件写入；被拒绝调用不得产生事件、修订或状态变化。Agent 拒绝后恢复、解释性对话计步、自适应/暂定诊断、多结局、长期记忆、自适应教学和 Reflection 均不在本轮实现。
 - **原因**：M2 的目标是证明真实模型能在确定性安全架构中完成标准闭环，并证明模型受压失误不会污染关键状态，而不是要求单次 V0 Prompt 在所有对抗探针中零冗余、零错误。分开记录模型行为失败与规则安全通过，可以如实关闭工程阶段，同时为 M3 保留不可绕过的边界。
+
+## ADR-031：M3-P0 使用应用 Facade 与官方 MCP v2 进程内契约
+
+- **状态**：已接受
+- **日期**：2026-08-07
+- **决策**：M3-P0 只增加 `mcp>=2,<3` 这一项直接依赖，并使用官方稳定版 `MCPServer` 创建可注入 Server factory。MCP handler 只负责严格参数接收、调用应用 Facade 和返回统一结构化结果；Facade 复用 `JsonStateStore`、`AgentContextFilter`、`V0ToolExecutor`、`FixedV0DiagnosisReadinessPolicy` 与 `CaseEngine`。状态变化必须来自既有领域事件，只有事件执行和安全返回构建均成功时才保存；参数或规则拒绝、未知内部错误和持久化失败均不返回事件，不增加修订，不覆盖原会话文件。领域拒绝返回稳定安全错误码和刷新后的公开选项，异常文本、路径、隐藏真值与评分规则不得跨越边界。
+- **工具边界**：冻结 `get_player_view`、`get_case_observation`、`observe_patient`、`question_patient`、`inspect_object`、`observe_qi`、`investigate_location`、`submit_diagnosis`、`execute_treatment` 九个工具。不增加 Resources、Prompts、Sampling、Roots、Elicitation、长期记忆或新玩法。
+- **验证边界**：P0 只用官方 `Client(server)` 做纯进程内发现和调用，不在模块导入时读取 `.env`、启动 stdio/HTTP 服务或建立网络连接。M3-P0 完成不代表真实 MCP Host、stdio、HTTP/SSE、认证或部署可用；这些属于需要另行授权的 M3-P1 及以后阶段。
+- **原因**：在引入跨进程传输前先冻结最小公开契约并证明拒绝零写入，可以让未来 MCP Host 复用已验证安全边界，避免在协议层复制或绕过病例规则。

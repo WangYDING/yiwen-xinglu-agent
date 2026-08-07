@@ -195,3 +195,18 @@ M2 继续保持进行中。后续任何模型发现或付费 Chat 均需新的�
 - **M3 边界**：M3 尚未开始。未来 MCP 必须返回安全结构化错误与刷新后的公开选项，不得绕过诊断策略、规则引擎、权限过滤或领域事件；拒绝调用不得改变状态。拒绝后恢复、解释性对话计步、自适应/暂定诊断、多结局、长期记忆和 Reflection 均留待后续里程碑。
 - **退出审计离线回归**：160 项全量测试通过；P0 Fake LLM dev 评测通过；历史脱敏轨迹重评通过；`git diff --check` 通过；脱敏结果 JSON 可解析。
 - **本轮收口外部调用**：文档和脱敏记录收口期间 `/models` 0 次、`/chat/completions` 0 次，费用 0 CNY。M2 付费运行与 Prompt 调优停止，三个真实探针不再重跑。
+
+## 2026-08-07：M3-P0 MCP 工具契约与进程内验证
+
+- **实现基线**：从提交 `af462fd398b207389fa0a4b9035959a5604ce79c` 的干净工作树开始；没有改写 M2 历史或真实 Pilot 数据。
+- **SDK 版本门槛**：全新临时 Python 3.12.3 `venv` 使用 `mcp>=2,<3` 解析并安装官方稳定版 `mcp==2.0.0`；版本不是 alpha、beta、rc 或 v1。项目只新增普通 `mcp` 直接依赖，没有新增数据库或部署框架。
+- **冻结工具**：`get_player_view`、`get_case_observation`、`observe_patient`、`question_patient`、`inspect_object`、`observe_qi`、`investigate_location`、`submit_diagnosis`、`execute_treatment`，共 9 个；官方进程内客户端发现结果与该集合及顺序完全一致。
+- **应用边界**：Facade 按 `player_id`、`session_id` 加载 JSON 状态和病例定义，复用权限过滤、V0 工具执行器、`fixed_v0` 诊断策略与病例引擎。MCP handler 不直接修改会话字段、不生成领域事件、不复制病例规则。
+- **拒绝不变性**：参数模型禁止未知字段；`diagnosis_not_ready`、未知调查、重复调查、错误参数、策略绕过和持久化失败测试均返回空事件序号。测试逐字节确认拒绝前后会话文件相同，修订不增加，刷新后的安全观察继续提供公开可用选项。
+- **等价性与安全视图**：通过 MCP 执行 6 次调查、诊断和处置共 8 个动作，事件序号为 1 至 8，终态与直接调用同一应用服务完全一致，为 `resolved / 100`。返回内容审计未发现根因、合法诊断集合、正确性标记、隐藏前置条件、评分规则、内部路径或密钥。
+- **MCP 专项测试**：15 passed，只使用官方 `Client(server)`；没有运行 stdio、HTTP/SSE、真实 Host 或监听端口。
+- **最终全量测试**：175 passed，其中原有 160 项继续通过。
+- **离线回归**：无 LLM Demo 仍为 100 分；P0 Fake LLM 的 3 场景/6 轨迹全部符合预期；历史脱敏轨迹重评保持事件连续且终态可重放；`pip check` 与 `git diff --check` 通过。
+- **密钥、网络与范围**：模块导入不读取 `.env`；本轮 DeepSeek `/models` 0 次、`/chat/completions` 0 次，费用 0 CNY。没有连接 DeepSeek、启动网络服务器、部署、实现长期记忆、自适应诊断、Reflection 或新玩法。
+
+M3-P0 只证明工具契约、应用服务边界和进程内调用。M3-P1 stdio 集成、真实 MCP Host、HTTP/SSE、认证和部署均未验证，必须另行授权后开始。

@@ -5,6 +5,7 @@ from .diagnosis_readiness import (
     DiagnosisReadinessPolicy,
     FixedV0DiagnosisReadinessPolicy,
 )
+from .mcp_facade import MCPApplicationResult, MCPApplicationService
 from .views import (
     AgentContextFilter,
     AvailableSkillView,
@@ -21,6 +22,8 @@ __all__ = [
     "DiagnosisReadinessDecision",
     "DiagnosisReadinessPolicy",
     "FixedV0DiagnosisReadinessPolicy",
+    "MCPApplicationResult",
+    "MCPApplicationService",
     "AgentContextFilter",
     "AvailableSkillView",
     "CaseObservation",
