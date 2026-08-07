@@ -23,6 +23,10 @@ class UnknownInvestigationError(RuleViolation):
     code = "unknown_investigation"
 
 
+class InvestigationAlreadyCompletedError(RuleViolation):
+    code = "investigation_already_completed"
+
+
 class ActionMismatchError(RuleViolation):
     code = "action_mismatch"
 

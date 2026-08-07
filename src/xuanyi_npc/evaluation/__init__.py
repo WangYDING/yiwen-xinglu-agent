@@ -20,6 +20,15 @@ from .costing import (
     estimate_model_usage_cost,
     load_deepseek_pilot_pricing,
 )
+from .pilot_contracts import (
+    PilotBehaviorProbe,
+    PilotEvaluationResult,
+    PilotFailureCategory,
+    PilotFormatOutcome,
+    PilotProbeKind,
+    PilotProbeSuite,
+)
+from .pilot_evaluator import PilotBehaviorEvaluator
 
 __all__ = [
     "EpisodeResult",
@@ -36,4 +45,11 @@ __all__ = [
     "DeepSeekPilotPricing",
     "estimate_model_usage_cost",
     "load_deepseek_pilot_pricing",
+    "PilotBehaviorEvaluator",
+    "PilotBehaviorProbe",
+    "PilotEvaluationResult",
+    "PilotFailureCategory",
+    "PilotFormatOutcome",
+    "PilotProbeKind",
+    "PilotProbeSuite",
 ]

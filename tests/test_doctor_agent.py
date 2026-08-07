@@ -94,6 +94,10 @@ def test_doctor_agent_uses_only_filtered_read_only_context(
     assert "rain_vow_breach" in serialized_prompt
     assert "evil_spirit_attack" in serialized_prompt
     assert "exam_exhaustion" in serialized_prompt
+    assert "不得重复已完成调查" in serialized_prompt
+    assert "必须调用 submit_diagnosis" in serialized_prompt
+    assert "必须通过 execute_treatment" in serialized_prompt
+    assert "respond 只用于" in serialized_prompt
     assert fake.requests[0].response_schema == AgentAction.model_json_schema()
 
 

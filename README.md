@@ -6,7 +6,7 @@
 
 ## 当前状态
 
-当前已完成 **M2a：Fake LLM Agent Harness 与安全闭环**、**M2b-P0：供应商无关 dev 场景与确定性评测器**，以及 **M2b-P1a：DeepSeek Adapter 与离线预检**。2026-08-06 已完成真实模型发现，并在随后一次明确授权下运行过首个诊断性 Pilot；由于严格的逐请求预算门禁是在该次运行后补齐，M2b-P1b 仍保持“进行中”，不得据此推进 M3。
+当前已完成 **M2a：Fake LLM Agent Harness 与安全闭环**、**M2b-P0：供应商无关 dev 场景与确定性评测器**，以及 **M2b-P1a：DeepSeek Adapter 与离线预检**。2026-08-06 已完成真实模型发现和一次诊断性 Pilot；2026-08-07 已完成不连网的根因分析、评测契约分离、重复调查拒绝和 Prompt 最小纠偏。M2b-P1b 仍保持“进行中”，不得据此推进 M3。
 
 已经包含：
 
@@ -28,17 +28,19 @@
 - 使用脚本化 Fake LLM 跑通并记录完整 Episode；
 - 3 条严格 Schema 的 dev 场景，以及每条场景的参考轨迹和明确错误轨迹；
 - 以统一 `EpisodeResult` 为输入的确定性评测器和单命令运行入口；
+- 与 P0 Fake 故障注入分离的 3 条真实模型正向行为探针，以及首轮脱敏动作轨迹的离线重评入口；
 - DeepSeek V4 Flash 的直接 HTTP Adapter、只读模型发现和明确供应商错误；
 - 日期化人民币价格快照、供应商无关用量记录和请求发送前的 1 元 Pilot 严格预算门禁；
 - 只使用伪 HTTP 响应的 DeepSeek Adapter 与 Pilot 离线测试；
 - 面向 Agent 的公开诊断候选、调查说明和处置说明；
 - 未知诊断候选由规则层拒绝，错误候选可正常提交并按确定性规则计分；
+- 已完成调查从可用视图消失，伪造重复调查被明确拒绝且不产生事件；
 - 全新 Python 3.12 虚拟环境中的安装、测试和 Demo 复现记录；
 - 领域模型、规则边界和持久化测试。
 
 **当前停在 M2b-P1b 收口**：当前 Key 已通过一次只读 `/models` 验证并确认可见 `deepseek-v4-flash`。后续任何付费运行都需新的单独授权；在 P1b 完成前，不把整个 M2 标为完成，也不进入 M3。
 
-当前真实记录包括一次独立模型发现，以及一次诊断性 Pilot 内的 1 次 `/models` 和 23 次 `/chat/completions`；该 Pilot 的供应商返回成本估算为 `0.0332138 CNY`，3 条场景任务通过数为 0，3 条轨迹均可重放。它是发现 V0 固定课程问题的单次负结果，不是正式成功率结论。项目仍不包含 MCP、长期记忆检索、数据库或交互界面。
+当前真实记录包括一次独立模型发现，以及一次诊断性 Pilot 内的 1 次 `/models` 和 23 次 `/chat/completions`；该 Pilot 的供应商返回成本估算为 `0.0332138 CNY`，23/23 次输出首次通过结构校验，3 条轨迹均可重放。三条运行使用同一个病例，历史 `0/3` 只是诊断性任务结果，不是模型正式成功率。项目仍不包含 MCP、长期记忆检索、数据库或交互界面。
 
 ## 设计边界
 
@@ -59,7 +61,7 @@ src/xuanyi_npc/engine/   确定性病例引擎
 src/xuanyi_npc/evaluation/ 统一 Episode 结果与确定性 dev 评测器
 src/xuanyi_npc/storage/  JSON 状态存储
 data/cases/              结构化病例定义
-data/evaluation/         严格 Schema 的 dev 场景与参考/错误轨迹
+data/evaluation/         P0 dev 场景、真实行为探针与脱敏回归轨迹
 data/pilot/              带日期和来源的 Pilot 价格与安全策略快照
 docs/                    架构决策记录
 tests/                   自动化测试
@@ -114,6 +116,14 @@ python -m xuanyi_npc.evaluation.dev_runner
 
 在 macOS/Linux 中使用 `PYTHONPATH=src python -m xuanyi_npc.evaluation.dev_runner`。输出只有确定性轨迹结果；Fake LLM 的延迟、Token、成本和真实成功率保持“未测量”。
 
+首轮真实 Pilot 的脱敏动作轨迹可以在完全不连网的情况下重评：
+
+```bash
+xuanyi-pilot-replay
+```
+
+未安装项目时，在仓库根目录运行 `python -m xuanyi_npc.evaluation.pilot_runner`。该命令只使用仓库内脱敏动作和确定性规则，不读取 API Key，不调用 DeepSeek。
+
 ## DeepSeek M2b 配置与安全边界
 
 当前配置固定使用 DeepSeek 官方 OpenAI 兼容地址和 `deepseek-v4-flash`，禁止自动切换 Pro 或旧模型别名。项目从仓库根目录运行时会自动读取本地 `.env`；系统环境变量优先于 `.env` 中的同名配置。
@@ -142,12 +152,12 @@ python -m xuanyi_npc.agents.deepseek_cli models
 付费 Pilot 当前暂停，必须再次获得单独授权。授权后的准确命令是：
 
 ```bash
-xuanyi-deepseek-pilot --confirm-paid-pilot --output results/deepseek_pilot_001.json
+xuanyi-deepseek-pilot --confirm-paid-pilot --output results/deepseek_pilot_review_001.json
 ```
 
-未安装项目时，在 PowerShell 中先设置 `$env:PYTHONPATH="src"`，再运行 `python -m xuanyi_npc.agents.deepseek_cli pilot --confirm-paid-pilot --output results/deepseek_pilot_001.json`；macOS/Linux 使用 `PYTHONPATH=src python -m xuanyi_npc.agents.deepseek_cli pilot --confirm-paid-pilot --output results/deepseek_pilot_001.json`。没有 `--confirm-paid-pilot` 时，程序会在读取 Key 和发起网络请求之前拒绝运行。
+未安装项目时，在 PowerShell 中先设置 `$env:PYTHONPATH="src"`，再运行 `python -m xuanyi_npc.agents.deepseek_cli pilot --confirm-paid-pilot --output results/deepseek_pilot_review_001.json`；macOS/Linux 使用 `PYTHONPATH=src python -m xuanyi_npc.agents.deepseek_cli pilot --confirm-paid-pilot --output results/deepseek_pilot_review_001.json`。新文件名避免覆盖已保留的首轮原始结果。没有 `--confirm-paid-pilot` 时，程序会在读取 Key 和发起网络请求之前拒绝运行。
 
-Pilot 默认保护参数：总预算 1.00 CNY；只运行冻结的 3 条 P0 场景；每场景 1 次；每个 Episode 最多 8 步；每步最多一次格式修复；单次输出最多 512 Token；Adapter 不进行隐式重试。每次 Chat 发送前，将完整请求 JSON 的 UTF-8 字节数加 4096 Token 协议余量作为输入上界，全部按缓存未命中价计费，再加 512 个输出 Token 的最高费用。只有“已确认成本＋本次最大预留成本不超过 1.00 CNY”才发送；超时、响应缺少用量或用量无法核对时保留该请求的最大预留并立即冻结后续请求。
+Pilot 默认保护参数：总预算 1.00 CNY；只运行同一病例的标准完成、错误诱导抵抗、过早诊断/处置安全三探针；每探针 1 次；每个 Episode 最多 8 步；每步最多一次格式修复；单次输出最多 512 Token；Adapter 不进行隐式重试。每次 Chat 发送前，将完整请求 JSON 的 UTF-8 字节数加 4096 Token 协议余量作为输入上界，全部按缓存未命中价计费，再加 512 个输出 Token 的最高费用。只有“已确认成本＋本次最大预留成本不超过 1.00 CNY”才发送；超时、响应缺少用量或用量无法核对时保留该请求的最大预留并立即冻结后续请求。
 
 ## 当前限制
 

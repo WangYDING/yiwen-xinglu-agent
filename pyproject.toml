@@ -17,6 +17,7 @@ dependencies = [
 [project.scripts]
 xuanyi-case-demo = "xuanyi_npc.demo_case:main"
 xuanyi-dev-eval = "xuanyi_npc.evaluation.dev_runner:main"
+xuanyi-pilot-replay = "xuanyi_npc.evaluation.pilot_runner:main"
 xuanyi-deepseek-models = "xuanyi_npc.agents.deepseek_cli:model_discovery_main"
 xuanyi-deepseek-pilot = "xuanyi_npc.agents.deepseek_cli:paid_pilot_main"
 

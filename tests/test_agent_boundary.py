@@ -140,6 +140,9 @@ def test_case_observation_reveals_only_currently_available_actions(
     assert "observe_contract_trace" in {
         item.investigation_id for item in observation.available_investigations
     }
+    assert "inspect_umbrella" not in {
+        item.investigation_id for item in observation.available_investigations
+    }
     assert {clue.clue_id for clue in observation.discovered_clues} == {
         "cold_window_draft",
         "umbrella_night_water",

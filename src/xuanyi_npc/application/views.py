@@ -128,7 +128,16 @@ class AgentContextFilter:
                 key=lambda item: item.investigation_id,
             )
             if is_active
-            and self._skill_is_available(player, investigation.required_skill_id, investigation.minimum_skill_level)
+            and not any(
+                record.reference_id == investigation.investigation_id
+                and record.action_type == investigation.action_type
+                for record in session.action_history
+            )
+            and self._skill_is_available(
+                player,
+                investigation.required_skill_id,
+                investigation.minimum_skill_level,
+            )
             and investigation.required_clue_ids.issubset(session.discovered_clue_ids)
         )
         clues = tuple(

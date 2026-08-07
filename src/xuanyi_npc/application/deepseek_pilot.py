@@ -1,4 +1,4 @@
-"""Budget-bounded runner for the three frozen M2b-P0 scenarios."""
+"""Budget-bounded runner for three independent real-model behavior probes."""
 
 from __future__ import annotations
 
@@ -24,24 +24,24 @@ from xuanyi_npc.domain import CaseDefinition, CaseSessionState
 from xuanyi_npc.domain.base import DomainModel, Identifier, NonEmptyText
 from xuanyi_npc.evaluation import (
     DeepSeekPilotPricing,
-    DevEpisodeEvaluator,
-    DevEvaluationResult,
     EpisodeResult,
+    PilotBehaviorEvaluator,
+    PilotEvaluationResult,
     load_deepseek_pilot_pricing,
 )
-from xuanyi_npc.evaluation.dev_runner import (
-    DEFAULT_CASE_PATH,
-    DEFAULT_DEV_SUITE_PATH,
-    load_dev_suite,
+from xuanyi_npc.evaluation.dev_runner import DEFAULT_CASE_PATH
+from xuanyi_npc.evaluation.pilot_runner import (
+    DEFAULT_PILOT_PROBE_PATH,
+    load_pilot_probe_suite,
 )
 
 from .v0_runner import V0EpisodeConfig, V0EpisodeRunner
 
 
-FROZEN_P0_SCENARIO_IDS = (
-    "dev_case_correct_001",
-    "dev_case_wrong_hypothesis_001",
-    "dev_recovery_001",
+FROZEN_PILOT_PROBE_IDS = (
+    "pilot_standard_completion_001",
+    "pilot_wrong_induction_resistance_001",
+    "pilot_premature_action_safety_001",
 )
 
 
@@ -64,9 +64,9 @@ class PilotRunStatus(str, Enum):
 class PilotEpisodeRecord(DomainModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    scenario_id: Identifier
+    probe_id: Identifier
     episode: EpisodeResult
-    evaluation: DevEvaluationResult
+    evaluation: PilotEvaluationResult
 
 
 class PilotExecutionConfig(DomainModel):
@@ -82,7 +82,7 @@ class PilotExecutionConfig(DomainModel):
     max_output_tokens: int = Field(gt=0)
     max_steps_per_episode: Literal[8]
     max_format_repair_attempts_per_step: Literal[1]
-    runs_per_scenario: Literal[1]
+    runs_per_probe: Literal[1]
     pricing_snapshot_id: Identifier
     request_input_token_upper_bound_method: Literal[
         "utf8_bytes_plus_framing"
@@ -102,7 +102,7 @@ class DeepSeekPilotRunResult(DomainModel):
     maximum_committed_cost: Decimal = Field(ge=0)
     cost_currency: Literal["CNY"] = "CNY"
     completed_episodes: tuple[PilotEpisodeRecord, ...]
-    unstarted_scenario_ids: tuple[Identifier, ...]
+    unstarted_probe_ids: tuple[Identifier, ...]
 
     @model_validator(mode="before")
     @classmethod
@@ -121,30 +121,30 @@ class DeepSeekPilotRunResult(DomainModel):
 
 
 class DeepSeekPilotRunner:
-    """Run exactly one Episode for each frozen scenario after model discovery."""
+    """Run exactly one Episode for each frozen behavior probe after discovery."""
 
     def __init__(
         self,
         adapter: DeepSeekPilotAdapter,
         *,
         pricing: DeepSeekPilotPricing | None = None,
-        suite_path: Path | str = DEFAULT_DEV_SUITE_PATH,
+        probe_path: Path | str = DEFAULT_PILOT_PROBE_PATH,
         case_path: Path | str = DEFAULT_CASE_PATH,
     ) -> None:
         self.adapter = adapter
         self.pricing = pricing or load_deepseek_pilot_pricing()
-        self.suite_path = Path(suite_path)
+        self.probe_path = Path(probe_path)
         self.case_path = Path(case_path)
         self._validate_policy()
 
     def run(self, checkpoint_path: Path | str | None = None) -> DeepSeekPilotRunResult:
-        suite = load_dev_suite(self.suite_path)
+        suite = load_pilot_probe_suite(self.probe_path)
         case = CaseDefinition.model_validate_json(
             self.case_path.read_text(encoding="utf-8")
         )
-        scenario_ids = tuple(scenario.scenario_id for scenario in suite.scenarios)
-        if scenario_ids != FROZEN_P0_SCENARIO_IDS:
-            raise ValueError("Pilot suite must contain only the frozen P0 scenarios")
+        probe_ids = tuple(probe.probe_id for probe in suite.probes)
+        if probe_ids != FROZEN_PILOT_PROBE_IDS:
+            raise ValueError("Pilot suite must contain only the frozen behavior probes")
 
         discovery = self.adapter.discover_models()
         if not discovery.configured_model_available:
@@ -152,18 +152,18 @@ class DeepSeekPilotRunner:
                 PilotRunStatus.MODEL_UNAVAILABLE,
                 discovery,
                 (),
-                scenario_ids,
+                probe_ids,
             )
             self._checkpoint(checkpoint_path, result)
             return result
 
         player = build_demo_player()
-        evaluator = DevEpisodeEvaluator()
+        evaluator = PilotBehaviorEvaluator()
         budget = self.adapter.request_budget
         records: list[PilotEpisodeRecord] = []
 
-        for index, scenario in enumerate(suite.scenarios):
-            pending = scenario_ids[index:]
+        for index, probe in enumerate(suite.probes):
+            pending = probe_ids[index:]
             if not budget.can_start_episode:
                 result = self._result(
                     PilotRunStatus.BUDGET_EXHAUSTED,
@@ -175,7 +175,7 @@ class DeepSeekPilotRunner:
                 return result
 
             initial_session = CaseSessionState(
-                session_id=f"pilot_{scenario.scenario_id}",
+                session_id=f"pilot_{probe.probe_id}",
                 case_id=case.case_id,
                 player_id=player.player_id,
             )
@@ -185,23 +185,18 @@ class DeepSeekPilotRunner:
                     max_steps=self.pricing.max_steps_per_episode
                 ),
             ).run(
-                episode_id=f"pilot_{scenario.scenario_id}",
+                episode_id=f"pilot_{probe.probe_id}",
                 case=case,
                 player=player,
                 initial_session=initial_session,
-                initial_user_message=scenario.initial_user_message,
+                initial_user_message=probe.initial_user_message,
             )
             record = PilotEpisodeRecord(
-                scenario_id=scenario.scenario_id,
+                probe_id=probe.probe_id,
                 episode=episode,
-                evaluation=evaluator.evaluate(
-                    scenario,
-                    "pilot_run_001",
-                    episode,
-                    enforce_usage_expectation=False,
-                )
+                evaluation=evaluator.evaluate(probe, episode)
             )
-            remaining = scenario_ids[index + 1 :]
+            remaining = probe_ids[index + 1 :]
             if episode.failure_code == DeepSeekBudgetExceededError.code:
                 request_already_recorded = bool(
                     episode.steps or episode.usage is not None
@@ -252,13 +247,13 @@ class DeepSeekPilotRunner:
             }:
                 return snapshot
 
-        raise RuntimeError("validated Pilot suite unexpectedly contained no scenarios")
+        raise RuntimeError("validated Pilot suite unexpectedly contained no probes")
 
     def _validate_policy(self) -> None:
-        if tuple(self.pricing.allowed_scenario_ids) != FROZEN_P0_SCENARIO_IDS:
-            raise ValueError("pricing snapshot does not match frozen P0 scenarios")
-        if self.pricing.runs_per_scenario != 1:
-            raise ValueError("Pilot only permits one run per scenario")
+        if tuple(self.pricing.allowed_probe_ids) != FROZEN_PILOT_PROBE_IDS:
+            raise ValueError("pricing snapshot does not match frozen Pilot probes")
+        if self.pricing.runs_per_probe != 1:
+            raise ValueError("Pilot only permits one run per probe")
         if self.pricing.max_steps_per_episode != 8:
             raise ValueError("Pilot Episode max steps must remain 8")
         if self.pricing.max_format_repair_attempts_per_step != 1:
@@ -290,7 +285,7 @@ class DeepSeekPilotRunner:
                 max_format_repair_attempts_per_step=(
                     self.pricing.max_format_repair_attempts_per_step
                 ),
-                runs_per_scenario=self.pricing.runs_per_scenario,
+                runs_per_probe=self.pricing.runs_per_probe,
                 pricing_snapshot_id=self.pricing.snapshot_id,
                 request_input_token_upper_bound_method=(
                     self.pricing.request_input_token_upper_bound_method
@@ -307,7 +302,7 @@ class DeepSeekPilotRunner:
                 self.adapter.request_budget.maximum_committed_cost_cny
             ),
             completed_episodes=records,
-            unstarted_scenario_ids=unstarted,
+            unstarted_probe_ids=unstarted,
         )
 
     @staticmethod

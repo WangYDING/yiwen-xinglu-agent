@@ -94,7 +94,7 @@ def test_deepseek_pricing_snapshot_estimates_cache_components_separately() -> No
     )
 
     assert pricing.effective_date.isoformat() == "2026-08-04"
-    assert pricing.snapshot_id == "deepseek_v4_flash_pilot_policy_2026_08_06"
+    assert pricing.snapshot_id == "deepseek_v4_flash_pilot_policy_2026_08_07"
     assert pricing.currency == "CNY"
     assert pricing.source_url == (
         "https://api-docs.deepseek.com/zh-cn/quick_start/pricing/"

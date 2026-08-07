@@ -14,7 +14,7 @@ DEFAULT_DEEPSEEK_PRICING_PATH = (
     REPOSITORY_ROOT
     / "data"
     / "pilot"
-    / "deepseek_v4_flash_pilot_policy_2026-08-06.json"
+    / "deepseek_v4_flash_pilot_policy_2026-08-07.json"
 )
 
 
@@ -34,8 +34,8 @@ class DeepSeekPilotPricing(DomainModel):
     cache_hit_input_price_per_unit: Annotated[Decimal, Field(ge=0)]
     cache_miss_input_price_per_unit: Annotated[Decimal, Field(ge=0)]
     output_price_per_unit: Annotated[Decimal, Field(ge=0)]
-    allowed_scenario_ids: tuple[Identifier, ...] = Field(min_length=3, max_length=3)
-    runs_per_scenario: Literal[1]
+    allowed_probe_ids: tuple[Identifier, ...] = Field(min_length=3, max_length=3)
+    runs_per_probe: Literal[1]
     max_steps_per_episode: Literal[8]
     max_format_repair_attempts_per_step: Literal[1]
     request_input_token_upper_bound_method: Literal[
@@ -43,10 +43,28 @@ class DeepSeekPilotPricing(DomainModel):
     ] = "utf8_bytes_plus_framing"
     request_framing_token_allowance: Annotated[StrictInt, Field(ge=256)] = 4096
 
+    @model_validator(mode="before")
+    @classmethod
+    def migrate_scenario_policy_names(cls, data: object) -> object:
+        if not isinstance(data, dict):
+            return data
+        migrated = dict(data)
+        if (
+            "allowed_probe_ids" not in migrated
+            and "allowed_scenario_ids" in migrated
+        ):
+            migrated["allowed_probe_ids"] = migrated.pop("allowed_scenario_ids")
+        if (
+            "runs_per_probe" not in migrated
+            and "runs_per_scenario" in migrated
+        ):
+            migrated["runs_per_probe"] = migrated.pop("runs_per_scenario")
+        return migrated
+
     @model_validator(mode="after")
-    def validate_scenarios(self) -> "DeepSeekPilotPricing":
-        if len(set(self.allowed_scenario_ids)) != len(self.allowed_scenario_ids):
-            raise ValueError("allowed Pilot scenario IDs must be unique")
+    def validate_probes(self) -> "DeepSeekPilotPricing":
+        if len(set(self.allowed_probe_ids)) != len(self.allowed_probe_ids):
+            raise ValueError("allowed Pilot probe IDs must be unique")
         return self
 
 

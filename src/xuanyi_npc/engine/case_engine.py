@@ -25,6 +25,7 @@ from .errors import (
     ContextMismatchError,
     DiagnosisRequiredError,
     EvidenceNotDiscoveredError,
+    InvestigationAlreadyCompletedError,
     InsufficientSkillError,
     MissingCluePrerequisiteError,
     SessionClosedError,
@@ -97,6 +98,14 @@ class CaseEngine:
         ):
             raise ActionMismatchError(
                 "command action_type or target_id does not match the investigation"
+            )
+        if any(
+            record.reference_id == investigation.investigation_id
+            and record.action_type == investigation.action_type
+            for record in session.action_history
+        ):
+            raise InvestigationAlreadyCompletedError(
+                f"investigation already completed: {command.investigation_id}"
             )
 
         self._validate_skill(

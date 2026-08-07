@@ -21,6 +21,7 @@ from xuanyi_npc.engine import (
     DiagnosisRequiredError,
     EvidenceNotDiscoveredError,
     InsufficientSkillError,
+    InvestigationAlreadyCompletedError,
     MissingCluePrerequisiteError,
     SessionClosedError,
     SkillLockedError,
@@ -432,7 +433,7 @@ def test_error_treatments_have_deterministic_outcomes(
         assert result.session.score == 0
 
 
-def test_repeated_investigation_does_not_duplicate_clues(
+def test_repeated_investigation_is_rejected_without_state_change(
     case_definition: CaseDefinition,
     qualified_player_state: PlayerState,
 ) -> None:
@@ -444,16 +445,19 @@ def test_repeated_investigation_does_not_duplicate_clues(
         session,
         investigation_command(case_definition, "observe_scholar", 1),
     )
-    second = engine.execute(
-        case_definition,
-        qualified_player_state,
-        first.session,
-        investigation_command(case_definition, "observe_scholar", 2),
-    )
+    snapshot = first.session.model_dump_json()
 
-    assert second.session.discovered_clue_ids == first.session.discovered_clue_ids
-    assert second.events[0].newly_discovered_clue_ids == frozenset()
-    assert len(second.session.action_history) == 2
+    with pytest.raises(InvestigationAlreadyCompletedError) as exc_info:
+        engine.execute(
+            case_definition,
+            qualified_player_state,
+            first.session,
+            investigation_command(case_definition, "observe_scholar", 2),
+        )
+
+    assert exc_info.value.code == "investigation_already_completed"
+    assert first.session.model_dump_json() == snapshot
+    assert len(first.session.action_history) == 1
 
 
 def test_repeated_actions_do_not_duplicate_score(
@@ -467,7 +471,6 @@ def test_repeated_actions_do_not_duplicate_score(
         qualified_player_state,
         make_session(case_definition, qualified_player_state),
         (
-            "observe_scholar",
             "observe_scholar",
             "ask_about_memory",
             "inspect_umbrella",
