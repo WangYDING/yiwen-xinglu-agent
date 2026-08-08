@@ -23,6 +23,7 @@ xuanyi-deepseek-models = "xuanyi_npc.agents.deepseek_cli:model_discovery_main"
 xuanyi-deepseek-pilot = "xuanyi_npc.agents.deepseek_cli:paid_pilot_main"
 xuanyi-mcp-stdio = "xuanyi_npc.mcp_server.stdio:main"
 xuanyi-memory-eval = "xuanyi_npc.evaluation.memory_runner:main"
+xuanyi-semantic-memory-eval = "xuanyi_npc.evaluation.semantic_memory_runner:main"
 
 [project.optional-dependencies]
 dev = [
