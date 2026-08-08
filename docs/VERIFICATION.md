@@ -341,3 +341,18 @@ M4 工程里程碑完成。该结论只证明 Fake Embedding 下的离线工程�
 - **外部调用**：模型下载 0、依赖安装 0、Embedding API 0、DeepSeek `/models` 0、Chat 0、费用 0 CNY。
 
 M4 保持完成；M4.5-P1 尚未开始。进入 P1 需要用户单独授权安装固定依赖和下载经 revision/SHA 清单约束的本地模型；M5 尚未开始。
+
+## 2026-08-08：M4.5-P1 本地 BGE-M3 Adapter 与离线烟雾
+
+- **基线与范围**：基于 `d7c474d474a2ffe7e53909a09e33f2d826b6f733`；只实现本地可选依赖、固定模型白名单、Adapter、Mock 和真实权重烟雾。没有创建或运行 15 条语义 Gold，没有改 Top-K/阈值/排序、V1 Prompt、M4 的 14 条 Gold、病例、规则或 9 个 MCP 工具。
+- **下载前预检**：项目 `.venv` 为 Python `3.12.3`、pip `26.2.1`、`83,183,416` 字节；项目盘 `119.91 GiB` 可用；RTX 4070 SUPER 为 `12,282 MiB`，驱动 `576.57`。固定 wheel 解析下载量 `2.521 GiB`，保守峰值新增占用约 `9.7 GiB`，低于 `12 GiB` 上限且可用空间高于 `20 GiB`，因此继续。
+- **依赖结果**：只向项目 `.venv` 安装 `torch==2.12.1+cu126`、`numpy==2.4.6`、`safetensors==0.8.0`、`transformers==4.57.6`、`sentence-transformers==5.7.0` 和锁定依赖；来源为官方 PyTorch CUDA 12.6 index 与 PyPI，使用 `--no-cache-dir`。PyTorch 报告 CUDA `12.6` 且 GPU 可用，`pip check` 通过；系统 Python、Anaconda、全局 pip 和 Git 身份未修改。
+- **模型与资料纠偏**：固定 `BAAI/bge-m3@142964af7e05de16511657561de8e8750fc153a0`。官方 revision 文件树为 `6,858,381,860` 字节（约 6.86 GB），纠正 P0 的约 4.59 GB 估计；只下载 11 个 dense Sentence Transformers 文件，共 `2,293,250,249` 字节。主权重 SHA-256 为 `993b2248881724788dcab8c644a91dfd63584b6e5604ff2037cb5541e1e38e7e`，逐文件 SHA 与 manifest 均通过；未下载 `.bin`、`.pt`、pickle、ONNX、图片、sparse、ColBERT 或 reranker。
+- **Adapter 边界**：`BgeM3LocalEmbeddingAdapter` 延迟导入 Torch 和 Sentence Transformers；显式 `load()` 先校验规范 manifest SHA、完整白名单、逐文件大小/SHA 和安全模块类型，再以 `local_files_only=True`、`trust_remote_code=False`、CUDA、FP32 加载。结果保持数量/顺序，固定 1024 维并 L2 归一化；NaN、无穷、零范数、维度和数量错误均拒绝，不自动切换 CPU/API/Fake。空间为 `bge_m3_142964af7e05_dense_fp32_d1024_cuda_l512_v1`，Fake 空间不变。
+- **真实离线烟雾**：三条固定公开合成文本、同一批次两次推理；维度均为 1024，范数均为 `1.0`，最大逐元素差异 `0.0`，两次批次 SHA-256 均为 `f7e1079522eff5e63554673cadb971d2393afd74f5ef63f3859eda866efb6f37`。最终烟雾冷加载 `5,876.608 ms`，首轮 `173.137 ms`，热推理 `15.610 ms`；峰值工作集 `3,351,314,432` 字节，峰值 CUDA allocated/reserved 为 `2,281,566,720 / 2,294,284,288` 字节。加载与推理期间 Hugging Face/Transformers 离线模式开启且 socket 连接被封锁，网络尝试为 0。
+- **烟雾遥测修复**：第一次真实烟雾已成功加载并完成两轮推理，但最终 Windows 峰值内存读取因 64 位句柄类型未声明而退出；只修正烟雾脚本的 `ctypes` 类型后完整通过，没有改变 Adapter、模型、向量、检索或产品实现。
+- **磁盘与 Git**：`.venv` 增加 `4,733,950,322` 字节，模型为 `2,293,250,249` 字节，最终总新增 `7,027,200,571` 字节（`6.545 GiB`）。`.venv/`、`runtime_models/`、`runtime_data/`、`.env` 和 `results/` 均未被 Git 跟踪；模型、缓存和真实向量未提交，也未修改用户全局 Hugging Face 缓存。
+- **专项与全量**：本地 Adapter Mock 12 passed；M4-P1 44、P2 26、P3 19、P4 15 passed；M3 MCP P0/P1 22 passed；V0 DoctorAgent/Runner 16 passed；全量 299 passed。14 条 M4 Gold 为 14/14、双运行哈希均为 `01ecf59b42e37dc2c898fd893fc0234c3d9ff18701c22f77a31bed06511cb44e`、安全硬门槛全为 0；P0 Fake LLM 3 场景/6 轨迹符合预期；无 LLM Demo 为 `resolved / 100`。
+- **外部请求与费用**：获授权的官方包与模型文件下载已完成；DeepSeek `/models` 0、Chat 0、Embedding API 0、其他付费服务 0，费用 0 CNY。未读取任何真实 API Key。
+
+M4 保持完成。M4.5-P1 已完成，但只证明固定本地模型身份、离线加载和向量工程契约，不证明真实语义召回或真实 V1 Agent 效果。M4.5-P2 尚未开始，15 条正式语义 Gold 尚未创建或运行；M5 尚未开始。

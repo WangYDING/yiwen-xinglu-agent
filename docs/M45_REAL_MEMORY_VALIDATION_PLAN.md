@@ -2,11 +2,11 @@
 
 ## 1. 文档身份
 
-- **状态**：M4.5-P0 规划冻结
+- **状态**：M4.5-P0/P1 已完成；P2 尚未开始
 - **规划基线**：`6f678ce923adaa422fe8a84079fafe7fbd4143fb`
 - **日期**：2026-08-08
-- **当前结论**：M4 保持完成；M4.5-P1 尚未开始；M5 尚未开始
-- **本轮外部执行**：模型下载 0、依赖安装 0、Embedding API 0、DeepSeek `/models` 0、Chat 0、费用 0 CNY
+- **当前结论**：M4 保持完成；本地 BGE-M3 Adapter 与离线烟雾已通过；15 条语义 Gold 尚未创建或运行；M5 尚未开始
+- **P1 外部执行**：只从官方包源安装项目 `.venv` 依赖并从 Hugging Face 固定 revision 下载白名单；Embedding API 0、DeepSeek `/models` 0、Chat 0、费用 0 CNY
 
 M4.5 是产品效果验证门槛，不回写 M4 的离线工程结论。M4 已证明 Fake Embedding 下的投影、存储、生命周期、隔离、Top-K、只读上下文和评测契约；M4.5 才回答“真实语义向量是否能找对历史、真实模型是否会正确使用历史”。
 
@@ -66,7 +66,7 @@ M5 应等待 M4.5。自适应教学会依据历史召回改变教学策略；如
 
 #### 首选候选：`BAAI/bge-m3`，dense-only
 
-官方模型页和仓库记录：MIT 许可证、100+ 语言、最长 8192 Token、dense 输出 1024 维，并支持 Sentence Transformers、PyTorch 与 ONNX。官方仓库总量约 4.59 GB，单个 `model.safetensors` 约 2.27 GB；官方不可变文件页公开的该 safetensors SHA-256 为 `993b2248881724788dcab8c644a91dfd63584b6e5604ff2037cb5541e1e38e7e`。P1 仍必须在下载前冻结最终 full revision 和全部允许文件的 SHA-256，不能跟随可变的 `main`。
+官方模型页和仓库记录：MIT 许可证、100+ 语言、最长 8192 Token、dense 输出 1024 维，并支持 Sentence Transformers、PyTorch 与 ONNX。P1 对固定 revision `142964af7e05de16511657561de8e8750fc153a0` 的官方文件树重新核对后，整个 revision 为 `6,858,381,860` 字节（约 6.86 GB），纠正 P0 时约 4.59 GB 的旧估计；本项目只下载 11 个 dense Sentence Transformers 白名单文件，共 `2,293,250,249` 字节。单个 `model.safetensors` 为 `2,271,064,456` 字节，SHA-256 为 `993b2248881724788dcab8c644a91dfd63584b6e5604ff2037cb5541e1e38e7e`。完整逐文件哈希见 `docs/M45_P1_LOCAL_EMBEDDING_REPORT.md`。
 
 优势：
 
@@ -179,7 +179,7 @@ Embedding 是派生数据，权威记忆仍在 SQLite `memory_events`。真实 A
 | 阶段 | 输入 | 产物 | 不包含 | 退出条件 | 网络/付费 | 停止条件 |
 |---|---|---|---|---|---|---|
 | P0：规划 | M4 退出结论、现有接口、本机只读规格、官方资料 | 本文、语义 Gold 规划、路线推荐与授权边界 | 代码、依赖、模型、API 调用 | 文档一致；全量与 M4 Gold 回归通过 | 无 | 资料无法支持模型/价格/隐私结论时只记录未知，不猜测 |
-| P1：真实 Adapter 离线实现与 Mock | 单独下载/安装授权、不可变模型 revision 与文件清单 | 本地 BGE-M3 Adapter、显式配置、Mock、离线加载/维度/无网络测试、模型 manifest | Gold 实跑、Agent Prompt、真实 Chat | `local_files_only`、无导入副作用、向量严格有效、批次/顺序一致、V0 零调用、Fake 空间不变 | 需要下载/安装授权；无模型 API 与调用费 | hash/许可/依赖不符、静默联网、OOM、维度漂移、非有限向量或 V0 变化即停止 |
+| P1：真实 Adapter 离线实现与 Mock | 单独下载/安装授权、不可变模型 revision 与文件清单 | 本地 BGE-M3 Adapter、显式配置、Mock、离线加载/维度/无网络测试、模型 manifest | Gold 实跑、Agent Prompt、真实 Chat | **已完成**：`local_files_only`、无导入副作用、向量严格有效、批次/顺序一致、V0 零调用、Fake 空间不变 | 只发生获授权的官方依赖/模型下载；模型 API 与调用费为 0 | hash/许可/依赖不符、静默联网、OOM、维度漂移、非有限向量或 V0 变化即停止 |
 | P2：真实语义 Pilot | P1 通过、语义 Gold 与阈值已提交冻结、单次运行授权 | 真实排序、Recall@K/MRR/P/R/F1、空结果、Fake 差异、延迟、模型身份与脱敏结果 | Chat、Prompt 调优、真实玩家数据 | 语义门槛达到；安全计数全 0；两次本地排序一致；原始文件忽略 | 本地 0 CNY；API 备选需独立 Key 和最多 0.05 CNY | 预算拒绝、超时、维度/模型变化、用量缺失、费用不可核对、hash 变化或安全计数非 0 即停止 |
 | P3：真实 V1 Agent Pilot | P2 通过、V1 `v1.0.0`、固定课程、真实检索、单独 Chat 授权 | 少量跨 Episode 行为探针、Chat/Embedding 分账、事件与重放证据 | 自适应课程、写记忆工具、Reflection、M5 | 相关历史使用、当前事实隔离、注入边界、无虚假记忆、无永久写入口和 unavailable 停止均有真实证据 | DeepSeek Chat 建议独立上限 0.10 CNY；Embedding 另设独立计数/上限 | 任一预算/用量/超时/模型/索引/安全停止条件触发即保存并结束，不自动重跑 |
 | 退出审计 | P0–P3 提交与原始结果哈希 | 分层结论、限制、是否准入 M5 | 新调参、新运行、M5 代码 | 证据支持工程与行为边界；负结果未被改写 | 无新增调用 | Gold 漂移、数据越界、安全计数非 0 或证据不足则不得关闭 M4.5 |

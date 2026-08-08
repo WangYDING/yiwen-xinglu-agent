@@ -80,6 +80,22 @@ class EmbeddingVectorError(EmbeddingContractError):
     code = "embedding_vector_invalid"
 
 
+class LocalEmbeddingError(EmbeddingError):
+    code = "local_embedding_error"
+
+
+class LocalEmbeddingConfigurationError(LocalEmbeddingError):
+    code = "local_embedding_configuration_invalid"
+
+
+class LocalEmbeddingModelError(LocalEmbeddingError):
+    code = "local_embedding_model_unavailable"
+
+
+class LocalEmbeddingInferenceError(LocalEmbeddingError):
+    code = "local_embedding_inference_failed"
+
+
 class MemoryEmbeddingConflictError(MemoryStorageError):
     code = "memory_embedding_conflict"
 

@@ -28,6 +28,13 @@ xuanyi-memory-eval = "xuanyi_npc.evaluation.memory_runner:main"
 dev = [
     "pytest>=7.4,<9",
 ]
+local-embedding = [
+    "numpy==2.4.6",
+    "safetensors==0.8.0",
+    "sentence-transformers==5.7.0",
+    "torch==2.12.1",
+    "transformers==4.57.6",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]

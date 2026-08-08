@@ -299,3 +299,13 @@
 - **数据与空间决策**：M4.5 使用独立、运行前提交冻结的 15 条合成语义 Gold，不修改 M4 的 14 条工程 Gold。只允许公开架空文本；真实玩家身份、聊天原文、隐藏真值、评分、关系、权限和密钥不得外发。Fake 与每个真实模型/precision/revision 使用不同 `embedding_space_id`，不得覆盖、混用或在正式 Pilot 中静默回退。
 - **安全与费用决策**：真实向量仍是可删除、可重建的派生数据，不获得权威记忆写权限。P2/P3 继续要求玩家/会话预过滤、索引完整性、`memory_context_unavailable` 安全停止、无自动重跑和请求前预算门禁；Chat 与 Embedding 的调用数、用量和费用独立核算。真实 Adapter 失败不改变权威记忆，可在单独工程演示中显式重建 Fake 空间，但不能污染真实 Pilot 结果。
 - **原因**：本地 BGE-M3 在隐私、中文/多语言能力、许可证、硬件适配和现有无角色化 Embedding 契约之间提供最小改动的平衡；保留外部 API 备选可以在 Windows 依赖、性能或质量门槛失败时继续验证，而不把供应商锁定或数据外发提前带入主线。
+
+## ADR-040：本地 BGE-M3 使用固定 safetensors 白名单与设备隔离空间
+
+- **状态**：已接受
+- **日期**：2026-08-08
+- **模型决策**：M4.5-P1 固定 `BAAI/bge-m3` revision `142964af7e05de16511657561de8e8750fc153a0`、dense-only、FP32、1024 维。只下载 11 个 Sentence Transformers 所需文件，主权重必须是 `model.safetensors` 且 SHA-256 为 `993b2248881724788dcab8c644a91dfd63584b6e5604ff2037cb5541e1e38e7e`；`.bin`、`.pt`、pickle、ONNX、图片、sparse、ColBERT 和 reranker 均禁止。模型及运行结果只保存在 Git 忽略目录。
+- **依赖决策**：大型 ML 依赖保留为 `local-embedding` optional extra，Windows/Python 3.12/CUDA 12.6 的可复现锁使用 `torch==2.12.1+cu126`、`numpy==2.4.6`、`safetensors==0.8.0`、`transformers==4.57.6` 和 `sentence-transformers==5.7.0`。基础 `.[dev]` 不自动安装它们；安装只能发生在项目 `.venv`，不得修改全局 Python/Anaconda。
+- **加载决策**：Adapter 模块导入和构造不加载 Torch 或模型。显式 `load()` 必须先校验规范 manifest SHA、完整文件集合、每个文件大小/SHA 和安全模块类型，再以 `local_files_only=True`、`trust_remote_code=False`、固定设备和精度加载；失败不自动切换 CPU、模型、精度、revision、API 或 Fake。
+- **空间决策**：真实空间 ID 包含 revision 短标识、dense、FP32、维度、设备和最大输入长度；本次烟雾空间为 `bge_m3_142964af7e05_dense_fp32_d1024_cuda_l512_v1`。未经预注册容差与排序一致性证据，不得混用 CPU/GPU 或不同截断配置的向量，也不得覆盖 `fake_sha256_token_buckets_v1_d64`。
+- **证据边界**：P1 真实烟雾只证明三条公开合成文本可在网络封锁下产生合规、两轮一致的本地向量；不代表 15 条语义 Gold、Top-K 质量、真实 V1 Agent 行为或产品收益。M4 保持完成，P2 需单独冻结与运行语义 Gold，M5 继续等待 M4.5 退出。

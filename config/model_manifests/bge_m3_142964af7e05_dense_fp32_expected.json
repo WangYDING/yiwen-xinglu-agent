@@ -1,0 +1,78 @@
+{
+  "manifest_version": "bge_m3_expected_manifest_v1",
+  "repository_id": "BAAI/bge-m3",
+  "revision": "142964af7e05de16511657561de8e8750fc153a0",
+  "mode": "dense_only",
+  "precision": "fp32",
+  "dimension": 1024,
+  "trust_remote_code": false,
+  "revision_total_bytes": 6858381860,
+  "expected_total_bytes": 2293250249,
+  "files": [
+    {
+      "path": "1_Pooling/config.json",
+      "expected_size_bytes": 191,
+      "expected_sha256": null
+    },
+    {
+      "path": "README.md",
+      "expected_size_bytes": 15822,
+      "expected_sha256": null
+    },
+    {
+      "path": "config.json",
+      "expected_size_bytes": 687,
+      "expected_sha256": null
+    },
+    {
+      "path": "config_sentence_transformers.json",
+      "expected_size_bytes": 123,
+      "expected_sha256": null
+    },
+    {
+      "path": "model.safetensors",
+      "expected_size_bytes": 2271064456,
+      "expected_sha256": "993b2248881724788dcab8c644a91dfd63584b6e5604ff2037cb5541e1e38e7e"
+    },
+    {
+      "path": "modules.json",
+      "expected_size_bytes": 349,
+      "expected_sha256": null
+    },
+    {
+      "path": "sentence_bert_config.json",
+      "expected_size_bytes": 54,
+      "expected_sha256": null
+    },
+    {
+      "path": "sentencepiece.bpe.model",
+      "expected_size_bytes": 5069051,
+      "expected_sha256": "cfc8146abe2a0488e9e2a0c56de7952f7c11ab059eca145a0a727afce0db2865"
+    },
+    {
+      "path": "special_tokens_map.json",
+      "expected_size_bytes": 964,
+      "expected_sha256": null
+    },
+    {
+      "path": "tokenizer.json",
+      "expected_size_bytes": 17098108,
+      "expected_sha256": "21106b6d7dab2952c1d496fb21d5dc9db75c28ed361a05f5020bbba27810dd08"
+    },
+    {
+      "path": "tokenizer_config.json",
+      "expected_size_bytes": 444,
+      "expected_sha256": null
+    }
+  ],
+  "forbidden_patterns": [
+    "*.bin",
+    "*.pt",
+    "*.pickle",
+    "onnx/**",
+    "imgs/**",
+    "*sparse*",
+    "*colbert*",
+    "*reranker*"
+  ]
+}

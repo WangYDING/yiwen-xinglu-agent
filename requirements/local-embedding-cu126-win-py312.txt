@@ -1,0 +1,39 @@
+# Reproducible M4.5-P1 environment for Windows CPython 3.12 and CUDA 12.6.
+# Install only inside the repository .venv. The extra index is the official
+# PyTorch wheel source; all other packages resolve from the official PyPI index.
+--index-url https://pypi.org/simple
+--extra-index-url https://download.pytorch.org/whl/cu126
+
+torch==2.12.1+cu126
+numpy==2.4.6
+safetensors==0.8.0
+transformers==4.57.6
+sentence-transformers==5.7.0
+
+# Transitive dependency lock captured by the download-free resolver preflight.
+certifi==2026.7.22
+charset-normalizer==3.4.9
+colorama==0.4.6
+filelock==3.32.2
+fsspec==2026.7.0
+huggingface-hub==0.36.2
+idna==3.18
+Jinja2==3.1.6
+joblib==1.5.3
+MarkupSafe==3.0.3
+mpmath==1.3.0
+narwhals==2.24.0
+networkx==3.6.1
+packaging==26.3
+PyYAML==6.0.3
+regex==2026.7.19
+requests==2.34.2
+scikit-learn==1.9.0
+scipy==1.18.0
+setuptools==81.0.0
+sympy==1.14.0
+threadpoolctl==3.6.0
+tokenizers==0.22.2
+tqdm==4.70.0
+typing-extensions==4.16.0
+urllib3==2.7.0

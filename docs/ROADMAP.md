@@ -33,7 +33,8 @@ Word 设计总结、`xuanyi-npc-handoff` 和 `docs/algorithm-experiment-plan-v0.
 | M4-P4：离线记忆 Gold 与安全评测 | 已完成 | 14 条冻结合成场景、严格输入/Gold 契约、确定性双运行器、macro/micro 指标、逻辑快照与安全硬门槛 |
 | M4：V1 基础长期记忆 | 已完成 | P0–P4 与退出审计全部通过；完整结论见 `docs/M4_EXIT_AUDIT.md`，不代表真实 Embedding 或真实 V1 模型效果 |
 | M4.5-P0：真实 Embedding 与 V1 Pilot 规划 | 已完成 | 本机只读规格、三路线比较、本地 BGE-M3 首选、外部 API 备选、15 条语义 Gold 设计、P1–P3 授权与停止门禁 |
-| M4.5-P1～P3 与退出审计 | 未开始 | 真实 Adapter、真实语义 Pilot、真实 V1 Agent Pilot 均未实现或运行 |
+| M4.5-P1：本地 Adapter 与离线烟雾 | 已完成 | 固定依赖、BGE-M3 revision/SHA 白名单、延迟加载 Adapter、Mock、真实 CUDA/FP32 离线烟雾；未运行语义 Gold |
+| M4.5-P2～P3 与退出审计 | 未开始 | 15 条真实语义 Gold、真实 V1 Agent Pilot 与退出审计均未运行 |
 | M5 及以后 | 未开始 | 自适应教学、Reflection、界面、多 Agent 等均未开始 |
 
 ## M2a 完成边界
@@ -193,6 +194,6 @@ M4.5 不重新打开或改写 M4。P0 已完成本机只读调查、官方资料
 4. M4.5 退出审计；
 5. 之后才允许开始 M5 自适应教学规划。
 
-M5 等待 M4.5，是为了避免把记忆召回问题与教学策略问题混为同一个实验变量。M4.5-P1 尚未开始，本轮没有安装依赖、下载模型或调用任何模型 API。
+M5 等待 M4.5，是为了避免把记忆召回问题与教学策略问题混为同一个实验变量。M4.5-P1 已在项目 `.venv` 中安装固定可选依赖，只下载固定 revision 的 11 个 dense safetensors 白名单文件，并以网络阻断方式完成真实本地权重烟雾；详细身份、哈希、磁盘和性能证据见 `docs/M45_P1_LOCAL_EMBEDDING_REPORT.md`。P1 没有运行 15 条语义 Gold、调用模型 API、接入 Agent Prompt 或修改 M4 产品路径。M4.5-P2 尚未开始。
 
 V1 只增加基础向量 Top-K 长期记忆并保持固定课程；V2 才使用多因素记忆排序、自适应教学和 Reflection。三个产品版本始终启用 `AgentContextFilter`，模型始终不能直接写永久记忆或关键状态。真实 Embedding 的供应商、数据发送边界、预算和网络调用必须另行决定并授权。

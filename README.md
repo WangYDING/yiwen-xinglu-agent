@@ -6,7 +6,7 @@
 
 ## 当前状态
 
-**M2、M3 与 M4 工程里程碑已经完成；M4.5-P0 真实记忆验证规划已完成，M4.5-P1 与 M5 尚未开始。** M3-P0/P1 已验证官方 MCP v2 的冻结工具契约、应用服务安全边界和本地 stdio 生命周期。M4-P1/P2/P3 已实现公开来源投影、SQLite Schema v2 权威记忆与派生向量、跨 Episode 作用域过滤、稳定 Top-K、最小 `MemoryView`、`memory_query_v1` 和独立 V1 Prompt；P4 使用 14 条冻结合成场景和确定性 Fake Embedding 验证完整管道，M4 退出审计确认 V0 与冻结的 MCP 工具保持不变，所有安全硬门槛为 0。M4.5-P0 只完成本机只读调查、本地/API/Fake 路线比较、独立语义 Gold 与真实 V1 Pilot 规划，没有安装或运行真实 Embedding。
+**M2、M3 与 M4 工程里程碑已经完成；M4.5-P0/P1 已完成，M4.5-P2 与 M5 尚未开始。** M3-P0/P1 已验证官方 MCP v2 的冻结工具契约、应用服务安全边界和本地 stdio 生命周期。M4-P1/P2/P3 已实现公开来源投影、SQLite Schema v2 权威记忆与派生向量、跨 Episode 作用域过滤、稳定 Top-K、最小 `MemoryView`、`memory_query_v1` 和独立 V1 Prompt；P4 使用 14 条冻结合成场景和确定性 Fake Embedding 验证完整管道，M4 退出审计确认 V0 与冻结的 MCP 工具保持不变，所有安全硬门槛为 0。M4.5-P1 已安装项目内可选依赖、按固定 revision/SHA 下载 BGE-M3 dense 白名单，并完成 Mock 与真实权重的网络阻断离线烟雾；尚未运行 15 条正式语义 Gold 或真实 V1 Agent Pilot。
 
 已经包含：
 
@@ -43,6 +43,7 @@
 - V1 的严格公开来源契约、确定性调查/诊断/处置记忆投影和 SQLite Schema v1 权威存储；
 - 更正、失效、应用级隐私硬删除、非内容墓碑、事务回滚和状态先提交后的显式协调恢复；
 - 供应商无关 Embedding 契约、跨进程可重复的 64 维 SHA-256 特征桶 Fake Embedding；
+- 固定 revision、严格 safetensors 白名单、延迟加载且离线限定的 BGE-M3 CUDA/FP32 本地 Adapter；
 - SQLite Schema v1→v2 原子迁移、little-endian float32 派生向量、按玩家索引/清理/重建；
 - 只使用余弦相似度的 Top-K，并显式区分“无达阈值记忆”与“索引缺失或过期”；
 - 由可信玩家/会话构造的 `MemoryScope`，在排序前排除当前 Episode、非允许类型和其他玩家记忆；
@@ -54,11 +55,11 @@
 - 全新 Python 3.12 虚拟环境中的安装、测试和 Demo 复现记录；
 - 领域模型、规则边界和持久化测试。
 
-**当前停止在 M4.5-P1 开始之前**：M2 付费运行和 Prompt 调优已经关闭，标准探针与两个安全探针均不得重跑。M4 的实现与退出审计只使用确定性 Fake Embedding、Fake LLM、合成数据和临时 SQLite。M4.5-P0 推荐先用本地 `BAAI/bge-m3` dense-only 做真实语义验证，并把外部 API 保留为单独授权的备选；本轮没有下载模型、安装依赖、调用真实 Chat/Embedding 或开始自适应教学、Reflection、多 Agent、界面和新玩法。
+**当前停止在 M4.5-P2 开始之前**：M2 付费运行和 Prompt 调优已经关闭，标准探针与两个安全探针均不得重跑。M4 的实现与退出审计仍只基于确定性 Fake Embedding；M4.5-P1 只证明本地 `BAAI/bge-m3` dense-only 在固定文件身份和网络阻断下可加载、输出合规向量，不代表 15 条真实语义 Gold 或真实 V1 Agent 效果。没有调用真实 Chat/Embedding API，也没有开始自适应教学、Reflection、多 Agent、界面和新玩法。
 
 最终 M2 退出依据包括：标准探针在 8 步内完成正确诊断和处置，终态 `resolved / 100`；`SAFETY_ONLY` 的错误诱导探针抵抗了 `evil_spirit_attack` 暗示并提交正确诊断，但因一次解释性 `respond` 未能处置；过早行动探针的 1 次未知调查和 4 次过早诊断均被规则拒绝，没有状态污染。最新三探针共 24 次 Chat，24/24 首次结构化成功，格式修复、降级和非法状态写入均为 0，事件均连续且可重放。三探针共用一个病例且各运行一次，不是正式成功率样本。
 
-M2 分层结论和数据身份见 [`docs/M2_EXIT_AUDIT.md`](docs/M2_EXIT_AUDIT.md)，M3 证据和限制见 [`docs/M3_EXIT_AUDIT.md`](docs/M3_EXIT_AUDIT.md)，M4 退出结论见 [`docs/M4_EXIT_AUDIT.md`](docs/M4_EXIT_AUDIT.md)。M4 架构与 P1–P4 实现边界见 [`docs/M4_MEMORY_PLAN.md`](docs/M4_MEMORY_PLAN.md)，Gold 契约、指标和实测结果见 [`docs/M4_MEMORY_EVALUATION_PLAN.md`](docs/M4_MEMORY_EVALUATION_PLAN.md)。M4.5 的真实路线、授权和预算门槛见 [`docs/M45_REAL_MEMORY_VALIDATION_PLAN.md`](docs/M45_REAL_MEMORY_VALIDATION_PLAN.md)，独立语义 Gold 设计见 [`docs/M45_SEMANTIC_GOLD_PLAN.md`](docs/M45_SEMANTIC_GOLD_PLAN.md)。项目已经包含最小 MCP 包装、本地 stdio 启动入口、SQLite 记忆权威库、可重建的离线向量检索、V1 安全只读记忆 Prompt 和离线 Gold 评测，但仍不包含 HTTP/SSE、认证、远程部署、真实 Embedding、真实 V1 模型行为结论或交互界面。
+M2 分层结论和数据身份见 [`docs/M2_EXIT_AUDIT.md`](docs/M2_EXIT_AUDIT.md)，M3 证据和限制见 [`docs/M3_EXIT_AUDIT.md`](docs/M3_EXIT_AUDIT.md)，M4 退出结论见 [`docs/M4_EXIT_AUDIT.md`](docs/M4_EXIT_AUDIT.md)。M4 架构与 P1–P4 实现边界见 [`docs/M4_MEMORY_PLAN.md`](docs/M4_MEMORY_PLAN.md)，Gold 契约、指标和实测结果见 [`docs/M4_MEMORY_EVALUATION_PLAN.md`](docs/M4_MEMORY_EVALUATION_PLAN.md)。M4.5 的真实路线、授权和预算门槛见 [`docs/M45_REAL_MEMORY_VALIDATION_PLAN.md`](docs/M45_REAL_MEMORY_VALIDATION_PLAN.md)，P1 依赖、文件哈希与离线烟雾证据见 [`docs/M45_P1_LOCAL_EMBEDDING_REPORT.md`](docs/M45_P1_LOCAL_EMBEDDING_REPORT.md)，独立语义 Gold 设计见 [`docs/M45_SEMANTIC_GOLD_PLAN.md`](docs/M45_SEMANTIC_GOLD_PLAN.md)。项目已经包含最小 MCP 包装、本地 stdio 启动入口、SQLite 记忆权威库、可重建的离线向量检索、V1 安全只读记忆 Prompt、离线 Gold 评测和真实本地 Embedding Adapter，但仍不包含 HTTP/SSE、认证、远程部署、真实语义 Gold 结果、真实 V1 模型行为结论或交互界面。
 
 ## 设计边界
 
@@ -137,6 +138,8 @@ python -m xuanyi_npc.evaluation.memory_runner
 ```
 
 命令会在两个全新临时目录中重复完整套件，比较排序后的 SQLite 逻辑快照与确定性结果哈希，并自动清理临时状态。输出指标只属于合成 Gold 与 64 维确定性 Fake Embedding；不代表真实 Embedding 语义质量、真实模型长期记忆成功率或生产性能。
+
+M4.5-P1 的本地 Embedding 是可选能力，基础 `pip install -e ".[dev]"` 不会安装大型 ML 依赖。固定 Windows/Python 3.12/CUDA 12.6 环境的依赖、受控下载和离线烟雾命令见 `docs/M45_P1_LOCAL_EMBEDDING_REPORT.md`；模型目录、缓存和烟雾结果均被 Git 忽略。不要在没有单独下载授权时执行模型下载脚本。
 
 M2b-P0 的 3 条 dev 场景也完全离线，可由一条命令重复运行：
 
@@ -223,7 +226,7 @@ M2 真实 Pilot 已结束，不再运行模型发现、标准探针、安全探�
 - V1 只增加基础向量 Top-K 长期记忆并保持固定课程；多因素记忆排序、自适应教学与 Reflection 属于 V2。
 - 长期记忆、自适应教学和 Reflection 明确不属于当前 V0 实现。
 - M4-P4 已用冻结合成 Gold 验证投影、生命周期、检索、隔离、只读 Prompt 和协调恢复；该结论只证明离线程序化边界与 Fake Embedding 下的确定性结果，没有验证真实模型抵抗记忆提示注入或真实 Embedding 的语义能力。
-- 真实 Embedding 的供应商、可发送数据、预算、密钥和网络授权尚未决定；DeepSeek Chat 的历史授权不会自动延伸到 Embedding。
+- 本地 BGE-M3 Adapter 已完成离线烟雾，但尚未运行独立的 15 条语义 Gold；因此不能声称真实语义召回有效。外部 Embedding API 仍未授权，DeepSeek Chat 的历史授权不会自动延伸到其他供应商。
 - 当前 V0 的固定课程只按步骤编号推进，不基于玩家表现动态改变。
 - 当前真实样本仍只有一个病例上的单次探针运行，不足以形成正式成功率、跨病例比较或模型可靠性指标。
-- M2 付费运行已经停止；M3 与 M4 已完成工程退出；M4.5-P0 规划已完成，真实 Adapter、真实 Embedding 和真实 V1 Pilot 未实现或运行，M5 尚未开始。
+- M2 付费运行已经停止；M3 与 M4 已完成工程退出；M4.5-P0/P1 已完成，本地 Adapter 已验证但 P2 语义 Gold 与 P3 真实 V1 Pilot 均未运行，M5 尚未开始。
