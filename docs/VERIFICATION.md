@@ -329,3 +329,15 @@ M4-P4 完成，但当时整个 M4 尚未执行单独退出审计；该句保留�
 - **外部调用**：DeepSeek `/models` 0 次、Chat 0 次、真实 Embedding 0 次、费用 0 CNY；未读取真实 API Key。
 
 M4 工程里程碑完成。该结论只证明 Fake Embedding 下的离线工程契约与安全边界，不代表真实 Embedding 语义质量、真实 V1 模型使用记忆的效果、真实玩家收益或生产性能。完整逐项审计见 `docs/M4_EXIT_AUDIT.md`；真实 Embedding 与真实 V1 Pilot 尚未验证，M5 尚未开始。
+
+## 2026-08-08：M4.5-P0 真实 Embedding 与 V1 Pilot 规划冻结
+
+- **基线与范围**：基于 `6f678ce923adaa422fe8a84079fafe7fbd4143fb`，只修改文档；没有改动 M4 P1–P4 产品实现、14 条工程 Gold、Prompt、病例、规则或 MCP 工具。
+- **只读环境**：Windows 10 64 位、Ryzen 9 7900X 12 核/24 线程、约 31 GiB 内存、RTX 4070 SUPER 12,282 MiB、项目盘约 120 GiB 可用、系统与项目 Python 3.12.3。当前 `.venv` 没有 PyTorch、ONNX Runtime、Transformers、Sentence Transformers 或 NumPy。
+- **路线结论**：比较本地、外部 API 与继续 Fake 三条路线后，推荐先在单独授权下使用本地 `BAAI/bge-m3` dense-only、1024 维、固定 revision/SHA 和 FP32；阿里云百炼 `text-embedding-v4` 是外部首选备选，智谱 `embedding-3` 是技术备选。DeepSeek Key 不复用。
+- **Pilot 规划**：新增 15 条、75 个唯一合成文本的独立语义 Gold 设计；P2 外部备选最多 8 次 Embedding 请求、16,000 Token、建议预算上限 0.05 CNY；P3 规划 5 个真实 V1 行为探针，DeepSeek Chat 与 Embedding 分开计数和预算。
+- **安全边界**：真实玩家身份、聊天原文、隐藏真值、评分、关系值、权限和密钥禁止外发；真实/Fake 空间分离；Adapter 失败不修改权威记忆，索引 unavailable 时不调用 LLM。
+- **验证结果**：全量测试 287 passed；14 条 M4 Gold 在两个临时目录中 14/14 通过，两次确定性哈希均为 `01ecf59b42e37dc2c898fd893fc0234c3d9ff18701c22f77a31bed06511cb44e`，安全总计全部为 0；`git diff --check` 与敏感信息/数据库/运行结果跟踪检查通过。
+- **外部调用**：模型下载 0、依赖安装 0、Embedding API 0、DeepSeek `/models` 0、Chat 0、费用 0 CNY。
+
+M4 保持完成；M4.5-P1 尚未开始。进入 P1 需要用户单独授权安装固定依赖和下载经 revision/SHA 清单约束的本地模型；M5 尚未开始。

@@ -32,6 +32,8 @@ Word 设计总结、`xuanyi-npc-handoff` 和 `docs/algorithm-experiment-plan-v0.
 | M4-P3：V1 Agent 安全上下文 | 已完成 | 跨 Episode MemoryScope、检索前/后过滤、最小 MemoryView、memory_query_v1、独立 V1 Prompt 与安全停止 |
 | M4-P4：离线记忆 Gold 与安全评测 | 已完成 | 14 条冻结合成场景、严格输入/Gold 契约、确定性双运行器、macro/micro 指标、逻辑快照与安全硬门槛 |
 | M4：V1 基础长期记忆 | 已完成 | P0–P4 与退出审计全部通过；完整结论见 `docs/M4_EXIT_AUDIT.md`，不代表真实 Embedding 或真实 V1 模型效果 |
+| M4.5-P0：真实 Embedding 与 V1 Pilot 规划 | 已完成 | 本机只读规格、三路线比较、本地 BGE-M3 首选、外部 API 备选、15 条语义 Gold 设计、P1–P3 授权与停止门禁 |
+| M4.5-P1～P3 与退出审计 | 未开始 | 真实 Adapter、真实语义 Pilot、真实 V1 Agent Pilot 均未实现或运行 |
 | M5 及以后 | 未开始 | 自适应教学、Reflection、界面、多 Agent 等均未开始 |
 
 ## M2a 完成边界
@@ -178,5 +180,19 @@ P4 的 Precision、Recall、F1 与 False Memory Rate 只描述冻结合成 Gold 
 M4 退出审计已核对两个同名 Gold 检查点，确认 `118b3b1` 是包含 14 条场景、预期、manifest 和严格契约的最终有效冻结基线；从冻结到 P4 最终提交，三份 Gold 文件、阈值、排序规则与 P1–P3 产品实现均未修改。14/14 场景与两次确定性哈希再次通过，安全硬门槛全部为 0。完整逐项证据见 `docs/M4_EXIT_AUDIT.md`。
 
 M4 的完成只表示 Fake Embedding 下的离线工程契约与安全边界闭环。真实 Embedding、真实 V1 DoctorAgent Pilot、真实玩家收益、生产性能和并发多进程事务仍未验证；它们不构成本次 M4 退出阻塞，但在形成产品效果结论前必须单独决策和授权。M5 尚未开始。
+
+## M4.5 真实效果验证门槛
+
+M4.5 不重新打开或改写 M4。P0 已完成本机只读调查、官方资料核对和 Pilot 规划，推荐优先用本地 `BAAI/bge-m3` dense-only 验证中文真实语义；阿里云百炼 `text-embedding-v4` 只作为需要新账号、独立 Key 与预算授权的外部备选。详细方案见 `docs/M45_REAL_MEMORY_VALIDATION_PLAN.md`，独立语义 Gold 见 `docs/M45_SEMANTIC_GOLD_PLAN.md`。
+
+后续顺序固定为：
+
+1. M4.5-P1：在单独下载/安装授权后实现真实 Adapter 和 Mock/离线验证；
+2. M4.5-P2：先冻结独立语义 Gold，再单次运行真实 Embedding Pilot；
+3. M4.5-P3：P2 通过后，分开授权 DeepSeek Chat 和 Embedding 预算，运行少量真实 V1 行为探针；
+4. M4.5 退出审计；
+5. 之后才允许开始 M5 自适应教学规划。
+
+M5 等待 M4.5，是为了避免把记忆召回问题与教学策略问题混为同一个实验变量。M4.5-P1 尚未开始，本轮没有安装依赖、下载模型或调用任何模型 API。
 
 V1 只增加基础向量 Top-K 长期记忆并保持固定课程；V2 才使用多因素记忆排序、自适应教学和 Reflection。三个产品版本始终启用 `AgentContextFilter`，模型始终不能直接写永久记忆或关键状态。真实 Embedding 的供应商、数据发送边界、预算和网络调用必须另行决定并授权。

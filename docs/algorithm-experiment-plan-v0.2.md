@@ -6,7 +6,7 @@
 - **日期**：2026-08-04
 - **最近同步**：2026-08-08
 - **验证状态**：M2/M3/M4 ENGINEERING EXIT VERIFIED / M4 FAKE-EMBEDDING GOLD 14/14 / REAL V1 EFFECT UNVERIFIED
-- **当前工程阶段**：M2、M3 与 M4 工程里程碑已完成；真实 Embedding 与真实 V1 Pilot 未验证，M5 尚未开始
+- **当前工程阶段**：M2、M3 与 M4 工程里程碑已完成；M4.5-P0 真实 Embedding 与 V1 Pilot 规划已完成，P1 尚未开始，M5 尚未开始
 - **取代范围**：取代 v0.1 的当前执行口径；v0.1 原文件保留为历史版本
 - **结论边界**：不提供现实医疗能力，不把研究目标写成已经实现的结果
 
@@ -144,7 +144,11 @@ M4-P3：安全只读 V1 Agent 记忆上下文
 M4-P4：14 条冻结跨 Episode Gold 与安全评测
   ↓ 已完成；14/14 与安全硬门槛 0 仅属于离线合成契约
 M4 退出审计
-  ↓ 已完成；真实 Embedding 与真实 V1 Pilot 仍是独立门槛，M5 未开始
+  ↓ 已完成；不回写 M4 离线结论
+M4.5-P0 真实 Embedding 与 V1 Pilot 规划
+  ↓ 已完成；P1–P3 仍需分阶段授权
+M4.5-P1 Adapter → P2 真实语义 Pilot → P3 真实 V1 Agent Pilot → M4.5 退出审计
+  ↓ 均未开始；完成后才允许开始 M5 规划
 ```
 
 ### M2a 已完成
@@ -285,4 +289,4 @@ M2b-P0/P1a/P1b 均不包含 MCP、长期记忆、自适应教学或 Reflection�
 
 ## 11. 当前停止条件
 
-本方案已完成 M2、M3 与 M4 工程退出审计。模型发现、诊断性 Pilot、`v0.2.1` 超时、标准探针通过及两个安全任务失败均按真实结果保留；M3-P0/P1 的工具契约、规则边界、stdio 生命周期和 15 项退出条件已验证。M4-P0–P4 已完成确定性公开事件投影、SQLite 权威记忆、可重建派生向量、玩家过滤后的基础余弦 Top-K、V1 只读记忆上下文和 14 条冻结合成 Gold；退出审计确认冻结后无 Gold/阈值/产品反向调整，安全硬门槛均为 0。当前继续停止所有 M2 付费运行与 Prompt 调优，并停止在 M5 开始之前；真实 Embedding 与真实 V1 Pilot 需要新的供应商或本地模型决策、数据授权和独立预算。永久记忆仍不得接受模型直接写入。详细边界以 `M4_MEMORY_PLAN.md`、`M4_MEMORY_EVALUATION_PLAN.md` 和 `M4_EXIT_AUDIT.md` 为准。
+本方案已完成 M2、M3 与 M4 工程退出审计。模型发现、诊断性 Pilot、`v0.2.1` 超时、标准探针通过及两个安全任务失败均按真实结果保留；M3-P0/P1 的工具契约、规则边界、stdio 生命周期和 15 项退出条件已验证。M4-P0–P4 已完成确定性公开事件投影、SQLite 权威记忆、可重建派生向量、玩家过滤后的基础余弦 Top-K、V1 只读记忆上下文和 14 条冻结合成 Gold；退出审计确认冻结后无 Gold/阈值/产品反向调整，安全硬门槛均为 0。M4.5-P0 已完成本地/API/Fake 路线比较、独立语义 Gold 和真实 V1 Pilot 规划，推荐先在单独授权后验证本地 `BAAI/bge-m3` dense-only；P1–P3 均未开始。当前继续停止所有 M2 付费运行与 Prompt 调优，并停止在 M4.5-P1 开始之前；M5 必须等待真实语义与真实 V1 Pilot 能把召回问题和教学策略问题分离后再规划。永久记忆仍不得接受模型直接写入。M4 边界以 `M4_MEMORY_PLAN.md`、`M4_MEMORY_EVALUATION_PLAN.md` 和 `M4_EXIT_AUDIT.md` 为准，M4.5 边界以 `M45_REAL_MEMORY_VALIDATION_PLAN.md` 和 `M45_SEMANTIC_GOLD_PLAN.md` 为准。
