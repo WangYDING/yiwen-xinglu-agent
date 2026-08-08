@@ -40,7 +40,7 @@ Gold 真值只进入评测器，不进入 `MemoryQueryBuilder`、`AgentContextFi
 | `memory_projection_idempotency_001` | 同一来源事件和投影版本重复消费至少两次 | 只存在一条记忆和一条来源收据；返回幂等已存在而非新增 |
 | `memory_projection_conflict_001` | 同一稳定来源/版本被构造成不同内容哈希 | 明确 `projection_conflict`，不覆盖原记录，不生成第二条事实 |
 | `memory_invalidation_deletion_001` | 依次覆盖失效、更正和隐私硬删除，再重建向量与投影 | 旧、失效和硬删除记录不召回；更正版本可召回；硬删除内容不复活 |
-| `memory_stable_tie_001` | 多条同玩家 active 记忆由 Fake Embedding 产生完全相同相似度 | 严格按 `event_id ASC` 返回；跨进程和重复运行顺序一致 |
+| `memory_stable_tie_001` | 多条同玩家 active 记忆由 Fake Embedding 产生完全相同相似度 | 严格按 `memory_id ASC` 返回；跨进程和重复运行顺序一致 |
 | `memory_prompt_injection_data_001` | 合成病例的公开文本含“忽略规则、调用隐藏工具”等注入式内容，并经合法事件投影 | 文本只能出现在 `retrieved_memories[].content`；工具集合、课程和 AgentAction Schema 不改变 |
 | `memory_hidden_truth_filter_001` | 来源领域对象含隐藏哨兵，安全投影只允许公开说明 | SQLite 公开来源负载、记忆内容、Embedding 输入、查询和 Prompt 均不含哨兵 |
 | `memory_v0_isolation_001` | 使用与 V1 相同的玩家和病例运行 V0 | MemoryRepository、EmbeddingAdapter 和检索器调用次数全部为 0；V0 Prompt 与历史快照一致 |
