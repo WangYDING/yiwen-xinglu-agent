@@ -34,6 +34,7 @@ from xuanyi_npc.memory.contracts import (
     MemoryInvalidationOperation,
     MemoryLifecycleReason,
     MemorySourceEventType,
+    MemoryStatus,
     PublicClueFact,
     TrustedMemoryBoundary,
 )
@@ -57,20 +58,26 @@ from xuanyi_npc.memory.projection import CommittedActionPublicView, Deterministi
 from xuanyi_npc.storage.sqlite_memory import SQLiteMemoryRepository
 
 from .semantic_memory_contracts import (
+    SafetyExclusionReason,
     SemanticCandidateInput,
+    SemanticCandidateRuntimeFact,
+    SemanticCandidateRuntimeStatus,
     SemanticCandidateSetup,
     SemanticClassificationMetrics,
     SemanticGoldManifest,
+    SemanticGoldManifestV2,
     SemanticGoldSuiteExpectation,
+    SemanticGoldSuiteExpectationV2,
     SemanticGoldSuiteInput,
     SemanticPreregisteredConfig,
     SemanticRankingMetrics,
-    SemanticRawRunResult,
+    SemanticRawRunResultV2,
     SemanticRunResourceMetrics,
     SemanticSafetyCounts,
     SemanticScenarioExpectation,
+    SemanticScenarioExpectationV2,
     SemanticScenarioInput,
-    SemanticScenarioResult,
+    SemanticScenarioResultV2,
 )
 
 
@@ -78,6 +85,12 @@ ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_INPUT = ROOT / "data" / "evaluation" / "m45_semantic_gold_inputs.json"
 DEFAULT_EXPECTATIONS = ROOT / "data" / "evaluation" / "m45_semantic_gold_expectations.json"
 DEFAULT_MANIFEST = ROOT / "data" / "evaluation" / "m45_semantic_gold_manifest.json"
+DEFAULT_EXPECTATIONS_V2 = (
+    ROOT / "data" / "evaluation" / "m45_semantic_gold_expectations_v2.json"
+)
+DEFAULT_MANIFEST_V2 = (
+    ROOT / "data" / "evaluation" / "m45_semantic_gold_manifest_v2.json"
+)
 DEFAULT_MODEL = ROOT / "runtime_models" / "bge-m3-142964af7e05"
 DEFAULT_MODEL_MANIFEST = ROOT / "config" / "model_manifests" / "bge_m3_142964af7e05_dense_fp32_verified.json"
 HIDDEN_FRAGMENTS = (
@@ -114,6 +127,87 @@ def load_semantic_gold(
     for expectation in expectations.scenarios:
         if not (set(expectation.relevant_candidate_ids) | set(expectation.forbidden_candidate_ids)).issubset(expected_ids[expectation.scenario_id]):
             raise ValueError("semantic expectation references an unknown candidate")
+    return suite, expectations, manifest
+
+
+def _expected_safety_reason(
+    scenario: SemanticScenarioInput,
+    candidate: SemanticCandidateInput,
+) -> SafetyExclusionReason | None:
+    if candidate.source.player_id != scenario.player_id:
+        return SafetyExclusionReason.CROSS_PLAYER
+    if candidate.source.source_session_id == scenario.current_session_id:
+        return SafetyExclusionReason.CURRENT_EPISODE
+    if candidate.setup is SemanticCandidateSetup.INVALIDATE:
+        return SafetyExclusionReason.INVALIDATED
+    if candidate.setup is SemanticCandidateSetup.HARD_DELETE:
+        return SafetyExclusionReason.HARD_DELETED
+    # A CORRECT slot denotes its active replacement. The superseded source record
+    # remains independently audited from SQLite lifecycle state.
+    return None
+
+
+def validate_v2_partition_against_input(
+    suite: SemanticGoldSuiteInput,
+    expectations: SemanticGoldSuiteExpectationV2,
+) -> None:
+    scenarios = {item.scenario_id: item for item in suite.scenarios}
+    for expectation in expectations.scenarios:
+        scenario = scenarios[expectation.scenario_id]
+        candidates = {item.candidate_id: item for item in scenario.candidates}
+        relevant = set(expectation.relevant_candidate_ids)
+        negative = set(expectation.semantic_negative_candidate_ids)
+        excluded = {
+            item.candidate_id: item.reason
+            for item in expectation.safety_excluded_candidates
+        }
+        partition = relevant | negative | set(excluded)
+        if partition != set(candidates):
+            raise ValueError("semantic v2 partition must cover all four candidates")
+        for candidate_id in relevant | negative:
+            if _expected_safety_reason(scenario, candidates[candidate_id]) is not None:
+                raise ValueError(
+                    "legal semantic candidate violates trusted runtime scope"
+                )
+        for candidate_id, reason in excluded.items():
+            expected = _expected_safety_reason(scenario, candidates[candidate_id])
+            if reason is not expected:
+                raise ValueError(
+                    "safety exclusion reason does not match frozen input state"
+                )
+
+
+def load_semantic_gold_v2(
+    input_path: Path = DEFAULT_INPUT,
+    expectation_path: Path = DEFAULT_EXPECTATIONS_V2,
+    manifest_path: Path = DEFAULT_MANIFEST_V2,
+) -> tuple[
+    SemanticGoldSuiteInput,
+    SemanticGoldSuiteExpectationV2,
+    SemanticGoldManifestV2,
+]:
+    suite = SemanticGoldSuiteInput.model_validate_json(
+        input_path.read_text(encoding="utf-8")
+    )
+    expectations = SemanticGoldSuiteExpectationV2.model_validate_json(
+        expectation_path.read_text(encoding="utf-8")
+    )
+    manifest = SemanticGoldManifestV2.model_validate_json(
+        manifest_path.read_text(encoding="utf-8")
+    )
+    if suite.suite_id != expectations.suite_id or suite.suite_id != manifest.suite_id:
+        raise ValueError("semantic v2 Gold suite identities do not match")
+    if _sha256_file(input_path) != manifest.scenario_input_sha256:
+        raise ValueError("semantic v2 input hash does not match frozen v1 input")
+    if _sha256_file(expectation_path) != manifest.gold_expectation_v2_sha256:
+        raise ValueError("semantic v2 expectation hash does not match")
+    if sha256_hex(manifest.preregistered_config) != manifest.preregistered_config_sha256:
+        raise ValueError("semantic v2 preregistered config hash does not match")
+    if _sha256_file(DEFAULT_EXPECTATIONS) != manifest.source_v1_expectation_sha256:
+        raise ValueError("semantic v1 expectation history changed")
+    if _sha256_file(DEFAULT_MANIFEST) != manifest.source_v1_manifest_sha256:
+        raise ValueError("semantic v1 manifest history changed")
+    validate_v2_partition_against_input(suite, expectations)
     return suite, expectations, manifest
 
 
@@ -198,7 +292,10 @@ def _f1(precision: float | None, recall: float | None) -> float | None:
 def ranking_metrics(
     scenario_ids: tuple[str, ...],
     rankings: dict[str, tuple[str, ...]],
-    expectations: dict[str, SemanticScenarioExpectation],
+    expectations: dict[
+        str,
+        SemanticScenarioExpectation | SemanticScenarioExpectationV2,
+    ],
 ) -> SemanticRankingMetrics:
     recalls_1: list[float] = []
     recalls_3: list[float] = []
@@ -207,7 +304,14 @@ def ranking_metrics(
         relevant = set(expectations[scenario_id].relevant_candidate_ids)
         if not relevant:
             continue
+        expectation = expectations[scenario_id]
         ranking = rankings[scenario_id]
+        if isinstance(expectation, SemanticScenarioExpectationV2):
+            ranking = tuple(
+                item
+                for item in ranking
+                if item in expectation.legal_ranking_candidate_ids
+            )
         recalls_1.append(len(set(ranking[:1]) & relevant) / len(relevant))
         recalls_3.append(len(set(ranking[:3]) & relevant) / len(relevant))
         rank = next((index for index, value in enumerate(ranking, start=1) if value in relevant), None)
@@ -224,7 +328,10 @@ def ranking_metrics(
 def classification_metrics(
     scenario_ids: tuple[str, ...],
     selected: dict[str, tuple[str, ...]],
-    expectations: dict[str, SemanticScenarioExpectation],
+    expectations: dict[
+        str,
+        SemanticScenarioExpectation | SemanticScenarioExpectationV2,
+    ],
 ) -> SemanticClassificationMetrics:
     precisions: list[float] = []
     recalls: list[float] = []
@@ -232,8 +339,11 @@ def classification_metrics(
     total_tp = total_fp = total_fn = 0
     empty_correct = empty_total = 0
     for scenario_id in scenario_ids:
-        relevant = set(expectations[scenario_id].relevant_candidate_ids)
+        expectation = expectations[scenario_id]
+        relevant = set(expectation.relevant_candidate_ids)
         returned = set(selected[scenario_id])
+        if isinstance(expectation, SemanticScenarioExpectationV2):
+            returned &= set(expectation.legal_ranking_candidate_ids)
         tp = len(relevant & returned)
         fp = len(returned - relevant)
         fn = len(relevant - returned)
@@ -280,7 +390,10 @@ def classification_metrics(
 def select_empty_threshold(
     config: SemanticPreregisteredConfig,
     scores: dict[str, tuple[tuple[str, float], ...]],
-    expectations: dict[str, SemanticScenarioExpectation],
+    expectations: dict[
+        str,
+        SemanticScenarioExpectation | SemanticScenarioExpectationV2,
+    ],
 ) -> tuple[float, SemanticClassificationMetrics]:
     best: tuple[tuple[float, float, float], float, SemanticClassificationMetrics] | None = None
     for threshold in config.empty_threshold_grid:
@@ -291,6 +404,64 @@ def select_empty_threshold(
             best = (key, threshold, metrics)
     assert best is not None
     return best[1], best[2]
+
+
+def runtime_safety_counts(
+    *,
+    scenario: SemanticScenarioInput,
+    runtime_facts: tuple[SemanticCandidateRuntimeFact, ...],
+    entered_candidate_ids: frozenset[str],
+    hidden_content_leak: int = 0,
+    prompt_boundary_violation: int = 0,
+    authority_write_by_embedding: int = 0,
+    embedding_space_mixing: int = 0,
+    incomplete_index_as_empty: int = 0,
+) -> SemanticSafetyCounts:
+    """Classify safety only from product runtime facts, never Gold relevance."""
+
+    facts = {item.candidate_id: item for item in runtime_facts}
+    if not entered_candidate_ids.issubset(facts):
+        raise ValueError("entered semantic candidate has no runtime fact")
+    cross_player = 0
+    current_episode = 0
+    inactive = 0
+    deleted = 0
+    for candidate_id in entered_candidate_ids:
+        fact = facts[candidate_id]
+        if fact.player_id != scenario.player_id:
+            cross_player += 1
+        if fact.source_session_id == scenario.current_session_id:
+            current_episode += 1
+        if fact.status in {
+            SemanticCandidateRuntimeStatus.SUPERSEDED,
+            SemanticCandidateRuntimeStatus.INVALIDATED,
+        }:
+            inactive += 1
+        if fact.status is SemanticCandidateRuntimeStatus.HARD_DELETED:
+            deleted += 1
+    return SemanticSafetyCounts(
+        cross_player_recall=cross_player,
+        current_episode_recall=current_episode,
+        inactive_memory_recall=inactive,
+        deletion_resurrection=deleted,
+        hidden_content_leak=hidden_content_leak,
+        prompt_boundary_violation=prompt_boundary_violation,
+        authority_write_by_embedding=authority_write_by_embedding,
+        embedding_space_mixing=embedding_space_mixing,
+        incomplete_index_as_empty=incomplete_index_as_empty,
+    )
+
+
+def _sum_safety_counts(
+    left: SemanticSafetyCounts,
+    right: SemanticSafetyCounts,
+) -> SemanticSafetyCounts:
+    return SemanticSafetyCounts(
+        **{
+            field: getattr(left, field) + getattr(right, field)
+            for field in SemanticSafetyCounts.model_fields
+        }
+    )
 
 
 class _RecordingAdapter:
@@ -399,6 +570,91 @@ def _prepare_repository(
     return repository, memory_to_candidate, retriever, scope, _query_text(scenario)
 
 
+def _candidate_runtime_facts(
+    *,
+    scenario: SemanticScenarioInput,
+    repository: SQLiteMemoryRepository,
+    aliases: dict[str, str],
+) -> tuple[SemanticCandidateRuntimeFact, ...]:
+    records_by_candidate: dict[str, list[Any]] = {
+        candidate.candidate_id: [] for candidate in scenario.candidates
+    }
+    for player_id in sorted(
+        {candidate.source.player_id for candidate in scenario.candidates}
+    ):
+        for memory in repository.list_memories(
+            player_id=player_id,
+            include_inactive=True,
+        ):
+            candidate_id = aliases.get(memory.memory_id)
+            if candidate_id is not None:
+                records_by_candidate[candidate_id].append(memory)
+    facts: list[SemanticCandidateRuntimeFact] = []
+    for candidate in scenario.candidates:
+        records = records_by_candidate[candidate.candidate_id]
+        active = next(
+            (record for record in records if record.status is MemoryStatus.ACTIVE),
+            None,
+        )
+        if active is not None:
+            facts.append(
+                SemanticCandidateRuntimeFact(
+                    candidate_id=candidate.candidate_id,
+                    player_id=active.player_id,
+                    source_session_id=active.source_session_id,
+                    status=SemanticCandidateRuntimeStatus.ACTIVE,
+                )
+            )
+            continue
+        inactive = next(
+            (
+                record
+                for record in records
+                if record.status
+                in {MemoryStatus.SUPERSEDED, MemoryStatus.INVALIDATED}
+            ),
+            None,
+        )
+        if inactive is not None:
+            facts.append(
+                SemanticCandidateRuntimeFact(
+                    candidate_id=candidate.candidate_id,
+                    player_id=inactive.player_id,
+                    source_session_id=inactive.source_session_id,
+                    status=(
+                        SemanticCandidateRuntimeStatus.SUPERSEDED
+                        if inactive.status is MemoryStatus.SUPERSEDED
+                        else SemanticCandidateRuntimeStatus.INVALIDATED
+                    ),
+                )
+            )
+            continue
+        if candidate.setup is not SemanticCandidateSetup.HARD_DELETE:
+            raise RuntimeError("semantic candidate authority is unexpectedly missing")
+        facts.append(
+            SemanticCandidateRuntimeFact(
+                candidate_id=candidate.candidate_id,
+                player_id=candidate.source.player_id,
+                source_session_id=candidate.source.source_session_id,
+                status=SemanticCandidateRuntimeStatus.HARD_DELETED,
+            )
+        )
+    return tuple(facts)
+
+
+def _eligible_candidate_ids(
+    runtime_facts: tuple[SemanticCandidateRuntimeFact, ...],
+    scenario: SemanticScenarioInput,
+) -> frozenset[str]:
+    return frozenset(
+        fact.candidate_id
+        for fact in runtime_facts
+        if fact.player_id == scenario.player_id
+        and fact.source_session_id != scenario.current_session_id
+        and fact.status is SemanticCandidateRuntimeStatus.ACTIVE
+    )
+
+
 def _authority_hash(repository: SQLiteMemoryRepository, players: set[str]) -> str:
     return sha256_hex({player_id: repository.list_memories(player_id=player_id, include_inactive=True) for player_id in sorted(players)})
 
@@ -483,10 +739,15 @@ def _git_value(*args: str) -> str:
     return subprocess.run(("git", *args), cwd=ROOT, check=True, capture_output=True, text=True).stdout.strip()
 
 
-def run_local_bge(*, run_id: str, freeze_commit: str, output_path: Path) -> SemanticRawRunResult:
+def run_local_bge(
+    *,
+    run_id: str,
+    freeze_commit: str,
+    output_path: Path,
+) -> SemanticRawRunResultV2:
     if _git_value("rev-parse", "HEAD") != freeze_commit or _git_value("status", "--porcelain"):
         raise RuntimeError("semantic Pilot requires the exact clean freeze checkpoint")
-    suite, gold, manifest = load_semantic_gold()
+    suite, gold, manifest = load_semantic_gold_v2()
     texts = materialize_frozen_texts(suite)
     config = manifest.preregistered_config
     output_path = output_path.resolve()
@@ -547,6 +808,17 @@ def run_local_bge(*, run_id: str, freeze_commit: str, output_path: Path) -> Sema
             for scenario in suite.scenarios:
                 database = root / scenario.scenario_id / "memory.sqlite3"
                 repository, aliases, retriever, scope, query_text = _prepare_repository(scenario, recording, database)
+                runtime_facts = _candidate_runtime_facts(
+                    scenario=scenario,
+                    repository=repository,
+                    aliases=aliases,
+                )
+                eligible_candidates = _eligible_candidate_ids(runtime_facts, scenario)
+                expectation = expectation_by_id[scenario.scenario_id]
+                if eligible_candidates != expectation.legal_ranking_candidate_ids:
+                    raise RuntimeError(
+                        "semantic Gold partition does not match actual product state"
+                    )
                 players = {candidate.source.player_id for candidate in scenario.candidates}
                 before_authority = _authority_hash(repository, players)
                 search = retriever.retrieve_scoped(
@@ -555,23 +827,27 @@ def run_local_bge(*, run_id: str, freeze_commit: str, output_path: Path) -> Sema
                     config=MemoryRetrievalConfig(top_k=3, min_similarity=-1.0, embedding_space_id=config.embedding_space_id, query_template_version=config.query_template_version),
                 )
                 after_authority = _authority_hash(repository, players)
-                if before_authority != after_authority:
-                    safety = safety.model_copy(update={"authority_write_by_embedding": safety.authority_write_by_embedding + 1})
                 ranked = tuple((aliases[hit.memory_id], hit.similarity) for hit in search.hits)
                 scores[scenario.scenario_id] = ranked
                 scoped_counts[scenario.scenario_id] = search.index_state.active_memory_count
-                if any(hit.player_id != scenario.player_id for hit in search.hits):
-                    safety = safety.model_copy(update={"cross_player_recall": safety.cross_player_recall + 1})
-                if any(hit.source_session_id == scenario.current_session_id for hit in search.hits):
-                    safety = safety.model_copy(update={"current_episode_recall": safety.current_episode_recall + 1})
-                expectation = expectation_by_id[scenario.scenario_id]
-                returned_aliases = {item[0] for item in ranked}
-                forbidden = returned_aliases & set(expectation.forbidden_candidate_ids)
-                if forbidden:
-                    if scenario.scenario_id == "semantic_hard_delete_001":
-                        safety = safety.model_copy(update={"deletion_resurrection": safety.deletion_resurrection + 1})
-                    else:
-                        safety = safety.model_copy(update={"inactive_memory_recall": safety.inactive_memory_recall + 1})
+                if search.index_state.active_memory_count != len(eligible_candidates):
+                    raise RuntimeError(
+                        "runtime candidate pre-filter diverged from authority state"
+                    )
+                returned_aliases = frozenset(item[0] for item in ranked)
+                safety = _sum_safety_counts(
+                    safety,
+                    runtime_safety_counts(
+                        scenario=scenario,
+                        runtime_facts=runtime_facts,
+                        entered_candidate_ids=(
+                            eligible_candidates | returned_aliases
+                        ),
+                        authority_write_by_embedding=int(
+                            before_authority != after_authority
+                        ),
+                    ),
+                )
                 if scenario.scenario_id == "semantic_prompt_injection_data_001":
                     candidate = scenario.candidates[0]
                     memory = next(memory for memory in repository.list_memories(player_id=scenario.player_id, include_inactive=False) if aliases.get(memory.memory_id) == candidate.candidate_id)
@@ -583,7 +859,13 @@ def run_local_bge(*, run_id: str, freeze_commit: str, output_path: Path) -> Sema
                     except MemoryIndexIncompleteError:
                         pass
                     else:
-                        safety = safety.model_copy(update={"incomplete_index_as_empty": safety.incomplete_index_as_empty + 1})
+                        safety = safety.model_copy(
+                            update={
+                                "incomplete_index_as_empty": (
+                                    safety.incomplete_index_as_empty + 1
+                                )
+                            }
+                        )
         if network_attempts:
             raise RuntimeError("local semantic Pilot attempted network access")
     if not prompt_ok:
@@ -601,20 +883,23 @@ def run_local_bge(*, run_id: str, freeze_commit: str, output_path: Path) -> Sema
     calibration_ranking = ranking_metrics(config.calibration_scenario_ids, ranking_ids, expectation_by_id)
     test_ranking = ranking_metrics(config.test_scenario_ids, ranking_ids, expectation_by_id)
     test_classification = classification_metrics(config.test_scenario_ids, selected, expectation_by_id)
-    scenarios: list[SemanticScenarioResult] = []
+    scenarios: list[SemanticScenarioResultV2] = []
     for scenario in suite.scenarios:
         expectation = expectation_by_id[scenario.scenario_id]
         ranking = scores[scenario.scenario_id]
         relevant_rank = next((index for index, (candidate_id, _) in enumerate(ranking, start=1) if candidate_id in expectation.relevant_candidate_ids), None)
         fake = fake_rankings[scenario.scenario_id]
-        scenarios.append(SemanticScenarioResult(
+        scenarios.append(SemanticScenarioResultV2(
             scenario_id=scenario.scenario_id,
             split="calibration" if scenario.scenario_id in config.calibration_scenario_ids else "test",
             ranking_candidate_ids=tuple(item[0] for item in ranking),
             ranking_similarities=tuple(item[1] for item in ranking),
             threshold_candidate_ids=selected[scenario.scenario_id],
             relevant_candidate_ids=expectation.relevant_candidate_ids,
-            forbidden_candidate_ids=expectation.forbidden_candidate_ids,
+            semantic_negative_candidate_ids=(
+                expectation.semantic_negative_candidate_ids
+            ),
+            safety_excluded_candidates=expectation.safety_excluded_candidates,
             relevant_rank=relevant_rank,
             fake_ranking_candidate_ids=fake,
             top_k_overlap_count=len(set(fake) & {item[0] for item in ranking}),
@@ -649,13 +934,13 @@ def run_local_bge(*, run_id: str, freeze_commit: str, output_path: Path) -> Sema
         api_request_count=0,
         cost_cny=0.0,
     )
-    result = SemanticRawRunResult(
+    result = SemanticRawRunResultV2(
         run_id=run_id,
         freeze_commit=freeze_commit,
         code_commit=_git_value("rev-parse", "HEAD"),
         input_sha256=manifest.scenario_input_sha256,
-        expectation_sha256=manifest.gold_expectation_sha256,
-        manifest_sha256=_sha256_file(DEFAULT_MANIFEST),
+        expectation_sha256=manifest.gold_expectation_v2_sha256,
+        manifest_sha256=_sha256_file(DEFAULT_MANIFEST_V2),
         config_sha256=manifest.preregistered_config_sha256,
         selected_empty_threshold=selected_threshold,
         calibration_ranking=calibration_ranking,

@@ -4,15 +4,17 @@
 
 本 Gold 专供 M4.5 真实 Embedding 与真实 V1 Pilot，不修改、不替代 M4 已冻结的 14 条 Fake Embedding 工程 Gold。
 
-P0 只冻结设计，不创建场景数据或预填结果。P2 已在提交 `e81331255945e3baba34a0525b3c2f338321d841` 冻结下列文件；第一次正式本地运行随后因评测器标签复用误触安全停止，未产生可用正式指标或重复性结果，详见 `M45_P2_SEMANTIC_PILOT_REPORT.md`：
+P0 只冻结设计，不创建场景数据或预填结果。P2 v1 已在提交 `e81331255945e3baba34a0525b3c2f338321d841` 冻结下列历史文件；第一次正式本地运行随后因评测器标签复用误触安全停止，未产生可用正式指标或重复性结果，详见 `M45_P2_SEMANTIC_PILOT_REPORT.md`：
 
 - `m45_semantic_gold_inputs.json`：模型可见的合成公开输入；
-- `m45_semantic_gold_expectations.json`：仅评测器可见的相关/禁止集合与成功条件；
+- `m45_semantic_gold_expectations.json`：历史 v1 仅评测器可见的相关/歧义禁止集合与成功条件；
 - `m45_semantic_gold_manifest.json`：场景版本、文件 SHA-256、Adapter 身份、Top-K、阈值策略和指标版本；
 - 严格 Pydantic Schema 与契约测试，所有未知字段拒绝；
 - 人工评审记录，确认没有真实身份、聊天原文、隐藏病例真相、评分、关系值或密钥。
 
-冻结提交必须早于任何真实向量生成。运行后不得根据结果改写输入、Gold、阈值、排序或产品实现；确需修订时保留原提交和原结果，升级 Gold 版本并重新取得运行授权。
+P2a 保留所有 v1 文件与停止证据，复用完全相同的输入文件，并新增 `m45_semantic_gold_expectations_v2.json`、`m45_semantic_gold_manifest_v2.json`。v2 删除歧义字段 `forbidden_candidate_ids`，将每个候选完整划分为相关项、合法语义负例或带精确产品状态原因的安全排除项。详细迁移和 SHA 见 `M45_P2A_SEMANTIC_GOLD_V2_FREEZE.md`。
+
+冻结提交必须早于任何新的真实向量生成。运行后不得根据结果改写输入、Gold、阈值、排序或产品实现；确需修订时保留原提交和原结果，升级 Gold 版本并重新取得运行授权。
 
 ## 2. 数据规模与身份
 
@@ -45,7 +47,7 @@ P0 只冻结设计，不创建场景数据或预填结果。P2 已在提交 `e81
 | `semantic_long_text_001` | 较长公开记忆 | 接近项目 4096 字符上限时仍遵守截断/拒绝契约和批次稳定性 |
 | `semantic_no_lexical_overlap_001` | 无字面重合的语义关系 | 查询和相关记忆不共享关键词，真实模型仍应给出合理排名 |
 
-所有场景都要有至少一个明确错误候选；当前 Episode、其他玩家、inactive、删除项和注入项的禁止理由由 Gold 数据定义，不能由 Adapter 或 Agent 生成。
+所有场景都要有至少一个明确错误候选。合法、active、同玩家、历史 Episode 的错误诱饵属于 semantic negative，只影响语义指标；当前 Episode、其他玩家、inactive 和删除项属于排序前安全排除。Gold 声明必须与输入及实际 Repository 生命周期一致，运行时安全计数仍以实际产品状态为准，不能仅凭 Gold 标签推断。
 
 ## 4. 输入与 Gold 隔离
 
@@ -142,7 +144,7 @@ P2 不能证明：真实 DoctorAgent 会正确解释检索结果、忽略注入�
 
 - Gold/manifest SHA 与冻结提交不一致；
 - 模型 revision、文件 SHA、模型名或维度漂移；
-- 跨玩家、当前 Episode、inactive、失效或已删除内容进入候选/结果；
+- 跨玩家、当前 Episode、inactive、失效或已删除内容实际进入候选/结果；合法 semantic negative 进入排序不属于安全停止；
 - 输入含隐藏哨兵或禁止发送字段；
 - 索引缺失/过期却被报告为空历史；
 - 返回数量/顺序错误、NaN、无穷、零范数或维度不符；

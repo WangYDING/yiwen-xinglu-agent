@@ -1,0 +1,215 @@
+{
+  "schema_version": "semantic_gold_contract_v2",
+  "suite_id": "m45_semantic_gold_001",
+  "source_input_schema_version": "m45_semantic_gold_v1",
+  "scenarios": [
+    {
+      "scenario_id": "semantic_zh_synonym_001",
+      "relevant_candidate_ids": [
+        "cand_zh_synonym_1"
+      ],
+      "semantic_negative_candidate_ids": [
+        "cand_zh_synonym_2",
+        "cand_zh_synonym_3",
+        "cand_zh_synonym_4"
+      ],
+      "safety_excluded_candidates": [],
+      "expected_empty": false
+    },
+    {
+      "scenario_id": "semantic_action_paraphrase_001",
+      "relevant_candidate_ids": [
+        "cand_action_paraphrase_1"
+      ],
+      "semantic_negative_candidate_ids": [
+        "cand_action_paraphrase_2",
+        "cand_action_paraphrase_3",
+        "cand_action_paraphrase_4"
+      ],
+      "safety_excluded_candidates": [],
+      "expected_empty": false
+    },
+    {
+      "scenario_id": "semantic_lexical_distractor_001",
+      "relevant_candidate_ids": [
+        "cand_lexical_distractor_1"
+      ],
+      "semantic_negative_candidate_ids": [
+        "cand_lexical_distractor_2",
+        "cand_lexical_distractor_3",
+        "cand_lexical_distractor_4"
+      ],
+      "safety_excluded_candidates": [],
+      "expected_empty": false
+    },
+    {
+      "scenario_id": "semantic_wrong_diagnosis_provenance_001",
+      "relevant_candidate_ids": [
+        "cand_wrong_diagnosis_provenance_1"
+      ],
+      "semantic_negative_candidate_ids": [
+        "cand_wrong_diagnosis_provenance_2",
+        "cand_wrong_diagnosis_provenance_3",
+        "cand_wrong_diagnosis_provenance_4"
+      ],
+      "safety_excluded_candidates": [],
+      "expected_empty": false
+    },
+    {
+      "scenario_id": "semantic_current_episode_exclusion_001",
+      "relevant_candidate_ids": [
+        "cand_current_episode_exclusion_2"
+      ],
+      "semantic_negative_candidate_ids": [
+        "cand_current_episode_exclusion_3",
+        "cand_current_episode_exclusion_4"
+      ],
+      "safety_excluded_candidates": [
+        {
+          "candidate_id": "cand_current_episode_exclusion_1",
+          "reason": "current_episode"
+        }
+      ],
+      "expected_empty": false
+    },
+    {
+      "scenario_id": "semantic_player_isolation_001",
+      "relevant_candidate_ids": [
+        "cand_player_isolation_2"
+      ],
+      "semantic_negative_candidate_ids": [
+        "cand_player_isolation_3",
+        "cand_player_isolation_4"
+      ],
+      "safety_excluded_candidates": [
+        {
+          "candidate_id": "cand_player_isolation_1",
+          "reason": "cross_player"
+        }
+      ],
+      "expected_empty": false
+    },
+    {
+      "scenario_id": "semantic_empty_001",
+      "relevant_candidate_ids": [],
+      "semantic_negative_candidate_ids": [
+        "cand_empty_1",
+        "cand_empty_2",
+        "cand_empty_3",
+        "cand_empty_4"
+      ],
+      "safety_excluded_candidates": [],
+      "expected_empty": true
+    },
+    {
+      "scenario_id": "semantic_correction_001",
+      "relevant_candidate_ids": [
+        "cand_correction_1"
+      ],
+      "semantic_negative_candidate_ids": [
+        "cand_correction_2",
+        "cand_correction_3",
+        "cand_correction_4"
+      ],
+      "safety_excluded_candidates": [],
+      "expected_empty": false
+    },
+    {
+      "scenario_id": "semantic_invalidation_001",
+      "relevant_candidate_ids": [],
+      "semantic_negative_candidate_ids": [
+        "cand_invalidation_2",
+        "cand_invalidation_3",
+        "cand_invalidation_4"
+      ],
+      "safety_excluded_candidates": [
+        {
+          "candidate_id": "cand_invalidation_1",
+          "reason": "invalidated"
+        }
+      ],
+      "expected_empty": true
+    },
+    {
+      "scenario_id": "semantic_hard_delete_001",
+      "relevant_candidate_ids": [],
+      "semantic_negative_candidate_ids": [
+        "cand_hard_delete_2",
+        "cand_hard_delete_3",
+        "cand_hard_delete_4"
+      ],
+      "safety_excluded_candidates": [
+        {
+          "candidate_id": "cand_hard_delete_1",
+          "reason": "hard_deleted"
+        }
+      ],
+      "expected_empty": true
+    },
+    {
+      "scenario_id": "semantic_prompt_injection_data_001",
+      "relevant_candidate_ids": [
+        "cand_prompt_injection_data_1"
+      ],
+      "semantic_negative_candidate_ids": [
+        "cand_prompt_injection_data_2",
+        "cand_prompt_injection_data_3",
+        "cand_prompt_injection_data_4"
+      ],
+      "safety_excluded_candidates": [],
+      "expected_empty": false
+    },
+    {
+      "scenario_id": "semantic_mixed_language_entity_001",
+      "relevant_candidate_ids": [
+        "cand_mixed_language_entity_1"
+      ],
+      "semantic_negative_candidate_ids": [
+        "cand_mixed_language_entity_2",
+        "cand_mixed_language_entity_3",
+        "cand_mixed_language_entity_4"
+      ],
+      "safety_excluded_candidates": [],
+      "expected_empty": false
+    },
+    {
+      "scenario_id": "semantic_short_text_001",
+      "relevant_candidate_ids": [
+        "cand_short_text_1"
+      ],
+      "semantic_negative_candidate_ids": [
+        "cand_short_text_2",
+        "cand_short_text_3",
+        "cand_short_text_4"
+      ],
+      "safety_excluded_candidates": [],
+      "expected_empty": false
+    },
+    {
+      "scenario_id": "semantic_long_text_001",
+      "relevant_candidate_ids": [
+        "cand_long_text_1"
+      ],
+      "semantic_negative_candidate_ids": [
+        "cand_long_text_2",
+        "cand_long_text_3",
+        "cand_long_text_4"
+      ],
+      "safety_excluded_candidates": [],
+      "expected_empty": false
+    },
+    {
+      "scenario_id": "semantic_no_lexical_overlap_001",
+      "relevant_candidate_ids": [
+        "cand_no_lexical_overlap_1"
+      ],
+      "semantic_negative_candidate_ids": [
+        "cand_no_lexical_overlap_2",
+        "cand_no_lexical_overlap_3",
+        "cand_no_lexical_overlap_4"
+      ],
+      "safety_excluded_candidates": [],
+      "expected_empty": false
+    }
+  ]
+}

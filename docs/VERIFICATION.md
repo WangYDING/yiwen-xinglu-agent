@@ -366,3 +366,14 @@ M4 保持完成。M4.5-P1 已完成，但只证明固定本地模型身份、离
 - **外部边界**：DeepSeek `/models` 0、Chat 0、外部 Embedding API 0、网络模型请求 0、费用 0 CNY。
 
 M4.5-P2 保持进行中且未达到 P3 准入线；修复后的评测契约必须重新冻结并获得单独运行授权。M4.5-P3 与 M5 尚未开始。
+
+## 2026-08-08：M4.5-P2a 语义 Gold v2 离线纠偏与冻结
+
+- **历史保留**：v1 Gold 冻结提交 `e81331255945e3baba34a0525b3c2f338321d841`、停止记录提交 `41a5bdf254d964b35993809a86a01b75141d1381`、失败检查点 SHA `6B7E35CD8A8F712061FA0576E7B6352F061C1494E8455008EB75893B6C7C1BA5` 及三个 v1 数据文件均未修改或删除。本轮没有解析失败检查点、恢复排序/向量或读取模型指标。
+- **冻结身份**：继续复用输入 SHA `ca55bebdafaa59c06eab156c44316c2f862264e9082c71b768ab54d867674f3d`；v2 expectations SHA 为 `2ce0c4ab316243b06be7a80a5b3617f26b06545a736202bd27ebf24490b9d8d0`，v2 manifest SHA 为 `4479ca16df1457782fd94af919da1942ca87619d080a2f0e339779e83447aa61`；模型、空间、calibration/test、Top-K、阈值网格、选择规则和排序身份继续使用配置 SHA `1c302cb2155260812278a70defae23d869aee094b1a28523210fb826a332fda8`。
+- **契约纠偏**：15 个场景的 60 个候选全部且仅分为 relevant、semantic negative、safety excluded。高字面重合诱饵是合法 semantic negative，Mock 排名证明其进入 Top-3 只增加语义 FP 并降低 Precision/F1，安全计数仍为 0。跨玩家、当前 Episode、superseded/invalidated 和硬删除复活只根据实际运行状态增加安全计数；Gold 原因与输入/生命周期事实不一致时拒绝加载。
+- **变更边界**：15 条查询、60 条候选、75 条公开文本、阈值、模型、Adapter、Retriever、QueryBuilder、AgentContextFilter、Prompt 及 P1–P4 产品代码均未因历史停止结果调整。v1 `forbidden_candidate_ids` 在 v2 严格 Schema 中被拒绝。
+- **离线回归**：v2 Gold/Mock 专项 16 passed；M4-P1/P2/P3/P4 组合回归 104 passed；M3 MCP 与 V0 Agent/Runner 组合回归 38 passed；本地 Adapter Mock 12 passed；全量 326 passed。M4 原 14 条 Gold 以 Fake Embedding 运行两次均通过，确定性哈希均为 `01ecf59b42e37dc2c898fd893fc0234c3d9ff18701c22f77a31bed06511cb44e` 且安全计数全 0；P0 Fake LLM 3 场景/6 轨迹符合预期；无 LLM Demo 为 `resolved / 100`；`pip check` 与 `git diff --check` 通过。
+- **外部边界**：本轮本地 BGE 加载 0、真实权重推理 0、网络请求 0、DeepSeek `/models` 0、Chat 0、Embedding API 0、费用 0 CNY。
+
+M4.5-P2a 只形成新的离线冻结检查点，不完成 P2。任何正式 BGE 运行都需重新授权；M4.5-P3 和 M5 尚未开始。

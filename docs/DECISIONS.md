@@ -309,3 +309,13 @@
 - **加载决策**：Adapter 模块导入和构造不加载 Torch 或模型。显式 `load()` 必须先校验规范 manifest SHA、完整文件集合、每个文件大小/SHA 和安全模块类型，再以 `local_files_only=True`、`trust_remote_code=False`、固定设备和精度加载；失败不自动切换 CPU、模型、精度、revision、API 或 Fake。
 - **空间决策**：真实空间 ID 包含 revision 短标识、dense、FP32、维度、设备和最大输入长度；本次烟雾空间为 `bge_m3_142964af7e05_dense_fp32_d1024_cuda_l512_v1`。未经预注册容差与排序一致性证据，不得混用 CPU/GPU 或不同截断配置的向量，也不得覆盖 `fake_sha256_token_buckets_v1_d64`。
 - **证据边界**：P1 真实烟雾只证明三条公开合成文本可在网络封锁下产生合规、两轮一致的本地向量；不代表 15 条语义 Gold、Top-K 质量、真实 V1 Agent 行为或产品收益。M4 保持完成，P2 需单独冻结与运行语义 Gold，M5 继续等待 M4.5 退出。
+
+## ADR-041：语义 Gold v2 分离合法负例与实际安全排除
+
+- **状态**：已接受
+- **日期**：2026-08-08
+- **历史决策**：保留 v1 Gold 冻结、首次停止记录、失败检查点 SHA 及原始 v1 文件。v2 继续使用完全相同的模型可见输入和配置，只新增版本化 expectations/manifest；禁止从停止检查点读取排序、向量或指标来调整 Gold。
+- **分区决策**：每个冻结候选必须且只能属于 relevant、semantic negative 或 safety excluded。semantic negative 是合法、active、同玩家、历史 Episode 的普通排序候选，被召回只计算语义 FP；safety excluded 必须使用 `cross_player`、`current_episode`、`superseded`、`invalidated` 或 `hard_deleted` 等明确产品状态原因。v2 删除并严格拒绝歧义字段 `forbidden_candidate_ids`。
+- **安全决策**：安全计数以实际 Repository、玩家、来源会话、生命周期和墓碑为准，不因 Gold 标签或高相似度自动产生。安全排除对象正常在余弦排序前过滤时不进入语义 TP/FP/FN；实际越界进入候选或结果才触发安全停止。索引不完整伪装 empty、隐藏泄漏和 Embedding 写权威记忆继续使用原硬门槛。
+- **指标决策**：相关返回为 TP，合法 semantic negative 返回为 FP，相关未返回为 FN；空结果可以包含合法负例，只有其分数全部低于冻结阈值才判正确。模型、文本、拆分、Top-K、阈值网格、选择程序、排序和 P1–P4 产品实现均不随本次契约修复变化。
+- **原因**：v1 的单一“forbidden”集合混合了语义错误和权限/生命周期越界，使合法高字面负例误触安全停止。v2 将检索质量与安全隔离分开测量，同时保留历史负结果并避免依据真实向量反向调参。

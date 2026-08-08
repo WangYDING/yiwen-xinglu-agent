@@ -34,7 +34,8 @@ Word 设计总结、`xuanyi-npc-handoff` 和 `docs/algorithm-experiment-plan-v0.
 | M4：V1 基础长期记忆 | 已完成 | P0–P4 与退出审计全部通过；完整结论见 `docs/M4_EXIT_AUDIT.md`，不代表真实 Embedding 或真实 V1 模型效果 |
 | M4.5-P0：真实 Embedding 与 V1 Pilot 规划 | 已完成 | 本机只读规格、三路线比较、本地 BGE-M3 首选、外部 API 备选、15 条语义 Gold 设计、P1–P3 授权与停止门禁 |
 | M4.5-P1：本地 Adapter 与离线烟雾 | 已完成 | 固定依赖、BGE-M3 revision/SHA 白名单、延迟加载 Adapter、Mock、真实 CUDA/FP32 离线烟雾；未运行语义 Gold |
-| M4.5-P2：真实语义 Gold | 进行中（首次运行已停止） | 15 条/75 文本已冻结；首次本地 BGE 运行因评测器标签复用误触安全门槛而停止，无正式指标，未运行重复性核对 |
+| M4.5-P2a：语义 Gold v2 离线纠偏 | 已完成 | 保留 v1 冻结与停止历史；复用相同 15 条/75 文本，将相关项、合法语义负例和实际安全排除项完整分区；没有加载 BGE 或读取失败指标 |
+| M4.5-P2：真实语义 Gold | 进行中（等待新授权） | v2 契约已冻结；历史 v1 本地运行停止且无正式指标，新的正式 BGE 运行与重复性核对均未执行 |
 | M4.5-P3 与退出审计 | 未开始 | P2 尚未形成可用正式指标或准入结论；真实 V1 Agent Pilot与退出审计均未运行 |
 | M5 及以后 | 未开始 | 自适应教学、Reflection、界面、多 Agent 等均未开始 |
 
@@ -190,11 +191,11 @@ M4.5 不重新打开或改写 M4。P0 已完成本机只读调查、官方资料
 后续顺序固定为：
 
 1. M4.5-P1：在单独下载/安装授权后实现真实 Adapter 和 Mock/离线验证；
-2. M4.5-P2：先冻结独立语义 Gold，再单次运行真实 Embedding Pilot；
+2. M4.5-P2：v2 独立语义 Gold 已冻结；获得新的单独授权后，才可运行真实 Embedding Pilot；
 3. M4.5-P3：P2 通过后，分开授权 DeepSeek Chat 和 Embedding 预算，运行少量真实 V1 行为探针；
 4. M4.5 退出审计；
 5. 之后才允许开始 M5 自适应教学规划。
 
-M5 等待 M4.5，是为了避免把记忆召回问题与教学策略问题混为同一个实验变量。M4.5-P1 已在项目 `.venv` 中安装固定可选依赖，只下载固定 revision 的 11 个 dense safetensors 白名单文件，并以网络阻断方式完成真实本地权重烟雾；详细身份、哈希、磁盘和性能证据见 `docs/M45_P1_LOCAL_EMBEDDING_REPORT.md`。P2 已在 `e813312` 冻结 15 条/75 文本，但第一次正式本地运行因评测器把语义负例误计为生命周期安全违规而停止，未产生可用指标且未启动第二次运行；见 `docs/M45_P2_SEMANTIC_PILOT_REPORT.md`。任何修复后的新运行都需要新的冻结检查点和单独授权。
+M5 等待 M4.5，是为了避免把记忆召回问题与教学策略问题混为同一个实验变量。M4.5-P1 已在项目 `.venv` 中安装固定可选依赖，只下载固定 revision 的 11 个 dense safetensors 白名单文件，并以网络阻断方式完成真实本地权重烟雾；详细身份、哈希、磁盘和性能证据见 `docs/M45_P1_LOCAL_EMBEDDING_REPORT.md`。P2 v1 已在 `e813312` 冻结 15 条/75 文本，但第一次正式本地运行因评测器把合法语义负例误计为生命周期安全违规而停止，未产生可用指标且未启动第二次运行；见 `docs/M45_P2_SEMANTIC_PILOT_REPORT.md`。P2a 保留该历史并冻结 v2 三分区契约，见 `docs/M45_P2A_SEMANTIC_GOLD_V2_FREEZE.md`。新的正式 BGE 运行仍需要单独授权。
 
 V1 只增加基础向量 Top-K 长期记忆并保持固定课程；V2 才使用多因素记忆排序、自适应教学和 Reflection。三个产品版本始终启用 `AgentContextFilter`，模型始终不能直接写永久记忆或关键状态。真实 Embedding 的供应商、数据发送边界、预算和网络调用必须另行决定并授权。

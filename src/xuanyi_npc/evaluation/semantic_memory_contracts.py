@@ -17,6 +17,8 @@ from .memory_contracts import MemoryGoldQuery, SyntheticMemorySource
 SEMANTIC_GOLD_SCHEMA_VERSION = "m45_semantic_gold_v1"
 SEMANTIC_METRICS_VERSION = "m45_semantic_metrics_v1"
 SEMANTIC_RESULT_VERSION = "m45_semantic_result_v1"
+SEMANTIC_GOLD_CONTRACT_V2 = "semantic_gold_contract_v2"
+SEMANTIC_RESULT_VERSION_V2 = "m45_semantic_result_v2"
 REQUIRED_SEMANTIC_SCENARIOS = (
     "semantic_zh_synonym_001",
     "semantic_action_paraphrase_001",
@@ -144,6 +146,75 @@ class SemanticGoldSuiteExpectation(StrictMemoryModel):
         return self
 
 
+class SafetyExclusionReason(str, Enum):
+    CROSS_PLAYER = "cross_player"
+    CURRENT_EPISODE = "current_episode"
+    SUPERSEDED = "superseded"
+    INVALIDATED = "invalidated"
+    HARD_DELETED = "hard_deleted"
+
+
+class SafetyExcludedCandidate(StrictMemoryModel):
+    candidate_id: Identifier
+    reason: SafetyExclusionReason
+
+
+class SemanticScenarioExpectationV2(StrictMemoryModel):
+    scenario_id: Identifier
+    relevant_candidate_ids: tuple[Identifier, ...] = Field(default_factory=tuple)
+    semantic_negative_candidate_ids: tuple[Identifier, ...] = Field(
+        default_factory=tuple
+    )
+    safety_excluded_candidates: tuple[SafetyExcludedCandidate, ...] = Field(
+        default_factory=tuple
+    )
+    expected_empty: StrictBool
+
+    @model_validator(mode="after")
+    def require_disjoint_unique_partition(self) -> "SemanticScenarioExpectationV2":
+        relevant = self.relevant_candidate_ids
+        negative = self.semantic_negative_candidate_ids
+        excluded = tuple(item.candidate_id for item in self.safety_excluded_candidates)
+        for values, label in (
+            (relevant, "relevant"),
+            (negative, "semantic negative"),
+            (excluded, "safety excluded"),
+        ):
+            if len(values) != len(set(values)):
+                raise ValueError(f"{label} candidate IDs must be unique")
+        if (
+            set(relevant) & set(negative)
+            or set(relevant) & set(excluded)
+            or set(negative) & set(excluded)
+        ):
+            raise ValueError("semantic v2 candidate partitions must be disjoint")
+        if self.expected_empty != (not relevant):
+            raise ValueError("empty expectation must match the relevant set")
+        return self
+
+    @property
+    def legal_ranking_candidate_ids(self) -> frozenset[str]:
+        return frozenset(
+            (*self.relevant_candidate_ids, *self.semantic_negative_candidate_ids)
+        )
+
+
+class SemanticGoldSuiteExpectationV2(StrictMemoryModel):
+    schema_version: Literal["semantic_gold_contract_v2"] = SEMANTIC_GOLD_CONTRACT_V2
+    suite_id: Identifier
+    source_input_schema_version: Literal["m45_semantic_gold_v1"]
+    scenarios: tuple[SemanticScenarioExpectationV2, ...] = Field(
+        min_length=15,
+        max_length=15,
+    )
+
+    @model_validator(mode="after")
+    def require_frozen_order(self) -> "SemanticGoldSuiteExpectationV2":
+        if tuple(item.scenario_id for item in self.scenarios) != REQUIRED_SEMANTIC_SCENARIOS:
+            raise ValueError("semantic v2 expectations do not match the frozen order")
+        return self
+
+
 class SemanticPreregisteredConfig(StrictMemoryModel):
     model_repository: Literal["BAAI/bge-m3"]
     model_revision: Literal["142964af7e05de16511657561de8e8750fc153a0"]
@@ -203,6 +274,37 @@ class SemanticGoldManifest(StrictMemoryModel):
     unique_public_text_count: Literal[75]
 
 
+class SemanticGoldManifestV2(StrictMemoryModel):
+    schema_version: Literal["m45_semantic_gold_manifest_v2"]
+    semantic_gold_contract_version: Literal["semantic_gold_contract_v2"]
+    suite_id: Identifier
+    unchanged_v1_input_path: Literal[
+        "data/evaluation/m45_semantic_gold_inputs.json"
+    ]
+    scenario_input_sha256: Sha256Hex
+    gold_expectation_v2_sha256: Sha256Hex
+    preregistered_config_sha256: Sha256Hex
+    preregistered_config: SemanticPreregisteredConfig
+    source_v1_expectation_sha256: Sha256Hex
+    source_v1_manifest_sha256: Sha256Hex
+    v1_freeze_commit: Literal[
+        "e81331255945e3baba34a0525b3c2f338321d841"
+    ]
+    v1_stop_commit: Literal[
+        "41a5bdf254d964b35993809a86a01b75141d1381"
+    ]
+    v1_failure_checkpoint_sha256: Literal[
+        "6b7e35cd8a8f712061fa0576e7b6352f061c1494e8455008eb75893b6c7c1ba5"
+    ]
+    migration_version: Literal["semantic_gold_v1_to_v2_partition_only"]
+    model_metrics_read_or_generated: Literal[False]
+    scenario_count: Literal[15]
+    query_count: Literal[15]
+    candidates_per_scenario: Literal[4]
+    candidate_count: Literal[60]
+    unique_public_text_count: Literal[75]
+
+
 class SemanticRankingMetrics(StrictMemoryModel):
     scenario_count: Annotated[StrictInt, Field(ge=0)]
     relevant_scenario_count: Annotated[StrictInt, Field(ge=0)]
@@ -249,6 +351,20 @@ class SemanticSafetyCounts(StrictMemoryModel):
         return sum(self.model_dump().values())
 
 
+class SemanticCandidateRuntimeStatus(str, Enum):
+    ACTIVE = "active"
+    SUPERSEDED = "superseded"
+    INVALIDATED = "invalidated"
+    HARD_DELETED = "hard_deleted"
+
+
+class SemanticCandidateRuntimeFact(StrictMemoryModel):
+    candidate_id: Identifier
+    player_id: Identifier
+    source_session_id: Identifier
+    status: SemanticCandidateRuntimeStatus
+
+
 class SemanticScenarioResult(StrictMemoryModel):
     scenario_id: Identifier
     split: Literal["calibration", "test"]
@@ -257,6 +373,27 @@ class SemanticScenarioResult(StrictMemoryModel):
     threshold_candidate_ids: tuple[Identifier, ...]
     relevant_candidate_ids: tuple[Identifier, ...]
     forbidden_candidate_ids: tuple[Identifier, ...]
+    relevant_rank: StrictInt | None = None
+    fake_ranking_candidate_ids: tuple[Identifier, ...] = Field(default_factory=tuple)
+    top_k_overlap_count: Annotated[StrictInt, Field(ge=0, le=3)] = 0
+    scoped_candidate_count: Annotated[StrictInt, Field(ge=0)]
+    other_player_candidate_count: Annotated[StrictInt, Field(ge=0)] = 0
+    current_episode_candidate_count: Annotated[StrictInt, Field(ge=0)] = 0
+    long_text_characters: Annotated[StrictInt, Field(ge=0)] | None = None
+    long_text_tokens_before_truncation: Annotated[StrictInt, Field(ge=0)] | None = None
+    long_text_tokens_after_truncation: Annotated[StrictInt, Field(ge=0)] | None = None
+    long_text_was_truncated: StrictBool | None = None
+
+
+class SemanticScenarioResultV2(StrictMemoryModel):
+    scenario_id: Identifier
+    split: Literal["calibration", "test"]
+    ranking_candidate_ids: tuple[Identifier, ...]
+    ranking_similarities: tuple[StrictFloat, ...]
+    threshold_candidate_ids: tuple[Identifier, ...]
+    relevant_candidate_ids: tuple[Identifier, ...]
+    semantic_negative_candidate_ids: tuple[Identifier, ...]
+    safety_excluded_candidates: tuple[SafetyExcludedCandidate, ...]
     relevant_rank: StrictInt | None = None
     fake_ranking_candidate_ids: tuple[Identifier, ...] = Field(default_factory=tuple)
     top_k_overlap_count: Annotated[StrictInt, Field(ge=0, le=3)] = 0
@@ -306,3 +443,27 @@ class SemanticRawRunResult(StrictMemoryModel):
     vector_values_by_text_id: dict[Identifier, tuple[StrictFloat, ...]]
     resources: SemanticRunResourceMetrics
 
+
+class SemanticRawRunResultV2(StrictMemoryModel):
+    result_version: Literal["m45_semantic_result_v2"] = SEMANTIC_RESULT_VERSION_V2
+    run_id: Identifier
+    freeze_commit: str
+    code_commit: str
+    input_sha256: Sha256Hex
+    expectation_sha256: Sha256Hex
+    manifest_sha256: Sha256Hex
+    config_sha256: Sha256Hex
+    selected_empty_threshold: StrictFloat
+    calibration_ranking: SemanticRankingMetrics
+    calibration_classification: SemanticClassificationMetrics
+    test_ranking: SemanticRankingMetrics
+    test_classification: SemanticClassificationMetrics
+    safety_counts: SemanticSafetyCounts
+    scenarios: tuple[SemanticScenarioResultV2, ...] = Field(
+        min_length=15,
+        max_length=15,
+    )
+    ordered_result_sha256: Sha256Hex
+    vector_payload_sha256: Sha256Hex
+    vector_values_by_text_id: dict[Identifier, tuple[StrictFloat, ...]]
+    resources: SemanticRunResourceMetrics
