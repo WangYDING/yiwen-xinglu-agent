@@ -1,0 +1,20 @@
+{
+  "schema_version": "memory_gold_v1",
+  "suite_id": "m4_memory_gold_suite",
+  "scenarios": [
+    {"scenario_id": "memory_relevant_recall_001", "expected_memory_ids": ["mem_721175891fee519f93569e6a4dd8844c"], "forbidden_memory_ids": ["mem_9c7564e1fb135161a416c1d091d12b6d"], "expected_projection": {"input_count": 4, "created_count": 4, "idempotent_count": 0, "conflict_count": 0}},
+    {"scenario_id": "memory_irrelevant_exclusion_001", "expected_memory_ids": [], "forbidden_memory_ids": ["mem_eca6fe9ceda55c579cd0677b823c09de", "mem_93b84684b32558e5863c6d9826cb1591"], "expected_projection": {"input_count": 2, "created_count": 2, "idempotent_count": 0, "conflict_count": 0}, "expected_empty": true},
+    {"scenario_id": "memory_player_isolation_001", "expected_memory_ids": ["mem_721175891fee519f93569e6a4dd8844c"], "forbidden_memory_ids": ["mem_f97a00081e6f5c87900a42be984dfb32"], "expected_projection": {"input_count": 2, "created_count": 2, "idempotent_count": 0, "conflict_count": 0}},
+    {"scenario_id": "memory_empty_001", "expected_memory_ids": [], "forbidden_memory_ids": [], "expected_projection": {"input_count": 0, "created_count": 0, "idempotent_count": 0, "conflict_count": 0}, "expected_empty": true},
+    {"scenario_id": "memory_projection_idempotency_001", "expected_memory_ids": ["mem_721175891fee519f93569e6a4dd8844c"], "forbidden_memory_ids": [], "expected_projection": {"input_count": 1, "created_count": 1, "idempotent_count": 1, "conflict_count": 0}},
+    {"scenario_id": "memory_projection_conflict_001", "expected_memory_ids": ["mem_721175891fee519f93569e6a4dd8844c"], "forbidden_memory_ids": [], "expected_observed_errors": ["projection_conflict"], "expected_projection": {"input_count": 1, "created_count": 1, "idempotent_count": 0, "conflict_count": 1}},
+    {"scenario_id": "memory_invalidation_deletion_001", "expected_memory_ids": ["mem_b80e86f97e405db5b525aff5f4faa5db"], "forbidden_memory_ids": ["mem_21531ed8c0cf5c748bd0c3ab52075bfe", "mem_47ba311bd5125aaab2a7a16f7e460d76", "mem_d93a893f8e0e58ed983ebfe65ad03543"], "expected_observed_errors": ["projection_not_allowed"], "expected_projection": {"input_count": 3, "created_count": 3, "idempotent_count": 0, "conflict_count": 0}},
+    {"scenario_id": "memory_stable_tie_001", "expected_memory_ids": ["mem_6ccec7e55e21510cbb97ea18a0e6e1cd", "mem_b1b303f3a0a75655816f1ecec37bf985"], "forbidden_memory_ids": [], "expected_projection": {"input_count": 2, "created_count": 2, "idempotent_count": 0, "conflict_count": 0}},
+    {"scenario_id": "memory_prompt_injection_data_001", "expected_memory_ids": ["mem_4e8ea4034c705bd483e84af9a6203c6a"], "forbidden_memory_ids": [], "expected_projection": {"input_count": 1, "created_count": 1, "idempotent_count": 0, "conflict_count": 0}},
+    {"scenario_id": "memory_hidden_truth_filter_001", "expected_memory_ids": ["mem_05729f0db32859dcac74760fd64e762b"], "forbidden_memory_ids": [], "expected_observed_errors": ["projection_not_allowed"], "expected_projection": {"input_count": 1, "created_count": 1, "idempotent_count": 0, "conflict_count": 0}},
+    {"scenario_id": "memory_v0_isolation_001", "expected_memory_ids": [], "forbidden_memory_ids": [], "expected_projection": {"input_count": 0, "created_count": 0, "idempotent_count": 0, "conflict_count": 0}, "expected_empty": true},
+    {"scenario_id": "memory_v1_readonly_001", "expected_memory_ids": ["mem_98197c8647935b20b7acf8170bddc0d4"], "forbidden_memory_ids": [], "expected_observed_errors": ["illegal_permanent_write"], "expected_projection": {"input_count": 1, "created_count": 1, "idempotent_count": 0, "conflict_count": 0}},
+    {"scenario_id": "memory_vector_rebuild_001", "expected_memory_ids": ["mem_d64fdf1ac7bb5eb98d4769298b3bce35", "mem_da518ebf7ec45287ae8104ddf724239e"], "forbidden_memory_ids": [], "expected_projection": {"input_count": 2, "created_count": 2, "idempotent_count": 0, "conflict_count": 0}},
+    {"scenario_id": "memory_commit_window_recovery_001", "expected_memory_ids": ["mem_04a8413b98c55767ac7d88669dcb8abd"], "forbidden_memory_ids": [], "expected_projection": {"input_count": 1, "created_count": 1, "idempotent_count": 1, "conflict_count": 0}}
+  ]
+}
