@@ -6,7 +6,7 @@
 
 ## 当前状态
 
-**M2 与 M3 工程里程碑已经完成，M4-P4 的离线跨 Episode Gold 与安全评测已完成；M4 仍等待单独退出审计。** M3-P0/P1 已验证官方 MCP v2 的冻结工具契约、应用服务安全边界和本地 stdio 生命周期。M4-P1/P2/P3 已实现公开来源投影、SQLite Schema v2 权威记忆与派生向量、跨 Episode 作用域过滤、稳定 Top-K、最小 `MemoryView`、`memory_query_v1` 和独立 V1 Prompt；P4 使用 14 条冻结合成场景和确定性 Fake Embedding 验证完整管道，V0 与冻结的 MCP 工具保持不变。
+**M2、M3 与 M4 工程里程碑已经完成，M5 尚未开始。** M3-P0/P1 已验证官方 MCP v2 的冻结工具契约、应用服务安全边界和本地 stdio 生命周期。M4-P1/P2/P3 已实现公开来源投影、SQLite Schema v2 权威记忆与派生向量、跨 Episode 作用域过滤、稳定 Top-K、最小 `MemoryView`、`memory_query_v1` 和独立 V1 Prompt；P4 使用 14 条冻结合成场景和确定性 Fake Embedding 验证完整管道，M4 退出审计确认 V0 与冻结的 MCP 工具保持不变，所有安全硬门槛为 0。
 
 已经包含：
 
@@ -54,11 +54,11 @@
 - 全新 Python 3.12 虚拟环境中的安装、测试和 Demo 复现记录；
 - 领域模型、规则边界和持久化测试。
 
-**当前停止在 M4 退出审计之前**：M2 付费运行和 Prompt 调优已经关闭，标准探针与两个安全探针均不得重跑。M4-P4 只使用确定性 Fake Embedding、Fake LLM、合成数据和临时 SQLite；没有调用真实 Chat 或 Embedding，也没有接入共享 V0/MCP 路径、实现自适应教学、Reflection、多 Agent、界面或新玩法。
+**当前停止在 M5 开始之前**：M2 付费运行和 Prompt 调优已经关闭，标准探针与两个安全探针均不得重跑。M4 的实现与退出审计只使用确定性 Fake Embedding、Fake LLM、合成数据和临时 SQLite；没有调用真实 Chat 或 Embedding，也没有接入共享 V0/MCP 路径、实现自适应教学、Reflection、多 Agent、界面或新玩法。
 
 最终 M2 退出依据包括：标准探针在 8 步内完成正确诊断和处置，终态 `resolved / 100`；`SAFETY_ONLY` 的错误诱导探针抵抗了 `evil_spirit_attack` 暗示并提交正确诊断，但因一次解释性 `respond` 未能处置；过早行动探针的 1 次未知调查和 4 次过早诊断均被规则拒绝，没有状态污染。最新三探针共 24 次 Chat，24/24 首次结构化成功，格式修复、降级和非法状态写入均为 0，事件均连续且可重放。三探针共用一个病例且各运行一次，不是正式成功率样本。
 
-M2 分层结论和数据身份见 [`docs/M2_EXIT_AUDIT.md`](docs/M2_EXIT_AUDIT.md)，M3 证据和限制见 [`docs/M3_EXIT_AUDIT.md`](docs/M3_EXIT_AUDIT.md)。M4 架构与 P1–P4 实现边界见 [`docs/M4_MEMORY_PLAN.md`](docs/M4_MEMORY_PLAN.md)，Gold 契约、指标和实测结果见 [`docs/M4_MEMORY_EVALUATION_PLAN.md`](docs/M4_MEMORY_EVALUATION_PLAN.md)。项目已经包含最小 MCP 包装、本地 stdio 启动入口、SQLite 记忆权威库、可重建的离线向量检索、V1 安全只读记忆 Prompt 和离线 Gold 评测，但仍不包含 HTTP/SSE、认证、远程部署、真实 Embedding、真实 V1 模型行为结论或交互界面。
+M2 分层结论和数据身份见 [`docs/M2_EXIT_AUDIT.md`](docs/M2_EXIT_AUDIT.md)，M3 证据和限制见 [`docs/M3_EXIT_AUDIT.md`](docs/M3_EXIT_AUDIT.md)，M4 退出结论见 [`docs/M4_EXIT_AUDIT.md`](docs/M4_EXIT_AUDIT.md)。M4 架构与 P1–P4 实现边界见 [`docs/M4_MEMORY_PLAN.md`](docs/M4_MEMORY_PLAN.md)，Gold 契约、指标和实测结果见 [`docs/M4_MEMORY_EVALUATION_PLAN.md`](docs/M4_MEMORY_EVALUATION_PLAN.md)。项目已经包含最小 MCP 包装、本地 stdio 启动入口、SQLite 记忆权威库、可重建的离线向量检索、V1 安全只读记忆 Prompt 和离线 Gold 评测，但仍不包含 HTTP/SSE、认证、远程部署、真实 Embedding、真实 V1 模型行为结论或交互界面。
 
 ## 设计边界
 
@@ -226,4 +226,4 @@ M2 真实 Pilot 已结束，不再运行模型发现、标准探针、安全探�
 - 真实 Embedding 的供应商、可发送数据、预算、密钥和网络授权尚未决定；DeepSeek Chat 的历史授权不会自动延伸到 Embedding。
 - 当前 V0 的固定课程只按步骤编号推进，不基于玩家表现动态改变。
 - 当前真实样本仍只有一个病例上的单次探针运行，不足以形成正式成功率、跨病例比较或模型可靠性指标。
-- M2 付费运行已经停止；M3 已完成；M4-P0/P1/P2/P3/P4 已完成，但 M4 尚未执行单独退出审计。
+- M2 付费运行已经停止；M3 与 M4 已完成工程退出；真实 Embedding 和真实 V1 Pilot 未验证，M5 尚未开始。

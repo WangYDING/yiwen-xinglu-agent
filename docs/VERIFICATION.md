@@ -314,4 +314,18 @@ M4-P3 完成，M4 整体仍在进行中。M4-P4 尚未开始；真实 Embedding 
 - **全量与离线流程**：287 passed；P0 Fake LLM 为 3 场景/6 轨迹全部符合预期；无 LLM Demo 为 `resolved / 100`；安装后的 `xuanyi-memory-eval` 入口成功运行 14 条场景。
 - **外部调用与结论边界**：DeepSeek `/models` 0 次、Chat 0 次、真实 Embedding 0 次、模型费用 0 CNY；没有读取真实 API Key。全部指标只属于合成 Gold 与确定性 Fake Embedding，不代表真实 Embedding 语义质量、真实 V1 模型成功率、真实玩家效果或生产延迟。
 
-M4-P4 完成，但整个 M4 尚未执行单独退出审计；本轮没有关闭 M4、运行真实 Embedding Pilot 或开始 M5。
+M4-P4 完成，但当时整个 M4 尚未执行单独退出审计；该句保留为 P4 提交时的历史检查点，不代表当前状态。当时没有关闭 M4、运行真实 Embedding Pilot 或开始 M5。
+
+## 2026-08-08：M4 工程里程碑退出审计
+
+- **审计基线**：`48a1ffcf9542fbcc466405da6a1e11a74b40ef14`；开始时 HEAD 精确匹配且工作树干净。
+- **Gold 冻结历史**：`82950266b7fb7dc12780b7e63cfff1f3e3cb7bea` 只纠正评测规划中的并列排序术语；其直接后继 `118b3b13f9558e5d8fbfb72180c807815772ad30` 才新增 14 条输入、Gold 预期、manifest、严格契约和冻结测试，因此后者是最终有效冻结基线。两个同名提交均保留，未改写历史。
+- **冻结后差异**：从 `118b3b1` 到 P4 最终提交，输入、Gold 与 manifest 的 Git blob 分别保持 `691502b8a012fdeebfa8830863bf656fa84896be`、`43b00530b00eeb89a945da776121b158e813ebf9`、`844a5f94997fd20480c3bd0b5cf57e8e68fda848`；P1–P3 产品目录无差异。后续只增加评测执行器、测试、命令和结果记录，以及评测器自身的集合规范排序修复。
+- **Gold 复核**：14/14 场景实际执行并通过；输入、Gold 和检索配置 SHA-256 与 P4 记录一致。两次确定性运行哈希均为 `01ecf59b42e37dc2c898fd893fc0234c3d9ff18701c22f77a31bed06511cb44e`。
+- **指标复核**：macro Precision / Recall / F1 为 `1.0 / 1.0 / 1.0`（各 11 条有定义场景）；micro TP/FP/FN 为 `13/0/0`，micro P/R/F1 为 `1.0 / 1.0 / 1.0`；False Memory Rate 为 `0/13`；3 条 Gold 空结果正确且无分母指标保持缺省。
+- **安全硬门槛**：跨玩家串扰、非法永久写入、隐藏泄漏和删除后复活均为 0；V0 记忆访问、inactive 召回、来源缺失、当前 Episode 召回和 Prompt 边界违规也均为 0。
+- **专项回归**：M4-P1 44 passed；P2 26 passed；P3 20 passed；P4 15 passed；V0 Agent/Prompt Gold 16 passed；M3 MCP P0/P1 22 passed。
+- **全量与流程**：287 passed；P0 Fake LLM 3 场景/6 轨迹符合预期；无 LLM Demo 为 `completed / resolved / 100`；`git diff --check` 与敏感信息/运行文件跟踪检查通过。
+- **外部调用**：DeepSeek `/models` 0 次、Chat 0 次、真实 Embedding 0 次、费用 0 CNY；未读取真实 API Key。
+
+M4 工程里程碑完成。该结论只证明 Fake Embedding 下的离线工程契约与安全边界，不代表真实 Embedding 语义质量、真实 V1 模型使用记忆的效果、真实玩家收益或生产性能。完整逐项审计见 `docs/M4_EXIT_AUDIT.md`；真实 Embedding 与真实 V1 Pilot 尚未验证，M5 尚未开始。
