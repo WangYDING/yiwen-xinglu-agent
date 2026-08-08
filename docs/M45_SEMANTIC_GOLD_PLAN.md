@@ -4,7 +4,7 @@
 
 本 Gold 专供 M4.5 真实 Embedding 与真实 V1 Pilot，不修改、不替代 M4 已冻结的 14 条 Fake Embedding 工程 Gold。
 
-P0 只冻结设计，不创建场景数据或预填结果。P2 真实运行前必须先形成独立本地提交，至少包含：
+P0 只冻结设计，不创建场景数据或预填结果。P2 已在提交 `e81331255945e3baba34a0525b3c2f338321d841` 冻结下列文件；第一次正式本地运行随后因评测器标签复用误触安全停止，未产生可用正式指标或重复性结果，详见 `M45_P2_SEMANTIC_PILOT_REPORT.md`：
 
 - `m45_semantic_gold_inputs.json`：模型可见的合成公开输入；
 - `m45_semantic_gold_expectations.json`：仅评测器可见的相关/禁止集合与成功条件；

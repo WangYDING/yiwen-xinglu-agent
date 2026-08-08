@@ -6,7 +6,7 @@
 
 ## 当前状态
 
-**M2、M3 与 M4 工程里程碑已经完成；M4.5-P0/P1 已完成，M4.5-P2 与 M5 尚未开始。** M3-P0/P1 已验证官方 MCP v2 的冻结工具契约、应用服务安全边界和本地 stdio 生命周期。M4-P1/P2/P3 已实现公开来源投影、SQLite Schema v2 权威记忆与派生向量、跨 Episode 作用域过滤、稳定 Top-K、最小 `MemoryView`、`memory_query_v1` 和独立 V1 Prompt；P4 使用 14 条冻结合成场景和确定性 Fake Embedding 验证完整管道，M4 退出审计确认 V0 与冻结的 MCP 工具保持不变，所有安全硬门槛为 0。M4.5-P1 已安装项目内可选依赖、按固定 revision/SHA 下载 BGE-M3 dense 白名单，并完成 Mock 与真实权重的网络阻断离线烟雾；尚未运行 15 条正式语义 Gold 或真实 V1 Agent Pilot。
+**M2、M3 与 M4 工程里程碑已经完成；M4.5-P0/P1 已完成，P2 首次正式运行已按门禁停止，M5 尚未开始。** M3-P0/P1 已验证官方 MCP v2 的冻结工具契约、应用服务安全边界和本地 stdio 生命周期。M4-P1/P2/P3 已实现公开来源投影、SQLite Schema v2 权威记忆与派生向量、跨 Episode 作用域过滤、稳定 Top-K、最小 `MemoryView`、`memory_query_v1` 和独立 V1 Prompt；P4 使用 14 条冻结合成场景和确定性 Fake Embedding 验证完整管道，M4 退出审计确认 V0 与冻结的 MCP 工具保持不变，所有安全硬门槛为 0。M4.5-P1 已安装项目内可选依赖、按固定 revision/SHA 下载 BGE-M3 dense 白名单并完成离线烟雾；P2 已冻结 15 条/75 文本，但首次正式运行因评测器标签复用误触安全门槛而停止，没有可用正式指标。
 
 已经包含：
 
@@ -55,11 +55,11 @@
 - 全新 Python 3.12 虚拟环境中的安装、测试和 Demo 复现记录；
 - 领域模型、规则边界和持久化测试。
 
-**当前停止在 M4.5-P2 开始之前**：M2 付费运行和 Prompt 调优已经关闭，标准探针与两个安全探针均不得重跑。M4 的实现与退出审计仍只基于确定性 Fake Embedding；M4.5-P1 只证明本地 `BAAI/bge-m3` dense-only 在固定文件身份和网络阻断下可加载、输出合规向量，不代表 15 条真实语义 Gold 或真实 V1 Agent 效果。没有调用真实 Chat/Embedding API，也没有开始自适应教学、Reflection、多 Agent、界面和新玩法。
+**当前停止在 M4.5-P2 首次运行之后**：15 条/75 文本已冻结，但第一次本地 BGE 正式运行因评测器把语义负例标签误当成生命周期安全违规而停止，未写出可用正式指标，第二次重复性运行没有启动。修复评测契约后必须形成新冻结检查点并取得单独授权；不得把本次停止改写成模型通过或失败。没有调用真实 Chat/Embedding API，也没有开始自适应教学、Reflection、多 Agent、界面和新玩法。
 
 最终 M2 退出依据包括：标准探针在 8 步内完成正确诊断和处置，终态 `resolved / 100`；`SAFETY_ONLY` 的错误诱导探针抵抗了 `evil_spirit_attack` 暗示并提交正确诊断，但因一次解释性 `respond` 未能处置；过早行动探针的 1 次未知调查和 4 次过早诊断均被规则拒绝，没有状态污染。最新三探针共 24 次 Chat，24/24 首次结构化成功，格式修复、降级和非法状态写入均为 0，事件均连续且可重放。三探针共用一个病例且各运行一次，不是正式成功率样本。
 
-M2 分层结论和数据身份见 [`docs/M2_EXIT_AUDIT.md`](docs/M2_EXIT_AUDIT.md)，M3 证据和限制见 [`docs/M3_EXIT_AUDIT.md`](docs/M3_EXIT_AUDIT.md)，M4 退出结论见 [`docs/M4_EXIT_AUDIT.md`](docs/M4_EXIT_AUDIT.md)。M4 架构与 P1–P4 实现边界见 [`docs/M4_MEMORY_PLAN.md`](docs/M4_MEMORY_PLAN.md)，Gold 契约、指标和实测结果见 [`docs/M4_MEMORY_EVALUATION_PLAN.md`](docs/M4_MEMORY_EVALUATION_PLAN.md)。M4.5 的真实路线、授权和预算门槛见 [`docs/M45_REAL_MEMORY_VALIDATION_PLAN.md`](docs/M45_REAL_MEMORY_VALIDATION_PLAN.md)，P1 依赖、文件哈希与离线烟雾证据见 [`docs/M45_P1_LOCAL_EMBEDDING_REPORT.md`](docs/M45_P1_LOCAL_EMBEDDING_REPORT.md)，独立语义 Gold 设计见 [`docs/M45_SEMANTIC_GOLD_PLAN.md`](docs/M45_SEMANTIC_GOLD_PLAN.md)。项目已经包含最小 MCP 包装、本地 stdio 启动入口、SQLite 记忆权威库、可重建的离线向量检索、V1 安全只读记忆 Prompt、离线 Gold 评测和真实本地 Embedding Adapter，但仍不包含 HTTP/SSE、认证、远程部署、真实语义 Gold 结果、真实 V1 模型行为结论或交互界面。
+M2 分层结论和数据身份见 [`docs/M2_EXIT_AUDIT.md`](docs/M2_EXIT_AUDIT.md)，M3 证据和限制见 [`docs/M3_EXIT_AUDIT.md`](docs/M3_EXIT_AUDIT.md)，M4 退出结论见 [`docs/M4_EXIT_AUDIT.md`](docs/M4_EXIT_AUDIT.md)。M4 架构与 P1–P4 实现边界见 [`docs/M4_MEMORY_PLAN.md`](docs/M4_MEMORY_PLAN.md)，Gold 契约、指标和实测结果见 [`docs/M4_MEMORY_EVALUATION_PLAN.md`](docs/M4_MEMORY_EVALUATION_PLAN.md)。M4.5 的真实路线见 [`docs/M45_REAL_MEMORY_VALIDATION_PLAN.md`](docs/M45_REAL_MEMORY_VALIDATION_PLAN.md)，P1 离线证据见 [`docs/M45_P1_LOCAL_EMBEDDING_REPORT.md`](docs/M45_P1_LOCAL_EMBEDDING_REPORT.md)，独立语义 Gold 设计见 [`docs/M45_SEMANTIC_GOLD_PLAN.md`](docs/M45_SEMANTIC_GOLD_PLAN.md)，P2 首次停止事实与根因见 [`docs/M45_P2_SEMANTIC_PILOT_REPORT.md`](docs/M45_P2_SEMANTIC_PILOT_REPORT.md)。项目仍不包含 HTTP/SSE、认证、远程部署、可用的真实语义 Gold 指标、真实 V1 模型行为结论或交互界面。
 
 ## 设计边界
 
