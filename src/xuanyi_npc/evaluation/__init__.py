@@ -30,6 +30,12 @@ from .pilot_contracts import (
     PilotTaskOutcome,
 )
 from .pilot_evaluator import PilotBehaviorEvaluator
+from .memory_contracts import (
+    MemoryEvaluationReport,
+    MemoryGoldManifest,
+    MemoryGoldSuiteExpectation,
+    MemoryGoldSuiteInput,
+)
 
 __all__ = [
     "EpisodeResult",
@@ -54,4 +60,8 @@ __all__ = [
     "PilotProbeKind",
     "PilotProbeSuite",
     "PilotTaskOutcome",
+    "MemoryEvaluationReport",
+    "MemoryGoldManifest",
+    "MemoryGoldSuiteExpectation",
+    "MemoryGoldSuiteInput",
 ]

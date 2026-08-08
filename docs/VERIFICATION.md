@@ -298,3 +298,20 @@ M4-P2 完成，M4 整体仍在进行中。M4-P3 尚未开始；真实 Embedding 
 - **外部调用与范围**：DeepSeek `/models` 0 次、Chat 0 次、真实 Embedding 0 次、费用 0 CNY；没有读取真实 API Key。未实现 P4 Gold 指标、真实 Embedding、真实模型 Pilot、自适应课程、多因素排序、Reflection、新 MCP 工具、HTTP、部署或界面。
 
 M4-P3 完成，M4 整体仍在进行中。M4-P4 尚未开始；真实 Embedding 与真实 V1 模型行为仍需未来独立决策、预算和网络授权。
+
+## 2026-08-08：M4-P4 离线跨 Episode Gold 与安全评测
+
+- **实现基线**：`b808cd3ab377bbace2c8037a9ef3ce93143bb363`；开始时 HEAD 精确匹配且工作树干净。
+- **Gold 冻结**：先建立只含排序术语纠偏、14 条合成场景、严格 Schema、输入/预期分离文件和清单 SHA-256 的本地检查点。场景输入哈希为 `6d1233c6392d9f89eccf9abbc7c937a82319bb29e2591327c5e55fc51612e483`，Gold 预期哈希为 `389b841f4f039c1fc076df7d9c206e6c040522bded3c471a8848ec5e8d732c49`，检索配置规范哈希为 `b0afa7f9726631d5a0d9f256c3b7ce3c70692c1302e71b8a5c59299daa284b6c`。并列文字从 `event_id ASC` 纠正为既有 `memory_id ASC`，P2 排序代码未改。
+- **执行器**：`xuanyi-memory-eval` 和等价模块入口在两个全新临时根目录中执行全部 14 条场景；场景间 SQLite、JSON 状态、缓存和调用计数相互隔离。评测依次经过 P1 投影/生命周期、P2 Fake 索引/余弦 Top-K、P3 `MemoryScope` / `MemoryView` / V1 Prompt，再比较 Gold、来源、逻辑快照和安全计数。
+- **场景结果**：14/14 通过。幂等重复只保留一条来源和记忆；冲突不覆盖；更正记录可召回，失效、被替代、硬删除和当前 Episode 记录不召回；墓碑阻止复活；向量删除重建前后一致；提交窗口首次协调创建、第二次幂等，缺少已提交 JSON 时明确拒绝且零写入。
+- **检索指标**：macro Precision / Recall / F1 为 `1.0 / 1.0 / 1.0`，各自分母为 11 个可定义场景；micro TP / FP / FN 为 `13 / 0 / 0`，micro Precision / Recall / F1 为 `1.0 / 1.0 / 1.0`；False Memory Rate 为 `0/13 = 0.0`；3 个 Gold 空结果正确，分母为 0 的 Precision、Recall、F1 和 FMR 保持缺省。
+- **安全硬门槛**：跨玩家串扰、非法永久写入、隐藏字段泄漏、删除后复活、V0 记忆访问、inactive 召回、来源不可核对、当前 Episode 召回和 Prompt 边界违规全部为 0。玩家 B 的更高相似度诱饵已建立向量但在玩家 A 候选前被排除；注入文本只进入 `retrieved_memories[].content`，未知写工具/字段被 Schema 拒绝且逻辑表不变。
+- **可重复性**：两次完整运行确定性结果 SHA-256 均为 `01ecf59b42e37dc2c898fd893fc0234c3d9ff18701c22f77a31bed06511cb44e`；独立 Python 子进程得到相同哈希和并列顺序。比较的是规范化、排序后的数据库/状态逻辑快照，不比较 SQLite 原始字节。
+- **评测器缺陷修复**：首次全量回归发现提交窗口的临时玩家 JSON 中集合数组顺序在不同进程间可能不同。修复只让评测器在哈希前恢复严格状态类型并规范排序集合；冻结 Gold、P1–P3 产品实现和产品 JSON 格式均未修改。修复后全量进程与子进程哈希一致。
+- **本地观察值**：Python `3.12.3`，Windows `10.0.19044`，Fake 算法 `fake_sha256_token_buckets_v1`、64 维、空间 `fake_sha256_token_buckets_v1_d64`，投影 `memory_projection_v1`，SQLite Schema v2。28 个场景耗时样本使用 nearest-rank（`ceil(p*n)`）得到 P50 `39.336 ms`、P95 `96.281 ms`；第一轮 13 个 SQLite 文件共 `1,118,208` 字节。这些值不进入确定性哈希，也不是生产性能。
+- **专项回归**：M4-P4 15 passed；M4-P1 44 passed；M4-P2 26 passed；M4-P3 20 passed；M3 MCP P0/P1 22 passed；V0 Agent/Prompt Gold 16 passed。
+- **全量与离线流程**：287 passed；P0 Fake LLM 为 3 场景/6 轨迹全部符合预期；无 LLM Demo 为 `resolved / 100`；安装后的 `xuanyi-memory-eval` 入口成功运行 14 条场景。
+- **外部调用与结论边界**：DeepSeek `/models` 0 次、Chat 0 次、真实 Embedding 0 次、模型费用 0 CNY；没有读取真实 API Key。全部指标只属于合成 Gold 与确定性 Fake Embedding，不代表真实 Embedding 语义质量、真实 V1 模型成功率、真实玩家效果或生产延迟。
+
+M4-P4 完成，但整个 M4 尚未执行单独退出审计；本轮没有关闭 M4、运行真实 Embedding Pilot 或开始 M5。

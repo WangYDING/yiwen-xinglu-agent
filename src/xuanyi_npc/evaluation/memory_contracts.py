@@ -378,12 +378,23 @@ class MemoryScenarioEvaluationResult(StrictMemoryModel):
     failure_categories: tuple[MemoryEvaluationFailureCategory, ...] = Field(
         default_factory=tuple
     )
+    safe_reason_code: Identifier | None = None
     memory_content_hashes: tuple[Sha256Hex, ...] = Field(default_factory=tuple)
     source_payload_hashes: tuple[Sha256Hex, ...] = Field(default_factory=tuple)
     lifecycle_statuses: tuple[str, ...] = Field(default_factory=tuple)
+    index_status: Identifier | None = None
     logical_snapshot_sha256: Sha256Hex
     deterministic_result_sha256: Sha256Hex
     observation: MemoryEvaluationObservation
+
+    @model_validator(mode="after")
+    def require_safe_failure_shape(self) -> "MemoryScenarioEvaluationResult":
+        if self.passed:
+            if self.failure_categories or self.safe_reason_code is not None:
+                raise ValueError("passed result cannot contain a failure reason")
+        elif not self.failure_categories or self.safe_reason_code is None:
+            raise ValueError("failed result requires a safe failure reason")
+        return self
 
 
 class MemoryAggregateMetrics(StrictMemoryModel):

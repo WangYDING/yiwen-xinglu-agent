@@ -6,7 +6,7 @@
 
 ## 当前状态
 
-**M2 与 M3 工程里程碑已经完成，M4-P3 的 V1 Agent 安全只读记忆上下文已完成，M4-P4 尚未开始。** M3-P0/P1 已验证官方 MCP v2 的冻结工具契约、应用服务安全边界和本地 stdio 生命周期。M4-P1/P2/P3 已实现公开来源投影、SQLite Schema v2 权威记忆与派生向量、跨 Episode 作用域过滤、稳定 Top-K、最小 `MemoryView`、`memory_query_v1` 和独立 V1 Prompt；V0 与冻结的 MCP 工具保持不变。
+**M2 与 M3 工程里程碑已经完成，M4-P4 的离线跨 Episode Gold 与安全评测已完成；M4 仍等待单独退出审计。** M3-P0/P1 已验证官方 MCP v2 的冻结工具契约、应用服务安全边界和本地 stdio 生命周期。M4-P1/P2/P3 已实现公开来源投影、SQLite Schema v2 权威记忆与派生向量、跨 Episode 作用域过滤、稳定 Top-K、最小 `MemoryView`、`memory_query_v1` 和独立 V1 Prompt；P4 使用 14 条冻结合成场景和确定性 Fake Embedding 验证完整管道，V0 与冻结的 MCP 工具保持不变。
 
 已经包含：
 
@@ -49,14 +49,16 @@
 - 只含不透明 ID、类型、公开内容和发生时间的 `MemoryView`，以及检索后的二次权限校验；
 - 独立的 V1 Agent 输入与 Prompt：记忆只作为用户上下文中的结构化 JSON 历史数据，固定课程和 `AgentAction` 不变；
 - `ready`、`empty`、`unavailable` 三种记忆上下文状态；索引或安全错误会在 LLM 调用前以 `memory_context_unavailable` 停止；
+- 14 条输入/Gold 分离的合成跨 Episode 记忆场景、严格 Schema、文件/配置哈希、确定性双运行器和结构化失败分类；
+- 逐场景及汇总 Precision、Recall、F1、False Memory Rate、安全硬门槛、规范数据库逻辑快照和本地观察指标；
 - 全新 Python 3.12 虚拟环境中的安装、测试和 Demo 复现记录；
 - 领域模型、规则边界和持久化测试。
 
-**当前停止在 M4-P4 开始之前**：M2 付费运行和 Prompt 调优已经关闭，标准探针与两个安全探针均不得重跑。M4-P3 只使用确定性 Fake Embedding 和 Fake LLM 验证 V1 安全上下文，没有调用真实 Chat 或 Embedding，也没有接入共享 V0/MCP 路径、实现自适应教学、Reflection、多 Agent、界面或新玩法。
+**当前停止在 M4 退出审计之前**：M2 付费运行和 Prompt 调优已经关闭，标准探针与两个安全探针均不得重跑。M4-P4 只使用确定性 Fake Embedding、Fake LLM、合成数据和临时 SQLite；没有调用真实 Chat 或 Embedding，也没有接入共享 V0/MCP 路径、实现自适应教学、Reflection、多 Agent、界面或新玩法。
 
 最终 M2 退出依据包括：标准探针在 8 步内完成正确诊断和处置，终态 `resolved / 100`；`SAFETY_ONLY` 的错误诱导探针抵抗了 `evil_spirit_attack` 暗示并提交正确诊断，但因一次解释性 `respond` 未能处置；过早行动探针的 1 次未知调查和 4 次过早诊断均被规则拒绝，没有状态污染。最新三探针共 24 次 Chat，24/24 首次结构化成功，格式修复、降级和非法状态写入均为 0，事件均连续且可重放。三探针共用一个病例且各运行一次，不是正式成功率样本。
 
-M2 分层结论和数据身份见 [`docs/M2_EXIT_AUDIT.md`](docs/M2_EXIT_AUDIT.md)，M3 证据和限制见 [`docs/M3_EXIT_AUDIT.md`](docs/M3_EXIT_AUDIT.md)。M4 架构与 P1/P2/P3 实现边界见 [`docs/M4_MEMORY_PLAN.md`](docs/M4_MEMORY_PLAN.md)，Gold 评测计划见 [`docs/M4_MEMORY_EVALUATION_PLAN.md`](docs/M4_MEMORY_EVALUATION_PLAN.md)。项目已经包含最小 MCP 包装、本地 stdio 启动入口、SQLite 记忆权威库、可重建的离线向量检索和 V1 安全只读记忆 Prompt，但仍不包含 HTTP/SSE、认证、远程部署、真实 Embedding、P4 记忆 Gold 指标或交互界面。
+M2 分层结论和数据身份见 [`docs/M2_EXIT_AUDIT.md`](docs/M2_EXIT_AUDIT.md)，M3 证据和限制见 [`docs/M3_EXIT_AUDIT.md`](docs/M3_EXIT_AUDIT.md)。M4 架构与 P1–P4 实现边界见 [`docs/M4_MEMORY_PLAN.md`](docs/M4_MEMORY_PLAN.md)，Gold 契约、指标和实测结果见 [`docs/M4_MEMORY_EVALUATION_PLAN.md`](docs/M4_MEMORY_EVALUATION_PLAN.md)。项目已经包含最小 MCP 包装、本地 stdio 启动入口、SQLite 记忆权威库、可重建的离线向量检索、V1 安全只读记忆 Prompt 和离线 Gold 评测，但仍不包含 HTTP/SSE、认证、远程部署、真实 Embedding、真实 V1 模型行为结论或交互界面。
 
 ## 设计边界
 
@@ -81,7 +83,7 @@ src/xuanyi_npc/mcp_server/ 官方 MCP v2 的进程内工具契约与 Server fact
 src/xuanyi_npc/memory/   M4 公开来源、投影、生命周期与 Embedding 契约
 src/xuanyi_npc/storage/  JSON 状态与 SQLite 权威记忆存储
 data/cases/              结构化病例定义
-data/evaluation/         P0 dev 场景、真实行为探针与脱敏回归轨迹
+data/evaluation/         P0 dev、真实行为探针、脱敏轨迹与 M4 合成记忆 Gold
 data/pilot/              带日期和来源的 Pilot 价格与安全策略快照
 docs/                    架构决策记录
 tests/                   自动化测试
@@ -120,6 +122,21 @@ M2a 的 Agent 闭环使用 Fake LLM 自动验证，不需要 API 密钥：
 ```bash
 python -m pytest tests/test_doctor_agent.py tests/test_v0_episode_runner.py
 ```
+
+M4-P4 的 14 条跨 Episode 记忆 Gold 完全离线。安装项目后运行：
+
+```bash
+xuanyi-memory-eval
+```
+
+未安装项目时，在仓库根目录使用：
+
+```powershell
+$env:PYTHONPATH="src"
+python -m xuanyi_npc.evaluation.memory_runner
+```
+
+命令会在两个全新临时目录中重复完整套件，比较排序后的 SQLite 逻辑快照与确定性结果哈希，并自动清理临时状态。输出指标只属于合成 Gold 与 64 维确定性 Fake Embedding；不代表真实 Embedding 语义质量、真实模型长期记忆成功率或生产性能。
 
 M2b-P0 的 3 条 dev 场景也完全离线，可由一条命令重复运行：
 
@@ -201,12 +218,12 @@ M2 真实 Pilot 已结束，不再运行模型发现、标准探针、安全探�
 - M1 只更新病例会话，不更新玩家能力、关系或长期记忆。
 - 评分暂时只计算关键线索、诊断、处置和危险处置惩罚；提示扣分将在教学阶段接入。
 - 演示是固定路线回放，还不是交互式游戏界面。
-- V0 的 M2a Harness、M2b-P0、M2b-P1a 和 M2b-P1b 工程门槛已经收口；V1 当前完成记忆持久化、基础检索和 Agent 安全只读上下文，尚未执行 P4 Gold 评测，V2 仍只有配置与共享契约。
+- V0 的 M2a Harness、M2b-P0、M2b-P1a 和 M2b-P1b 工程门槛已经收口；V1 当前完成记忆持久化、基础检索、Agent 安全只读上下文和 P4 离线 Gold 评测，V2 仍只有配置与共享契约。
 - 三个正式版本始终启用 `AgentContextFilter`；不安全提示词对照只允许在隔离的 A4 安全消融中运行。
 - V1 只增加基础向量 Top-K 长期记忆并保持固定课程；多因素记忆排序、自适应教学与 Reflection 属于 V2。
 - 长期记忆、自适应教学和 Reflection 明确不属于当前 V0 实现。
-- M4-P3 已把内部检索结果经 `MemoryScope` 与最小 `MemoryView` 接入独立 V1 Prompt；该结论只证明离线程序化边界与消息结构，没有验证真实模型抵抗记忆提示注入的能力。
+- M4-P4 已用冻结合成 Gold 验证投影、生命周期、检索、隔离、只读 Prompt 和协调恢复；该结论只证明离线程序化边界与 Fake Embedding 下的确定性结果，没有验证真实模型抵抗记忆提示注入或真实 Embedding 的语义能力。
 - 真实 Embedding 的供应商、可发送数据、预算、密钥和网络授权尚未决定；DeepSeek Chat 的历史授权不会自动延伸到 Embedding。
 - 当前 V0 的固定课程只按步骤编号推进，不基于玩家表现动态改变。
 - 当前真实样本仍只有一个病例上的单次探针运行，不足以形成正式成功率、跨病例比较或模型可靠性指标。
-- M2 付费运行已经停止；M3 已完成；M4-P0/P1/P2/P3 已完成，M4-P4 尚未开始。
+- M2 付费运行已经停止；M3 已完成；M4-P0/P1/P2/P3/P4 已完成，但 M4 尚未执行单独退出审计。

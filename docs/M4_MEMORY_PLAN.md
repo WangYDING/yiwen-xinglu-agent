@@ -5,8 +5,8 @@
 - **规划日期**：2026-08-07
 - **规划基线**：`2c78dadbab19ee724bfc7595e2256b14314c427c`
 - **适用版本**：V1（基础向量 Top-K 长期记忆 + 固定课程）
-- **当前状态**：M4-P0、M4-P1、M4-P2 与 M4-P3 已完成；M4-P4 尚未开始
-- **实现状态**：已实现确定性公开事件投影、SQLite Schema v2、生命周期、Fake Embedding、派生向量、按玩家余弦 Top-K 和 V1 Agent 安全只读上下文；尚未执行 P4 Gold 评测
+- **当前状态**：M4-P0、M4-P1、M4-P2、M4-P3 与 M4-P4 已完成；M4 尚待单独退出审计
+- **实现状态**：已实现确定性公开事件投影、SQLite Schema v2、生命周期、Fake Embedding、派生向量、按玩家余弦 Top-K、V1 Agent 安全只读上下文，以及 14 条冻结合成 Gold 的离线评测
 
 M4 的目标是在不改变 V0 病例引擎、固定课程、工具和安全边界的前提下，为 V1 增加跨 Episode、来源可追溯的只读长期记忆。V1 不实现多因素排序、自适应课程、Reflection、关系或技能自动成长，也不允许模型直接写永久状态。
 
@@ -50,6 +50,15 @@ M4 的目标是在不改变 V0 病例引擎、固定课程、工具和安全边�
 - 记忆上下文区分 `ready`、`empty`、`unavailable`。`unavailable` 统一返回安全码 `memory_context_unavailable`，不调用 LLM、不发送部分结果；
 - V0 Prompt `v0.2.1` 与输入 Schema 的 Gold 哈希保持不变，完整 V0 Episode 的记忆 Repository、Embedding、Retriever、QueryBuilder 和 MemoryScope 调用均为 0；
 - P3 只用 Fake Embedding 与 Fake LLM。注入测试证明程序化边界与消息结构未改变，不构成真实模型抗提示注入结论。
+
+### 2.4 M4-P4 实现检查点
+
+- `memory_gold_inputs.json` 与 `memory_gold_expectations.json` 分离保存合成输入和评测真值，`memory_gold_manifest.json` 固定两者及检索配置的 SHA-256；严格 Schema 禁止未知字段；
+- `xuanyi-memory-eval` 在两个全新临时目录中依次运行 14 条场景，不共享 SQLite、JSON 状态、缓存或调用计数；每条场景经过实际投影、生命周期、索引、`MemoryScope`、Top-K、`MemoryView` 与 V1 Prompt 边界；
+- 可重复性比较有序召回、投影计数、内容/来源哈希、生命周期状态、安全计数和排序后的数据库逻辑快照；不比较 SQLite 原始字节，延迟和文件大小不进入确定性哈希；
+- 实测 macro/micro Precision、Recall、F1 均为 1.0，False Memory Rate 为 `0/13`，3 条 Gold 空结果均正确；这些数字只属于冻结合成数据与确定性 Fake Embedding；
+- 扩展安全硬门槛全部为 0。注入式文本仅保留在 `retrieved_memories[].content`；没有真实模型调用，因此仍不能声称真实模型抗注入；
+- P4 未发现需要修改 P1–P3 产品实现的缺陷。提交窗口场景在来源 Episode 协调完成后，从另一个合成 Episode 验证跨 Episode 召回，从而保留 P3 当前 Episode 排除规则。
 
 ## 3. 冻结的单向安全管道
 
@@ -226,7 +235,7 @@ P3 的运行状态语义已经冻结：`ready` 有合法历史，`empty` 是索�
 | **M4-P1：事件投影与持久化（已完成）** | P0 冻结契约；已提交病例事件和安全视图 | `VerifiedMemorySource`、稳定来源 ID、`AuthoritativeMemoryRecord`、SQLite Repository、生命周期与协调测试 | Embedding、Top-K、Prompt、Agent/MCP 记忆工具、关系/技能更新 | 允许列表、隐藏字段排除、幂等、冲突、故障窗口、更正/失效/硬删除/重建和玩家隔离全部离线通过；V0 回归通过 | 不需要；实际请求与费用为 0 | 任一无来源写入、重复记忆、跨玩家写入、隐藏字段落库、删除后复活或 V0 行为变化 |
 | **M4-P2：Embedding 与基础检索（已完成）** | P1 的 active 权威记忆和严格检索配置 | 可替换 Adapter、确定性 Fake、派生向量表、进程内余弦 Top-K、稳定并列和重建测试 | 真实供应商调用、多因素排序、Agent Prompt、向量数据库 | 同空间校验、阈值、Top-K、稳定排序、失效排除、向量重建和无网络测试通过；跨玩家候选为 0 | 不需要；实际请求与费用为 0 | 向量成为唯一事实来源、排序混入重要度/时间、用量不明、网络未授权或不可重复 |
 | **M4-P3：V1 安全上下文集成（已完成）** | P2 检索器；现有 `AgentContextFilter`、DoctorAgent 与固定课程 | `MemoryScope`、`MemoryView`、版本化查询构建、V1 只读 Prompt 集成 | 自适应课程、Reflection、关系/能力更新、新工具、真实 LLM 调用 | 检索前玩家隔离、检索后最小视图、注入文本作为数据、V0 零读取、V1 零写入、固定课程不变 | 离线 Fake 不需要；实际外部请求和费用为 0 | 任何真值泄漏、跨玩家召回、AgentAction 写记忆、课程顺序受记忆暗改或 V0 Prompt 改变 |
-| **M4-P4：离线 Gold 与指标** | P1–P3 能力；合成跨 Episode Gold | 严格场景 Schema、确定性评测器、Precision/Recall/F1/FMR、安全与规模报告 | 真实成功率、付费模型数据、自适应教学或 Reflection | 全部 Gold 可重复；跨玩家串扰=0、非法永久写入=0；失败分类、延迟和存储规模可审计；不预填效果 | 不需要 | 安全硬门槛非 0、同输入结果不稳定、评测真值进入 Prompt 或 Fake 指标被写成真实效果 |
+| **M4-P4：离线 Gold 与指标（已完成）** | P1–P3 能力；合成跨 Episode Gold | 严格场景 Schema、确定性评测器、Precision/Recall/F1/FMR、安全与规模报告 | 真实成功率、付费模型数据、自适应教学或 Reflection | 14/14 Gold 在两个临时目录中可重复；扩展安全硬门槛全为 0；失败分类、延迟和存储规模可审计 | 不需要；实际外部请求和费用为 0 | 安全硬门槛非 0、同输入结果不稳定、评测真值进入 Prompt 或 Fake 指标被写成真实效果 |
 | **M4 退出审计** | P1–P4 已提交证据 | 逐项审计、能力边界、已知限制和最终结论 | 顺手修功能、真实供应商扩权、M5 代码 | 全量与专项测试、Gold、重建、安全检查和文档一致；明确真实 Embedding 是否未验证 | 审计本身不需要 | 证据与实现不一致时停止，不能靠审计修改代码掩盖缺口 |
 
 ## 12. M4 退出时仍不应声称的能力
