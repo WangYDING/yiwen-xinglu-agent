@@ -396,3 +396,13 @@ M4.5-P2 仍未完成且不能判断 P3 准入；下一次正式运行需要新�
 - **检查点**：忽略目录 `results/m45_p2_v2_identity_stop_20260810.json`，SHA `628C24576585ACBFF2DFB6035F326FEA6B207442F0C50D73ECA01B9ADD1B0D19`；DeepSeek、外部 Embedding API、网络请求和费用均为 0。
 
 M4.5-P2 再次因工程条件停止，尚未形成质量通过或质量未通过结论。下一次运行需单独授权并明确执行 HEAD 与冻结基线的兼容方式；M4.5-P3 和 M5 尚未开始。
+
+## 2026-08-10：M4.5-P2 v2 精确执行 run1 在资源遥测阶段停止
+
+- **双重身份**：Gold v2 原始冻结来源为 `b78033099663464bf3d7790c6fef5d4b973dc692`；精确执行 HEAD 为 `0ed89c15dfbb3dcb6a637813fabef205ffc1229e`。预检确认二者在 `src/`、`tests/`、`data/evaluation/`、`requirements/`、`pyproject.toml` 零差异；后者只新增两次停止记录，不代表 Gold 重设计或调优。
+- **身份与环境**：工作树干净，Gold/配置/模型 manifest/主权重/依赖锁/入口 SHA 全部匹配；CUDA 12.6、RTX 4070 SUPER、FP32/1024/CUDA 空间通过。run1 使用 `--freeze-commit 0ed89c1...` 通过精确 HEAD 门禁。
+- **执行停止**：BGE 加载 1 次、CPU 回退 0；15 条场景循环、安全汇总和网络封锁检查均已执行。构造最终资源指标时，Windows `GetProcessMemoryInfo` 因 `ctypes` 进程句柄宽度未声明而抛出 `ArgumentError/OverflowError`，正式结果在序列化前丢失。没有修复、重跑 run1 或启动 run2。
+- **安全证据**：控制流已通过 `safety.total` 硬门槛，因此九个安全计数均为 0；但没有正式结果文件。逐场景 Top-K、阈值、语义指标、Fake/BGE 差异、延迟/资源和重复性均为 `not_observed`，不得补造。
+- **失败检查点**：忽略目录 `results/m45_p2_v2_0ed89c1_run1_failure_20260810.json`，SHA `D853266CAA8C24D0F37A705F8EC5B3C1784E63EDBB24140C6933AA3E1B431517`；run1/run2 正式 JSON 均未创建。网络尝试、DeepSeek、外部 Embedding API 和费用均为 0。
+
+M4.5-P2 再次因工程条件停止，不是质量失败，也不能判定通过。修复资源遥测和后续运行需要新的授权；M4.5-P3 与 M5 尚未开始。

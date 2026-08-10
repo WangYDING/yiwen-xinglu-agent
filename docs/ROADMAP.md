@@ -35,7 +35,7 @@ Word 设计总结、`xuanyi-npc-handoff` 和 `docs/algorithm-experiment-plan-v0.
 | M4.5-P0：真实 Embedding 与 V1 Pilot 规划 | 已完成 | 本机只读规格、三路线比较、本地 BGE-M3 首选、外部 API 备选、15 条语义 Gold 设计、P1–P3 授权与停止门禁 |
 | M4.5-P1：本地 Adapter 与离线烟雾 | 已完成 | 固定依赖、BGE-M3 revision/SHA 白名单、延迟加载 Adapter、Mock、真实 CUDA/FP32 离线烟雾；未运行语义 Gold |
 | M4.5-P2a：语义 Gold v2 离线纠偏 | 已完成 | 保留 v1 冻结与停止历史；复用相同 15 条/75 文本，将相关项、合法语义负例和实际安全排除项完整分区；没有加载 BGE 或读取失败指标 |
-| M4.5-P2：真实语义 Gold | 进行中（冻结身份门禁停止） | `.venv` 命令入口已离线修复；run1 因执行 HEAD `f573e03` 与冻结参数 `b780330` 不精确相等，在 BGE 加载前停止。正式/重复性运行均为 0，需新授权 |
+| M4.5-P2：真实语义 Gold | 进行中（资源遥测异常停止） | 原始 Gold `b780330`、精确执行 HEAD `0ed89c1`；run1 已加载 BGE 并完成场景循环，但在结果写入前因 Windows `ctypes` 峰值内存采集失败。run2 未启动，无正式指标 |
 | M4.5-P3 与退出审计 | 未开始 | P2 尚未形成可用正式指标或准入结论；真实 V1 Agent Pilot与退出审计均未运行 |
 | M5 及以后 | 未开始 | 自适应教学、Reflection、界面、多 Agent 等均未开始 |
 
