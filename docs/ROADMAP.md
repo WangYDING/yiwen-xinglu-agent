@@ -39,8 +39,15 @@ Word 设计总结、`xuanyi-npc-handoff` 和 `docs/algorithm-experiment-plan-v0.
 | M4.5-P2b：离线失败诊断与下一轮规划 | 已完成 | 只读重算 15×4 完整分数；确认模板/长度不对称、字面诱饵和全局阈值重叠；原 15 条转为已观察开发集，规划 36 条新 holdout |
 | M4.5-P2c：V2 表示与新 holdout 冻结 | 已完成 | `retrieval_query_v2`、`embedding_document_v2`、表示空间隔离、索引过期状态、保守策略契约；36 条/144 候选 calibration/test 已冻结 |
 | M4.5-P2d：新 holdout 本地验证 | 已完成运行（语义质量未通过） | 唯一一组两次 BGE-M3 运行工程/安全/重复性通过；final Recall@3 `1.0`、MRR `0.975`，但 micro F1 `0.6667` 且更正切片 FN `1`，未达到准入线；Dense-only 优化关闭 |
-| M4.5-P3 与退出审计 | 未开始 | P2d 未达到准入线，不进入真实 V1 Agent Pilot；不自动扩展 reranker、其他模型、向量数据库或题库 |
-| M5 及以后 | 未开始 | 自适应教学、Reflection、界面、多 Agent 等均未开始 |
+| M4.5-P3：真实 V1 Agent Pilot | 本轮取消 | P2d 未达到准入线，真实语义记忆不得进入 Agent Prompt；不描述为通过或已执行 |
+| M4.5 终止审计 | 已完成：`closed_with_known_dense_retrieval_limitations` | 本地 BGE 工程、安全与重复性通过，Dense 排名主要门槛通过，但保守召回 micro F1 `0.6667`、更正切片 FN `1`；完整结论见 `docs/M45_TERMINATION_AUDIT.md` |
+| M5-P0：多病例纵向切片规划 | 已完成 | 三病例用户流程、Runner 边界、确定性跨 Episode 连续性、两个新病例概要、双岗位证据与 P1–P5 验收已冻结 |
+| M5-P1：正式多病例 Episode Runner | 未开始 | 交互式 CLI、玩家/病例选择、开始/恢复/退出与结构化故障处理 |
+| M5-P2：两个完整新病例 | 未开始 | 复用现有 Schema/Engine 的可玩病例、无 LLM 闭环、重放与恢复 |
+| M5-P3：确定性跨 Episode 连续性 | 未开始 | 从可信事件投影公开 CampaignFact 和至少一项可见成长；至少两处后续反应，不依赖 BGE |
+| M5-P4：Agent 运行模式 | 未开始 | no-LLM、Fake、DeepSeek V0 与只记录不注入的 semantic shadow |
+| M5-P5：纵向切片验收 | 未开始 | 三病例完整试玩、重启恢复、玩家隔离、演示与双岗位证据 |
+| M5 以后 | 未开始 | 自适应教学、Reflection、网页、多 Agent 和新玩法均未开始 |
 
 ## 双岗位作品集主线
 
@@ -49,12 +56,16 @@ Word 设计总结、`xuanyi-npc-handoff` 和 `docs/algorithm-experiment-plan-v0.
 | 后续工作 | Agent 应用岗证据 | 游戏 AI 产品岗证据 |
 |---|---|---|
 | M4.5-P2d 正式双运行 | 版本化检索、calibration/final 隔离、安全过滤和重复性通过；保留语义质量负结果 | 证明当前 Dense-only 方案仍会漏召回，不宣称玩家收益 |
-| M4.5-P3 真实 V1 Agent | 模型是否正确使用只读记忆、抵抗数据注入、安全停止 | 师承 NPC 是否能在病例中自然引用历史 |
-| M4.5 退出审计 | 可审计的真实 Adapter/Agent 证据与已知限制 | 给纵向切片提供稳定记忆能力边界 |
-| 下一主线：游戏 AI 纵向切片 | 正式 V1 Episode Runner 与端到端工具/记忆编排 | 至少 2 个新可玩病例、跨 Episode 产生/保存/召回/使用、普通用户入口 |
-| M5 自适应教学规划（更后） | 受约束策略与评测设计 | 课程、关系和能力成长体验；不得在记忆效果未验证前混入 |
+| M4.5 终止审计 | 可审计的真实 Adapter、Dense 排名/返回门禁证据与诚实负结论 | 明确未通过能力默认关闭，避免损害正式玩法 |
+| M5-P1 多病例 Runner | 结构化编排、工具、错误和持久化边界 | 普通用户入口、开始/恢复/退出的产品循环 |
+| M5-P2 三病例 | 多 Episode 的统一规则与回放证据 | 两个新可玩病例和非固定测试轨迹 |
+| M5-P3 确定性连续性 | 可信事件投影、玩家隔离和可审计历史 | NPC 对玩家真实选择产生至少两处可解释反应 |
+| M5-P4/P5 模式与验收 | no-LLM/Fake/DeepSeek 分层、shadow RAG 和真实失败分析 | 完整试玩、重启恢复、演示脚本与用户反馈入口 |
+| M5 之后的自适应教学 | 受约束策略与独立评测设计 | 课程、关系和能力成长；不与本轮 Dense 负结果混用 |
 
-P2c 新 holdout 的合成指标只能描述工程和语义检索符合度，不能描述游戏产品效果、玩家收益或正式准确率。新 holdout 只允许一组两次正式运行；未通过时关闭本轮 Dense-only 优化，reranker、其他模型、向量数据库和大规模题库都需要重新论证岗位展示收益与产品必要性后另行授权。
+P2c 新 holdout 的合成指标只能描述工程和语义检索符合度，不能描述游戏产品效果、玩家收益或正式准确率。唯一一组两次正式运行已经结束且未通过全部语义准入线；本轮 Dense-only 优化已经关闭。reranker、其他模型、向量数据库和大规模题库不属于当前路线，只有在真实多病例轨迹形成后重新论证岗位展示收益与产品必要性，才可另行立项。
+
+M5 的正式长期连续性使用确定性游戏记忆：从已提交领域事件投影结构化公开事实，再由显式规则影响后续公开对话或行动。语义向量记忆默认关闭，只允许 shadow mode 记录经过过滤的候选，不能进入 Agent Prompt、改变 Agent 行动或玩家状态。详细产品和架构边界见 `docs/M5_MULTI_CASE_VERTICAL_SLICE_PLAN.md`。
 
 ## M2a 完成边界
 
@@ -199,24 +210,26 @@ P4 的 Precision、Recall、F1 与 False Memory Rate 只描述冻结合成 Gold 
 
 M4 退出审计已核对两个同名 Gold 检查点，确认 `118b3b1` 是包含 14 条场景、预期、manifest 和严格契约的最终有效冻结基线；从冻结到 P4 最终提交，三份 Gold 文件、阈值、排序规则与 P1–P3 产品实现均未修改。14/14 场景与两次确定性哈希再次通过，安全硬门槛全部为 0。完整逐项证据见 `docs/M4_EXIT_AUDIT.md`。
 
-M4 的完成只表示 Fake Embedding 下的离线工程契约与安全边界闭环。真实 Embedding、真实 V1 DoctorAgent Pilot、真实玩家收益、生产性能和并发多进程事务仍未验证；它们不构成本次 M4 退出阻塞，但在形成产品效果结论前必须单独决策和授权。M5 尚未开始。
+M4 的完成只表示 Fake Embedding 下的离线工程契约与安全边界闭环。真实 V1 DoctorAgent 记忆注入、真实玩家收益、生产性能和并发多进程事务仍未验证；它们不构成 M4 退出阻塞。当前 M5-P0 只完成规划，M5 工程实现尚未开始。
 
-## M4.5 真实效果验证门槛
+## M4.5 终止边界与 M5 入口
 
 M4.5 不重新打开或改写 M4。P0 已完成本机只读调查、官方资料核对和 Pilot 规划，推荐优先用本地 `BAAI/bge-m3` dense-only 验证中文真实语义；阿里云百炼 `text-embedding-v4` 只作为需要新账号、独立 Key 与预算授权的外部备选。详细方案见 `docs/M45_REAL_MEMORY_VALIDATION_PLAN.md`，独立语义 Gold 见 `docs/M45_SEMANTIC_GOLD_PLAN.md`。
 
-后续顺序固定为：
+实际执行顺序为：
 
 1. M4.5-P1：真实 Adapter、Mock 和离线烟雾已完成；
 2. M4.5-P2：v2 独立语义 Gold 两次正式运行已完成，工程、安全和重复性通过，但语义质量未通过；
 3. M4.5-P2b：离线根因分析已完成；原 15 条只作为开发/诊断集，推荐版本化 `retrieval_query_v2`、`embedding_document_v2` 和 calibration 选择的保守门禁；
 4. M4.5-P2c 已实现最小方案并冻结 36 条全新 holdout；P2d 已在独立 runner 上完成唯一一组两次本地 BGE 运行；
 5. P2d 工程、安全和重复性通过，但 micro F1 与更正切片未过线；本轮 Dense-only 优化已经关闭，不进入 P3，也不自动扩展检索研究；
-6. M4.5 退出审计；
-7. 之后主线转向游戏 AI 纵向切片；M5 自适应教学规划仍需另行授权。
+6. M4.5 已以 `closed_with_known_dense_retrieval_limitations` 完成终止审计；
+7. M5-P0 已冻结三病例游戏纵向切片，P1 工程实现尚未开始。
 
-M5 等待 M4.5，是为了避免把记忆召回问题与教学策略问题混为同一个实验变量。M4.5-P1 已在项目 `.venv` 中安装固定可选依赖，只下载固定 revision 的 11 个 dense safetensors 白名单文件，并以网络阻断方式完成真实本地权重烟雾；详细身份、哈希、磁盘和性能证据见 `docs/M45_P1_LOCAL_EMBEDDING_REPORT.md`。P2 v1 已在 `e813312` 冻结 15 条/75 文本，但第一次正式本地运行因评测器把合法语义负例误计为生命周期安全违规而停止；P2a 保留该历史并冻结 v2 三分区契约。v2 随后经历入口、身份和 Windows 遥测三次诚实停止，最终在 `cad07ff` 上完成两次正式运行：安全和重复性门禁通过，但 test Recall@3 与 False Memory Rate 未过线。P2b 只用已保存向量确认正确更正与极短相关项均落到第 4，且相关/负例分数重叠；任何阈值或 Top-N 都不能修复候选顺序。完整证据见 `docs/M45_P2B_SEMANTIC_FAILURE_ANALYSIS.md`，新 holdout 设计见 `docs/M45_HOLDOUT_VALIDATION_PLAN.md`；当前不得进入 P3。
+M5 原先等待 M4.5，是为了避免把记忆召回问题与教学策略问题混为同一个实验变量。M4.5-P1 已在项目 `.venv` 中安装固定可选依赖，只下载固定 revision 的 11 个 dense safetensors 白名单文件，并以网络阻断方式完成真实本地权重烟雾；详细身份、哈希、磁盘和性能证据见 `docs/M45_P1_LOCAL_EMBEDDING_REPORT.md`。P2 v1 已在 `e813312` 冻结 15 条/75 文本，但第一次正式本地运行因评测器把合法语义负例误计为生命周期安全违规而停止；P2a 保留该历史并冻结 v2 三分区契约。v2 随后经历入口、身份和 Windows 遥测三次诚实停止，最终在 `cad07ff` 上完成两次正式运行：安全和重复性门禁通过，但 test Recall@3 与 False Memory Rate 未过线。P2b 只用已保存向量确认正确更正与极短相关项均落到第 4，且相关/负例分数重叠；任何阈值或 Top-N 都不能修复候选顺序。完整证据见 `docs/M45_P2B_SEMANTIC_FAILURE_ANALYSIS.md`，新 holdout 设计见 `docs/M45_HOLDOUT_VALIDATION_PLAN.md`；当前 P3 已取消本轮执行。
 
-P2c 随后冻结 V2 表示和 36 条全新 holdout；P2d 在精确执行提交 `ccf97ce` 上完成唯一一组两次本地 BGE 运行。安全与重复性继续通过，但 final micro F1 `0.6667`、更正切片 FN `1`，所以 Dense-only 语义质量仍未准入。完整结果见 `docs/M45_P2D_HOLDOUT_PILOT_REPORT_20260810.md`；当前不进入 P3，下一主线转向多病例与游戏纵向切片规划。
+P2c 随后冻结 V2 表示和 36 条全新 holdout；P2d 在精确执行提交 `ccf97ce` 上完成唯一一组两次本地 BGE 运行。安全与重复性继续通过，final Recall@1 `0.90`、Recall@3 `1.00`、MRR `0.975`、FP `0`；但保守返回门禁只有 TP/FN `11/11`，micro F1 `0.6667` 且更正切片 FN `1`，所以 Dense-only 语义质量仍未准入。完整结果见 `docs/M45_P2D_HOLDOUT_PILOT_REPORT_20260810.md`，终止结论见 `docs/M45_TERMINATION_AUDIT.md`。
 
-V1 只增加基础向量 Top-K 长期记忆并保持固定课程；V2 才使用多因素记忆排序、自适应教学和 Reflection。三个产品版本始终启用 `AgentContextFilter`，模型始终不能直接写永久记忆或关键状态。真实 Embedding 的供应商、数据发送边界、预算和网络调用必须另行决定并授权。
+V1 语义记忆从本审计起默认关闭、仅为实验功能且不得进入正式 Agent Prompt。可选 shadow mode 只能记录“本来会召回什么”，不得影响 Agent 行动、课程、工具或玩家状态。未来只有基于真实多病例轨迹重新立项并通过独立验证，才可再次申请 Prompt 注入。
+
+M5 从游戏 AI 产品纵向切片开始：P1 提供普通用户可操作的多病例 Runner，P2 新增两个完整病例，P3 用确定性事件投影实现跨 Episode 连续性，P4 提供 no-LLM/Fake/DeepSeek V0 与语义 shadow 模式，P5 完成三病例试玩验收。自适应教学、Reflection、多 Agent 和网页界面不属于本轮 M5 最小切片。

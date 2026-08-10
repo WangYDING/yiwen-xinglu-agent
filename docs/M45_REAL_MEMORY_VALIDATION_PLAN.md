@@ -1,13 +1,13 @@
 # M4.5 真实记忆验证方案
 
-> **当前更新（2026-08-10）**：P2 旧 15 条已转为观察开发集；P2c 冻结 `retrieval_query_v2`、`embedding_document_v2`、保守策略契约及 36 条新 holdout，P2d 已完成唯一一组两次本地正式验证。工程、安全和重复性通过，但 final micro F1 `0.6667`、更正切片 FN `1`，语义质量未通过；Dense-only 优化关闭，不自动扩展 reranker 或其他模型。M4 保持完成，P3 与 M5 尚未开始。
+> **当前更新（2026-08-10）**：P2 旧 15 条已转为观察开发集；P2c 冻结 `retrieval_query_v2`、`embedding_document_v2`、保守策略契约及 36 条新 holdout，P2d 已完成唯一一组两次本地正式验证。工程、安全、重复性和主要排名门槛通过，但 final micro F1 `0.6667`、更正切片 FN `1`，语义质量未通过。M4.5 已以 `closed_with_known_dense_retrieval_limitations` 终止，P3 本轮取消；语义记忆默认关闭且不进入正式 Agent Prompt。M4 保持完成，M5-P0 三病例纵向切片规划已冻结，P1 尚未开始。
 
 ## 1. 文档身份
 
-- **状态**：M4.5-P0/P1/P2a/P2b/P2c/P2d 已完成；两组不同阶段的正式本地语义运行均保留负结果；P3 未开始
+- **状态**：M4.5-P0/P1/P2a/P2b/P2c/P2d 已完成；两组不同阶段的正式本地语义运行均保留负结果；P3 本轮取消；最终状态为 `closed_with_known_dense_retrieval_limitations`
 - **规划基线**：`6f678ce923adaa422fe8a84079fafe7fbd4143fb`
 - **日期**：2026-08-08
-- **当前结论**：M4 保持完成；本地 BGE-M3 Adapter 与离线烟雾已通过；历史 v1 标签问题由 P2a v2 契约纠正，三次 v2 工程停止均保留。Windows 遥测修复后，两次正式运行的有序结果、指标和向量一致，安全计数全 0，但 test Recall@3 为 0.8889、False Memory Rate 为 5/13，未达到 P3 准入线；M5 尚未开始
+- **当前结论**：M4 保持完成；本地 BGE-M3 Adapter 与离线烟雾已通过；历史 v1 标签问题、三次工程停止和旧开发集负结果均保留。新 holdout 的唯一双运行有序结果、指标和向量一致，安全计数全 0，主要排名门槛通过，但保守返回门禁的 micro F1 与更正切片未过线。真实 V1 Agent 记忆注入未获准；M5-P0 已完成，P1 尚未开始
 - **P1 外部执行**：只从官方包源安装项目 `.venv` 依赖并从 Hugging Face 固定 revision 下载白名单；Embedding API 0、DeepSeek `/models` 0、Chat 0、费用 0 CNY
 
 M4.5 是产品效果验证门槛，不回写 M4 的离线工程结论。M4 已证明 Fake Embedding 下的投影、存储、生命周期、隔离、Top-K、只读上下文和评测契约；M4.5 才回答“真实语义向量是否能找对历史、真实模型是否会正确使用历史”。

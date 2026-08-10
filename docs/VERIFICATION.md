@@ -445,3 +445,14 @@ M4.5-P2 再次因工程条件停止，不是质量失败，也不能判定通过
 - **资源与外部边界**：两次冷加载约 `6.129/5.794 s`，Embedding 总耗时约 `1.355/1.335 s`；峰值工作集约 `3.358 GB`，CUDA allocated/reserved 均约 `2.303/2.338 GB`。网络尝试、外部 Embedding API、DeepSeek `/models`、Chat 与费用均为 0。
 
 M4.5-P2 的最终判定是“工程、安全、重复性通过，语义质量未通过”。按冻结停止规则关闭本轮 Dense-only 优化，不自动进入 reranker、其他模型、向量数据库或新题库；M4.5-P3 与 M5 均未开始。完整逐项结果见 `docs/M45_P2D_HOLDOUT_PILOT_REPORT_20260810.md`。
+
+## 2026-08-10：M4.5 终止审计与 M5-P0 多病例纵向切片规划
+
+- **审计基线**：`f2a523d65a125770b6a6da067479e2587066c537`；开始时工作树干净。
+- **M4.5 结论**：最终状态为 `closed_with_known_dense_retrieval_limitations`。本地 BGE 工程、安全、重复性和主要排名门槛通过；P2d 的 Recall@1 `0.90`、Recall@3 `1.00`、MRR `0.975`、FP `0` 保留，同时 TP/FN `11/11`、micro F1 `0.6667` 和更正切片 FN `1` 的未通过事实不变。P3 本轮取消，语义记忆默认关闭且不得进入正式 Agent Prompt。
+- **M5-P0**：冻结同一玩家依次完成三个病例的产品流程、交互式 CLI 优先的 Runner 接口、两个新病例概要、确定性 CampaignEvent/CampaignFact 连续性、故障协调、双岗位证据和 P1–P5 验收。M5-P1 未开始，没有新增病例 JSON 或运行代码。
+- **回归结果**：全量 `359 passed`；独立收集确认 `359 tests collected`；`git diff --check` 通过。`src/`、`tests/`、`data/`、`requirements/` 和 `pyproject.toml` 差异为 0。
+- **安全与运行文件**：Git 未跟踪 `.env`、`.env.local`、`results/`、`runtime_data/`、`runtime_models/` 或 SQLite/DB 文件；差异中未发现 API Key、Bearer Token 或密钥模式。
+- **外部边界**：本轮 BGE 加载 0、真实向量生成 0、网络请求 0、DeepSeek `/models` 0、Chat 0、外部 Embedding API 0、费用 0 CNY。
+
+本轮只完成审计和规划。M4.5 的历史停止与真实负结果没有改写；M5-P1、M4.5-P3、M5 自适应教学、Reflection、网页和多 Agent 均未实现。

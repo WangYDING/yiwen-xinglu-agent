@@ -5,8 +5,8 @@
 - **版本**：`experiment_plan_v0.2`
 - **日期**：2026-08-04
 - **最近同步**：2026-08-08
-- **验证状态**：M2/M3/M4 ENGINEERING EXIT VERIFIED / M4 FAKE-EMBEDDING GOLD 14/14 / REAL V1 EFFECT UNVERIFIED
-- **当前工程阶段**：M2、M3 与 M4 工程里程碑已完成；M4.5 旧 P2 语义质量未通过，P2c 已离线冻结 V2 表示、保守策略和 36 条新 holdout 但尚未运行模型，P3 与 M5 尚未开始
+- **验证状态**：M2/M3/M4 ENGINEERING EXIT VERIFIED / M4 FAKE-EMBEDDING GOLD 14/14 / M4.5 CLOSED WITH KNOWN DENSE RETRIEVAL LIMITATIONS
+- **当前工程阶段**：M2、M3 与 M4 工程里程碑已完成；M4.5 新 holdout 的唯一双运行已完成，工程、安全、重复性和主要排名门槛通过，但保守返回门禁的 micro F1 与更正切片未通过。P3 本轮取消，语义记忆默认不进入 Agent Prompt。M5-P0 三病例纵向切片规划已冻结，P1 尚未开始
 - **取代范围**：取代 v0.1 的当前执行口径；v0.1 原文件保留为历史版本
 - **结论边界**：不提供现实医疗能力，不把研究目标写成已经实现的结果
 
@@ -147,8 +147,9 @@ M4 退出审计
   ↓ 已完成；不回写 M4 离线结论
 M4.5-P0 真实 Embedding 与 V1 Pilot 规划
   ↓ 已完成；P1–P3 仍需分阶段授权
-M4.5-P1 Adapter → P2 真实语义 Pilot → P3 真实 V1 Agent Pilot → M4.5 退出审计
-  ↓ 均未开始；完成后才允许开始 M5 规划
+M4.5-P1 Adapter → P2/P2d 真实语义 Pilot → P3 取消 → M4.5 终止审计
+  ↓ `closed_with_known_dense_retrieval_limitations`
+M5-P0 三病例纵向切片规划 → P1 多病例 Runner（尚未开始）
 ```
 
 ### M2a 已完成
@@ -289,4 +290,4 @@ M2b-P0/P1a/P1b 均不包含 MCP、长期记忆、自适应教学或 Reflection�
 
 ## 11. 当前停止条件
 
-本方案已完成 M2、M3 与 M4 工程退出审计。模型发现、诊断性 Pilot、`v0.2.1` 超时、标准探针通过及两个安全任务失败均按真实结果保留；M3-P0/P1 的工具契约、规则边界、stdio 生命周期和 15 项退出条件已验证。M4-P0–P4 已完成确定性公开事件投影、SQLite 权威记忆、可重建派生向量、玩家过滤后的基础余弦 Top-K、V1 只读记忆上下文和 14 条冻结合成 Gold。M4.5 旧 15 条真实语义运行的安全和重复性通过、语义质量未通过，现只作为观察开发集。P2c 以独立的查询/文档表示空间和 calibration-only 保守策略冻结 36 条新 holdout；新的 BGE 双运行必须再次授权且只允许一组两次。通过后进入 P3，未通过则关闭 Dense-only 优化，不自动引入 reranker、其他模型、向量数据库或更大题库。P3 与 M5 尚未开始，永久记忆仍不得接受模型直接写入。P2c 身份以 `M45_P2C_SEMANTIC_HOLDOUT_FREEZE.md` 为准。
+本方案已完成 M2、M3 与 M4 工程退出审计。模型发现、诊断性 Pilot、`v0.2.1` 超时、标准探针通过及两个安全任务失败均按真实结果保留；M3-P0/P1 的工具契约、规则边界、stdio 生命周期和 15 项退出条件已验证。M4-P0–P4 已完成确定性公开事件投影、SQLite 权威记忆、可重建派生向量、玩家过滤后的基础余弦 Top-K、V1 只读记忆上下文和 14 条冻结合成 Gold。M4.5 的旧 15 条只作为观察开发集；P2d 的 36 条新 holdout 唯一双运行已经结束，工程、安全、重复性和主要排名门槛通过，但 micro F1 `0.6667` 与更正切片 FN `1` 未过线。因此 M4.5 以 `closed_with_known_dense_retrieval_limitations` 终止，P3 取消本轮执行，语义记忆默认关闭且只允许不影响 Prompt/行动/状态的 shadow mode。M5-P0 已冻结三病例游戏纵向切片，P1 实现尚未开始；永久记忆仍不得接受模型直接写入。
