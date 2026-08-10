@@ -433,3 +433,15 @@ M4.5-P2 再次因工程条件停止，不是质量失败，也不能判定通过
 - **范围**：本轮本地 BGE 加载 0、真实向量 0、网络 0、DeepSeek `/models` 0、Chat 0、外部 Embedding API 0、费用 0 CNY。P2c 没有形成新语义质量结果；P3 与 M5 未开始。
 - **停止边界**：新 holdout 未来只允许一组两次正式运行；通过则进入 P3，未通过则关闭 Dense-only 优化，不自动追加 reranker、模型、向量数据库或题库。合成指标不表示游戏产品效果或玩家收益。
 - **离线回归**：P2c 查询/文档/索引/策略与 holdout 专项 11 passed；M4-P1/P2/P3/P4 与 P2c 组合专项 90 passed；M3 MCP + V0 Agent/Runner 38 passed；全量 347 passed。M4 原 14 条 Gold 双运行 14/14 通过且两次哈希均为 `01ecf59b42e37dc2c898fd893fc0234c3d9ff18701c22f77a31bed06511cb44e`，安全总计全 0；P0 Fake LLM 3 场景/6 轨迹符合预期；无 LLM Demo 为 `resolved / 100`；`pip check` 和 `git diff --check` 通过。
+
+## 2026-08-10：M4.5-P2d 新 Holdout 唯一双运行完成，语义质量未通过
+
+- **双重身份**：Gold/产品冻结提交为 `98d08eef52bfb164f454bd50c08c0d3feab1bb26`；runner 功能提交为 `08f962417e54fd868b47485b2850c5440a2a6e4f`；精确执行提交为 `ccf97ce0e5c29d6a8c0ce9d89f1f76e64b9a30a6`。后者只纠正 runner 对模型 manifest 规范 JSON 哈希的身份核对并增加测试；正式 BGE 尚未加载时发现并收口，没有改变 Gold、参数、模型、检索或产品代码。
+- **离线门禁**：独立 runner 专项 12 passed；MCP 22、V0 26、M4/语义链路 109 passed；全量 359 passed；`pip check` 与 `git diff --check` 通过。四份 holdout SHA、模型 manifest、主权重、依赖锁、V2 空间、干净工作树和 Git 忽略结果路径全部通过。
+- **执行边界**：新模块入口只运行 36 条 holdout，不导入旧 15 条 runner 或 P2b 事后诊断。缺少显式确认在 Torch/BGE 前停止；final-test Gold 在 calibration 策略锁定前不可访问；`fail_calibration` 不产生 final 指标；临时 SQLite/状态目录在退出时删除。
+- **策略与 final 指标**：calibration 从冻结 36 组中选择 `min_similarity=0.75, max_results=1, minimum_margin=0.06`。final Recall@1/Recall@3/MRR 为 `0.90/1.00/0.975`；macro P/R/F1 为 `1.0/0.5/0.9393939394`；micro TP/FP/FN 为 `11/0/11`，micro F1 `0.6666666667`；irrelevant retrieval rate `0/11`；empty `4/4`；更正 FN `1`、否定 FN `0`。失败门槛为 micro F1 与更正切片。
+- **安全与重复性**：两次运行全部十类安全计数为 0；策略、有序排名、指标和 173 个向量键一致，最大向量差 `0.0`。有序结果 SHA 均为 `3967a22a1a734f6bc2f1632285780743119d6eab803d0829b7237a7f2efd54e8`，向量载荷 SHA 均为 `cd9cc7c8498e03352bfd578cdd4bd0e5ab039abded2c527fcd1f3bfc5c8243fe`。
+- **原始结果**：run1 SHA `85C9B3A6109A2BDEF42DB1DB38E62EC976CA08933B882EED07A68197ECE44248`；run2 SHA `E376F58F61E53EF09F002B1AAD7C21FFDE83821B2FCCA956512326CC1525310C`。两份完整结果和向量只位于 Git 忽略的 `results/`；仓库只记录脱敏指标和 SHA。
+- **资源与外部边界**：两次冷加载约 `6.129/5.794 s`，Embedding 总耗时约 `1.355/1.335 s`；峰值工作集约 `3.358 GB`，CUDA allocated/reserved 均约 `2.303/2.338 GB`。网络尝试、外部 Embedding API、DeepSeek `/models`、Chat 与费用均为 0。
+
+M4.5-P2 的最终判定是“工程、安全、重复性通过，语义质量未通过”。按冻结停止规则关闭本轮 Dense-only 优化，不自动进入 reranker、其他模型、向量数据库或新题库；M4.5-P3 与 M5 均未开始。完整逐项结果见 `docs/M45_P2D_HOLDOUT_PILOT_REPORT_20260810.md`。

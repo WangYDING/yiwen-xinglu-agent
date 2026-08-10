@@ -37,8 +37,9 @@ Word 设计总结、`xuanyi-npc-handoff` 和 `docs/algorithm-experiment-plan-v0.
 | M4.5-P2a：语义 Gold v2 离线纠偏 | 已完成 | 保留 v1 冻结与停止历史；复用相同 15 条/75 文本，将相关项、合法语义负例和实际安全排除项完整分区；没有加载 BGE 或读取失败指标 |
 | M4.5-P2：真实语义 Gold | 已完成运行（语义质量未通过） | Gold `b780330`、执行提交 `cad07ff`；两次本地 BGE 运行完整且可重复，安全计数全 0；test Recall@3 `0.8889`、False Memory Rate `5/13`，未达到 P3 准入线 |
 | M4.5-P2b：离线失败诊断与下一轮规划 | 已完成 | 只读重算 15×4 完整分数；确认模板/长度不对称、字面诱饵和全局阈值重叠；原 15 条转为已观察开发集，规划 36 条新 holdout |
-| M4.5-P2c：V2 表示与新 holdout 冻结 | 已完成（未运行模型） | `retrieval_query_v2`、`embedding_document_v2`、表示空间隔离、索引过期状态、保守策略契约；36 条/144 候选 calibration/test 已冻结，等待一次双运行授权 |
-| M4.5-P3 与退出审计 | 未开始 | 必须先以 P2c 冻结点完成唯一一组本地 BGE 双运行并达到门槛；真实 V1 Agent Pilot 与退出审计均未运行 |
+| M4.5-P2c：V2 表示与新 holdout 冻结 | 已完成 | `retrieval_query_v2`、`embedding_document_v2`、表示空间隔离、索引过期状态、保守策略契约；36 条/144 候选 calibration/test 已冻结 |
+| M4.5-P2d：新 holdout 本地验证 | 已完成运行（语义质量未通过） | 唯一一组两次 BGE-M3 运行工程/安全/重复性通过；final Recall@3 `1.0`、MRR `0.975`，但 micro F1 `0.6667` 且更正切片 FN `1`，未达到准入线；Dense-only 优化关闭 |
+| M4.5-P3 与退出审计 | 未开始 | P2d 未达到准入线，不进入真实 V1 Agent Pilot；不自动扩展 reranker、其他模型、向量数据库或题库 |
 | M5 及以后 | 未开始 | 自适应教学、Reflection、界面、多 Agent 等均未开始 |
 
 ## 双岗位作品集主线
@@ -47,7 +48,7 @@ Word 设计总结、`xuanyi-npc-handoff` 和 `docs/algorithm-experiment-plan-v0.
 
 | 后续工作 | Agent 应用岗证据 | 游戏 AI 产品岗证据 |
 |---|---|---|
-| M4.5-P2c 正式双运行 | 版本化检索、离线 Gold、参数隔离、权限与可重复性 | 只作为 NPC 跨 Episode 记忆底座，不宣称玩家收益 |
+| M4.5-P2d 正式双运行 | 版本化检索、calibration/final 隔离、安全过滤和重复性通过；保留语义质量负结果 | 证明当前 Dense-only 方案仍会漏召回，不宣称玩家收益 |
 | M4.5-P3 真实 V1 Agent | 模型是否正确使用只读记忆、抵抗数据注入、安全停止 | 师承 NPC 是否能在病例中自然引用历史 |
 | M4.5 退出审计 | 可审计的真实 Adapter/Agent 证据与已知限制 | 给纵向切片提供稳定记忆能力边界 |
 | 下一主线：游戏 AI 纵向切片 | 正式 V1 Episode Runner 与端到端工具/记忆编排 | 至少 2 个新可玩病例、跨 Episode 产生/保存/召回/使用、普通用户入口 |
@@ -209,11 +210,13 @@ M4.5 不重新打开或改写 M4。P0 已完成本机只读调查、官方资料
 1. M4.5-P1：真实 Adapter、Mock 和离线烟雾已完成；
 2. M4.5-P2：v2 独立语义 Gold 两次正式运行已完成，工程、安全和重复性通过，但语义质量未通过；
 3. M4.5-P2b：离线根因分析已完成；原 15 条只作为开发/诊断集，推荐版本化 `retrieval_query_v2`、`embedding_document_v2` 和 calibration 选择的保守门禁；
-4. M4.5-P2c 已实现最小方案并冻结 36 条全新 holdout；当前等待以该冻结点完成唯一一组两次本地 BGE 运行；
-5. 新 holdout 通过后，P3 才可分开授权 DeepSeek Chat 和 Embedding 预算；若未通过则关闭 Dense-only 优化，不自动扩展检索研究；
+4. M4.5-P2c 已实现最小方案并冻结 36 条全新 holdout；P2d 已在独立 runner 上完成唯一一组两次本地 BGE 运行；
+5. P2d 工程、安全和重复性通过，但 micro F1 与更正切片未过线；本轮 Dense-only 优化已经关闭，不进入 P3，也不自动扩展检索研究；
 6. M4.5 退出审计；
 7. 之后主线转向游戏 AI 纵向切片；M5 自适应教学规划仍需另行授权。
 
 M5 等待 M4.5，是为了避免把记忆召回问题与教学策略问题混为同一个实验变量。M4.5-P1 已在项目 `.venv` 中安装固定可选依赖，只下载固定 revision 的 11 个 dense safetensors 白名单文件，并以网络阻断方式完成真实本地权重烟雾；详细身份、哈希、磁盘和性能证据见 `docs/M45_P1_LOCAL_EMBEDDING_REPORT.md`。P2 v1 已在 `e813312` 冻结 15 条/75 文本，但第一次正式本地运行因评测器把合法语义负例误计为生命周期安全违规而停止；P2a 保留该历史并冻结 v2 三分区契约。v2 随后经历入口、身份和 Windows 遥测三次诚实停止，最终在 `cad07ff` 上完成两次正式运行：安全和重复性门禁通过，但 test Recall@3 与 False Memory Rate 未过线。P2b 只用已保存向量确认正确更正与极短相关项均落到第 4，且相关/负例分数重叠；任何阈值或 Top-N 都不能修复候选顺序。完整证据见 `docs/M45_P2B_SEMANTIC_FAILURE_ANALYSIS.md`，新 holdout 设计见 `docs/M45_HOLDOUT_VALIDATION_PLAN.md`；当前不得进入 P3。
+
+P2c 随后冻结 V2 表示和 36 条全新 holdout；P2d 在精确执行提交 `ccf97ce` 上完成唯一一组两次本地 BGE 运行。安全与重复性继续通过，但 final micro F1 `0.6667`、更正切片 FN `1`，所以 Dense-only 语义质量仍未准入。完整结果见 `docs/M45_P2D_HOLDOUT_PILOT_REPORT_20260810.md`；当前不进入 P3，下一主线转向多病例与游戏纵向切片规划。
 
 V1 只增加基础向量 Top-K 长期记忆并保持固定课程；V2 才使用多因素记忆排序、自适应教学和 Reflection。三个产品版本始终启用 `AgentContextFilter`，模型始终不能直接写永久记忆或关键状态。真实 Embedding 的供应商、数据发送边界、预算和网络调用必须另行决定并授权。

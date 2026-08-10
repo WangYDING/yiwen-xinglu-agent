@@ -6,7 +6,7 @@
 
 ## 当前状态
 
-**M2、M3 与 M4 工程里程碑已经完成；M4.5-P2c 的 V2 检索表示、保守策略契约和 36 条新 holdout 已离线冻结，尚未运行新 BGE，M5 尚未开始。** M3-P0/P1 已验证官方 MCP v2 的冻结工具契约、应用服务安全边界和本地 stdio 生命周期。M4-P1/P2/P3 已实现公开来源投影、SQLite Schema v2 权威记忆与派生向量、跨 Episode 作用域过滤、稳定 Top-K、最小 `MemoryView`、`memory_query_v1` 和独立 V1 Prompt；P4 使用 14 条冻结合成场景和确定性 Fake Embedding 验证完整管道。M4.5 的旧 15 条已观察开发集保留“工程/安全/重复性通过、语义质量未通过”的历史结论。P2c 新增只嵌入公开检索意图与已发现线索的 `retrieval_query_v2`，以及不修改权威记忆的 `embedding_document_v2`；全新 holdout 固定为 calibration 12 条、final test 24 条和 144 个候选，正式 BGE 双运行仍需单独授权。
+**M2、M3 与 M4 工程里程碑已经完成；M4.5-P2d 已完成 36 条新 holdout 的唯一一组两次本地 BGE 验证，工程、安全和重复性通过，但语义质量未达到冻结准入线，M4.5-P3 与 M5 尚未开始。** M3-P0/P1 已验证官方 MCP v2 的冻结工具契约、应用服务安全边界和本地 stdio 生命周期。M4-P1/P2/P3 已实现公开来源投影、SQLite Schema v2 权威记忆与派生向量、跨 Episode 作用域过滤、稳定 Top-K、最小 `MemoryView`、`memory_query_v1` 和独立 V1 Prompt；P4 使用 14 条冻结合成场景和确定性 Fake Embedding 验证完整管道。M4.5 的旧 15 条已观察开发集保留“工程/安全/重复性通过、语义质量未通过”的历史结论。P2c 新增只嵌入公开检索意图与已发现线索的 `retrieval_query_v2`，以及不修改权威记忆的 `embedding_document_v2`；全新 holdout 固定为 calibration 12 条、final test 24 条和 144 个候选。P2d 的 final Recall@3 为 `1.0`，但 micro F1 为 `0.6667`、更正切片 FN 为 `1`，因此本轮 Dense-only 优化关闭。
 
 已经包含：
 
@@ -57,11 +57,11 @@
 - 全新 Python 3.12 虚拟环境中的安装、测试和 Demo 复现记录；
 - 领域模型、规则边界和持久化测试。
 
-**当前停止在 M4.5-P2c 离线冻结检查点**：旧 15 条的负结果没有被改写，也不再用作独立 test。新 36 条只使用合成、公开、架空文本；参数选择只能读取 12 条 calibration，24 条 final test 在参数锁定前不得参与选择。P2c 没有加载 BGE、生成真实向量、读取 Key 或访问网络。下一次只允许一组两次本地正式运行：通过则进入 P3；不通过则记录 Dense-only 限制并关闭本轮优化，不自动扩展 reranker、模型、向量数据库或题库。
+**当前停止在 M4.5-P2d 语义质量负结果之后**：旧 15 条的负结果没有被改写，也不再用作独立 test。新 36 条只使用合成、公开、架空文本；参数选择只读取 12 条 calibration，锁定后才评价 24 条 final test。两次本地运行均无网络/API/费用，安全计数全 0 且向量与排序完全一致；语义质量未达到冻结准入线。本轮不自动扩展 reranker、模型、向量数据库或题库，也不进入 P3。
 
 最终 M2 退出依据包括：标准探针在 8 步内完成正确诊断和处置，终态 `resolved / 100`；`SAFETY_ONLY` 的错误诱导探针抵抗了 `evil_spirit_attack` 暗示并提交正确诊断，但因一次解释性 `respond` 未能处置；过早行动探针的 1 次未知调查和 4 次过早诊断均被规则拒绝，没有状态污染。最新三探针共 24 次 Chat，24/24 首次结构化成功，格式修复、降级和非法状态写入均为 0，事件均连续且可重放。三探针共用一个病例且各运行一次，不是正式成功率样本。
 
-M2 分层结论和数据身份见 [`docs/M2_EXIT_AUDIT.md`](docs/M2_EXIT_AUDIT.md)，M3 证据和限制见 [`docs/M3_EXIT_AUDIT.md`](docs/M3_EXIT_AUDIT.md)，M4 退出结论见 [`docs/M4_EXIT_AUDIT.md`](docs/M4_EXIT_AUDIT.md)。M4 架构与 P1–P4 实现边界见 [`docs/M4_MEMORY_PLAN.md`](docs/M4_MEMORY_PLAN.md)，Gold 契约、指标和实测结果见 [`docs/M4_MEMORY_EVALUATION_PLAN.md`](docs/M4_MEMORY_EVALUATION_PLAN.md)。M4.5 的真实路线见 [`docs/M45_REAL_MEMORY_VALIDATION_PLAN.md`](docs/M45_REAL_MEMORY_VALIDATION_PLAN.md)，旧语义 Pilot 和根因分析见 [`docs/M45_P2_V2_SEMANTIC_PILOT_RESULT_20260810.md`](docs/M45_P2_V2_SEMANTIC_PILOT_RESULT_20260810.md) 与 [`docs/M45_P2B_SEMANTIC_FAILURE_ANALYSIS.md`](docs/M45_P2B_SEMANTIC_FAILURE_ANALYSIS.md)，P2c 的新 V2 表示、holdout 身份和停止边界见 [`docs/M45_P2C_SEMANTIC_HOLDOUT_FREEZE.md`](docs/M45_P2C_SEMANTIC_HOLDOUT_FREEZE.md)。项目仍不包含 HTTP/SSE、认证、远程部署、真实 V1 模型行为结论或交互界面。
+M2 分层结论和数据身份见 [`docs/M2_EXIT_AUDIT.md`](docs/M2_EXIT_AUDIT.md)，M3 证据和限制见 [`docs/M3_EXIT_AUDIT.md`](docs/M3_EXIT_AUDIT.md)，M4 退出结论见 [`docs/M4_EXIT_AUDIT.md`](docs/M4_EXIT_AUDIT.md)。M4 架构与 P1–P4 实现边界见 [`docs/M4_MEMORY_PLAN.md`](docs/M4_MEMORY_PLAN.md)，Gold 契约、指标和实测结果见 [`docs/M4_MEMORY_EVALUATION_PLAN.md`](docs/M4_MEMORY_EVALUATION_PLAN.md)。M4.5 的真实路线见 [`docs/M45_REAL_MEMORY_VALIDATION_PLAN.md`](docs/M45_REAL_MEMORY_VALIDATION_PLAN.md)，旧语义 Pilot 和根因分析见 [`docs/M45_P2_V2_SEMANTIC_PILOT_RESULT_20260810.md`](docs/M45_P2_V2_SEMANTIC_PILOT_RESULT_20260810.md) 与 [`docs/M45_P2B_SEMANTIC_FAILURE_ANALYSIS.md`](docs/M45_P2B_SEMANTIC_FAILURE_ANALYSIS.md)，P2c 的 V2 表示与 holdout 身份见 [`docs/M45_P2C_SEMANTIC_HOLDOUT_FREEZE.md`](docs/M45_P2C_SEMANTIC_HOLDOUT_FREEZE.md)，唯一双运行的完整负结果见 [`docs/M45_P2D_HOLDOUT_PILOT_REPORT_20260810.md`](docs/M45_P2D_HOLDOUT_PILOT_REPORT_20260810.md)。项目仍不包含 HTTP/SSE、认证、远程部署、真实 V1 模型行为结论或交互界面。
 
 ## 设计边界
 
@@ -231,4 +231,4 @@ M2 真实 Pilot 已结束，不再运行模型发现、标准探针、安全探�
 - 本地 BGE-M3 Adapter 已完成离线烟雾和两次独立的 15 条语义 Gold 运行；工程、安全与重复性通过，但语义准入线未通过，因此不能声称真实语义召回已满足产品要求。外部 Embedding API 仍未授权，DeepSeek Chat 的历史授权不会自动延伸到其他供应商。
 - 当前 V0 的固定课程只按步骤编号推进，不基于玩家表现动态改变。
 - 当前真实样本仍只有一个病例上的单次探针运行，不足以形成正式成功率、跨病例比较或模型可靠性指标。
-- M2 付费运行已经停止；M3 与 M4 已完成工程退出；M4.5-P2c 已离线冻结 V2 表示和 36 条新 holdout，但没有运行新 BGE，P3 真实 V1 Pilot 与 M5 均未开始。
+- M2 付费运行已经停止；M3 与 M4 已完成工程退出；M4.5-P2d 的新 holdout 双运行已经完成但语义质量未通过，Dense-only 优化关闭，P3 真实 V1 Pilot与 M5 均未开始。

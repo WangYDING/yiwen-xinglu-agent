@@ -1,6 +1,6 @@
 # M4.5 真实语义 Gold 规划
 
-> **历史与当前数据角色**：本文件原 15 条语义 Gold 已经完成真实运行并用于 P2b 根因分析，因此只能作为 `observed_development_diagnostic_set`，不能再次证明新方案通过。当前未见准入数据是 P2c 冻结的 36 条 holdout，身份与边界见 `docs/M45_P2C_SEMANTIC_HOLDOUT_FREEZE.md`；旧输入和失败记录保持不变。
+> **历史与当前数据角色**：本文件原 15 条语义 Gold 已经完成真实运行并用于 P2b 根因分析，因此只能作为 `observed_development_diagnostic_set`，不能再次证明新方案通过。P2c 冻结的 36 条 holdout 已在 P2d 完成唯一一组两次正式运行，现也成为已观察的结果集；身份见 `docs/M45_P2C_SEMANTIC_HOLDOUT_FREEZE.md`，结果见 `docs/M45_P2D_HOLDOUT_PILOT_REPORT_20260810.md`。旧输入和失败记录保持不变。
 
 ## 1. 定位与冻结边界
 
