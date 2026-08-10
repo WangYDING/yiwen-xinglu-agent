@@ -1,0 +1,196 @@
+{
+  "case_id": "gray_hearth_inn",
+  "title": "灰灶客栈与无火炊烟",
+  "synopsis": "山路客栈的灶火时明时灭，无火时仍有冷烟逆行，掌勺人也开始听见灶膛里的叩响。",
+  "difficulty": 2,
+  "patient": {
+    "patient_id": "cook_shen",
+    "display_name": "沈禾",
+    "public_profile": "在灰灶客栈掌勺多年的厨人，近来不敢独自靠近后厨旧灶。",
+    "hidden_information": [
+      "店主修整后厨时把邻灶的镇契铜片误装进旧灶，并用新泥封住了一段排烟夹道。",
+      "掌勺人看见逆风灶灰后认定有灰祟作乱，因此没有继续核对灶契归属。"
+    ]
+  },
+  "root_cause": "misplaced_hearth_token_and_blocked_flue",
+  "causal_chain": [
+    "邻灶镇契铜片被误装进旧灶，使灶契指向与实际灶位不一致。",
+    "修灶的新泥同时遮住排烟夹道，冷烟沿契隙折返。",
+    "折返烟流牵动灶灰和叩响，形成近似灰祟活动的表象。",
+    "归还契物并疏通夹道后，灶契与烟路才能同时复位。"
+  ],
+  "clues": {
+    "cook_breath_out_of_smoke": {
+      "clue_id": "cook_breath_out_of_smoke",
+      "description": "掌勺人离开灶边后呼吸很快平稳，衣袖冷烟却仍朝烟道反向飘动。",
+      "is_key": true,
+      "is_misleading": false
+    },
+    "reverse_ash_shape": {
+      "clue_id": "reverse_ash_shape",
+      "description": "灶沿灰末聚成数道逆风爪痕，外形很像传说中灰祟留下的抓印。",
+      "is_key": false,
+      "is_misleading": true
+    },
+    "fuel_recently_damp": {
+      "clue_id": "fuel_recently_damp",
+      "description": "店主承认一捆柴曾被雨水打湿，足以让火势不稳，却解释不了无火时的冷烟。",
+      "is_key": false,
+      "is_misleading": true
+    },
+    "hearth_seal_shifted": {
+      "clue_id": "hearth_seal_shifted",
+      "description": "旧灶契槽边缘有新旧两层压痕，现有符记与灶砖上的原位刻线错开半寸。",
+      "is_key": true,
+      "is_misleading": false
+    },
+    "token_slot_scrape": {
+      "clue_id": "token_slot_scrape",
+      "description": "契槽内侧留有近期拆装刮痕，铜片背面的灶号与旧灶梁上的编号不同。",
+      "is_key": true,
+      "is_misleading": false
+    },
+    "smoke_current_turns_back": {
+      "clue_id": "smoke_current_turns_back",
+      "description": "冷炁并未扑向掌勺人，而是在契槽与烟道接缝之间循环折返。",
+      "is_key": true,
+      "is_misleading": false
+    },
+    "misplaced_stove_token": {
+      "clue_id": "misplaced_stove_token",
+      "description": "烟道检修口旁找到同批旧砖记录，证实铜片原属于东侧已经停用的小灶。",
+      "is_key": true,
+      "is_misleading": false
+    },
+    "blocked_flue_joint": {
+      "clue_id": "blocked_flue_joint",
+      "description": "新补灶泥压住了排烟夹道，灰痕从堵点折回并延伸至错置契槽。",
+      "is_key": true,
+      "is_misleading": false
+    }
+  },
+  "investigations": [
+    {
+      "investigation_id": "observe_cook",
+      "action_type": "observe_patient",
+      "target_id": "cook_shen",
+      "public_description": "观察掌勺人的呼吸、衣物烟迹及其离开灶边后的变化。",
+      "reveals_clue_ids": ["cook_breath_out_of_smoke", "reverse_ash_shape"],
+      "required_skill_id": "observe_form",
+      "minimum_skill_level": 0,
+      "required_clue_ids": []
+    },
+    {
+      "investigation_id": "question_innkeeper",
+      "action_type": "question_patient",
+      "target_id": "innkeeper_luo",
+      "public_description": "询问店主近期燃料、修灶和异常出现的时间。",
+      "reveals_clue_ids": ["fuel_recently_damp"],
+      "required_skill_id": "ask_cause",
+      "minimum_skill_level": 0,
+      "required_clue_ids": []
+    },
+    {
+      "investigation_id": "inspect_fuel_and_hearth",
+      "action_type": "inspect_object",
+      "target_id": "old_inn_hearth",
+      "public_description": "检查柴薪、灶砖、契槽和火膛表面的公开痕迹。",
+      "reveals_clue_ids": ["hearth_seal_shifted"],
+      "required_skill_id": "inspect_object",
+      "minimum_skill_level": 0,
+      "required_clue_ids": []
+    },
+    {
+      "investigation_id": "inspect_hearth_contract",
+      "action_type": "inspect_object",
+      "target_id": "hearth_contract_slot",
+      "public_description": "沿灶砖原位刻线核对契槽、铜片和拆装痕迹。",
+      "reveals_clue_ids": ["token_slot_scrape"],
+      "required_skill_id": "inspect_object",
+      "minimum_skill_level": 10,
+      "required_clue_ids": ["hearth_seal_shifted"]
+    },
+    {
+      "investigation_id": "observe_flue_qi",
+      "action_type": "observe_qi",
+      "target_id": "old_inn_hearth",
+      "public_description": "观察灶契与烟道之间的冷炁走向，判断它是否主动追逐活人。",
+      "reveals_clue_ids": ["smoke_current_turns_back"],
+      "required_skill_id": "observe_qi",
+      "minimum_skill_level": 20,
+      "required_clue_ids": ["hearth_seal_shifted"]
+    },
+    {
+      "investigation_id": "investigate_smoke_passage",
+      "action_type": "investigate_location",
+      "target_id": "inn_flue_passage",
+      "public_description": "查看烟道检修口、补泥接缝和灰痕最终折返的位置。",
+      "reveals_clue_ids": ["misplaced_stove_token", "blocked_flue_joint"],
+      "required_skill_id": "inspect_object",
+      "minimum_skill_level": 20,
+      "required_clue_ids": ["token_slot_scrape", "smoke_current_turns_back"]
+    }
+  ],
+  "diagnosis_candidates": {
+    "ash_wraith_intrusion": {
+      "diagnosis_id": "ash_wraith_intrusion",
+      "public_description": "逆风灶灰和叩响来自潜伏在旧灶附近、主动惊扰掌勺人的灰祟。"
+    },
+    "fuel_or_hearth_failure": {
+      "diagnosis_id": "fuel_or_hearth_failure",
+      "public_description": "受潮燃料、旧灶裂缝或通风不良共同造成熄火、呛烟和紧张反应。"
+    },
+    "displaced_hearth_contract": {
+      "diagnosis_id": "displaced_hearth_contract",
+      "public_description": "灶契符记、契物归属或排烟通路存在错位，使冷烟在旧灶内部异常折返。"
+    }
+  },
+  "valid_diagnosis_ids": ["displaced_hearth_contract"],
+  "treatments": {
+    "restore_token_and_clear_flue": {
+      "treatment_id": "restore_token_and_clear_flue",
+      "public_description": "核对灶号后归还错置契物，并清理补泥遮住的排烟夹道。",
+      "description": "把铜片归还原灶并疏通夹道，使旧灶契位与烟路同时复位。",
+      "outcome": "resolved",
+      "required_clue_ids": ["token_slot_scrape", "smoke_current_turns_back", "misplaced_stove_token", "blocked_flue_joint"]
+    },
+    "seal_hearth_mouth": {
+      "treatment_id": "seal_hearth_mouth",
+      "public_description": "暂时封住灶口并压低循环冷炁，阻止冷烟进入后厨。",
+      "description": "封灶能暂缓冷烟，却没有纠正契物归属和堵塞的排烟夹道。",
+      "outcome": "suppressed",
+      "required_clue_ids": ["smoke_current_turns_back"]
+    },
+    "expel_ash_keeper": {
+      "treatment_id": "expel_ash_keeper",
+      "public_description": "以破契法强行驱逐被认为寄居灶中的灰影，并击碎现有铜片。",
+      "description": "击碎错置铜片使两座灶的契位同时残缺，折返冷烟扩散至整条烟道。",
+      "outcome": "worsened",
+      "required_clue_ids": []
+    }
+  },
+  "hints": [
+    {
+      "level": 1,
+      "text": "先分别核对掌勺人、燃料和灶台，判断哪些现象在无火时仍然存在。",
+      "score_penalty": 2
+    },
+    {
+      "level": 2,
+      "text": "注意灶砖原位刻线、现有符记和冷烟折返的位置是否一致。",
+      "score_penalty": 5
+    },
+    {
+      "level": 3,
+      "text": "调查烟道检修口，并核对契物原本属于哪一座灶。",
+      "score_penalty": 10
+    }
+  ],
+  "scoring": {
+    "key_clue_points": 40,
+    "correct_diagnosis_points": 30,
+    "correct_treatment_points": 30,
+    "unsafe_treatment_penalty": 20,
+    "max_score": 100
+  }
+}

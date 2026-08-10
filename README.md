@@ -6,12 +6,12 @@
 
 ## 当前状态
 
-**M2、M3 与 M4 工程里程碑已经完成；M4.5 已以 `closed_with_known_dense_retrieval_limitations` 终止，M5-P0/P1 已完成，M5-P2 尚未开始。** M5-P1 新增可注入的病例目录与多病例 Episode 应用服务，以及面向普通用户的 `xuanyi-play` 交互式 CLI。当前可以创建/选择玩家、开始旧纸伞病例、执行公开调查/诊断/处置、退出并跨进程恢复、查看完成结果；整个路径不需要 LLM、Embedding 或 API Key。当前病例目录仍只有“旧纸伞与失约书生”，两个新病例、Campaign 成长和跨案影响留在 P2/P3。
+**M2、M3 与 M4 工程里程碑已经完成；M4.5 已以 `closed_with_known_dense_retrieval_limitations` 终止，M5-P0～P2 已完成，M5-P3 尚未开始。** M5-P1 提供可注入的病例目录、多病例 Episode 应用服务和面向普通用户的 `xuanyi-play`；M5-P2 新增“灰灶客栈与无火炊烟”和“月井回声与错投木简”。当前可以创建/选择玩家、独立游玩三个病例、调查/诊断/处置、退出并跨进程恢复、查看完成结果；整个路径不需要 LLM、Embedding 或 API Key。Campaign 成长和跨案影响留在 P3。
 
 已经包含：
 
 - 七个核心领域对象及其输入校验；
-- 一个“旧纸伞与失约书生”技术验证病例；
+- 三个可独立完成的正式病例：“旧纸伞与失约书生”“灰灶客栈与无火炊烟”“月井回声与错投木简”；
 - 玩家状态与病例会话状态的 JSON 保存和读取接口；
 - 可列举、严格校验且原子保存的本地玩家与病例 Episode 快照；
 - 调查、诊断、处置与基础评分引擎；
@@ -59,12 +59,13 @@
 - 领域模型、规则边界和持久化测试。
 - 可注入 `CaseCatalog`、`MultiCaseEpisodeService` 与普通用户交互式 `xuanyi-play` 入口；
 - 两个独立 CLI 子进程之间恢复同一未完成 Episode，以及完整旧纸伞 `resolved / 100` 回放验证。
+- 两个新病例各有 6 个调查、8 条线索、3 个公开诊断和 resolved/suppressed/worsened 三类处置，并各以两种合法调查顺序验证 `resolved / 100` 与事件重放。
 
-**当前停止在 M5-P2 之前**：M5-P1 只实现本地交互式 Runner 和旧纸伞病例，没有新增病例、CampaignEvent、成长、跨案影响、DeepSeek、BGE、semantic shadow、网页或自适应教学。M4.5 的旧 15 条与新 36 条负结果均按历史保留；本轮不再运行 BGE、调阈值、增加 reranker、换模型或扩大题库。
+**当前停止在 M5-P3 之前**：三个病例目前仍彼此独立；没有 CampaignEvent、成长、跨案影响、DeepSeek、BGE、semantic shadow、网页或自适应教学。M4.5 的旧 15 条与新 36 条负结果均按历史保留；语义记忆继续默认关闭。
 
 最终 M2 退出依据包括：标准探针在 8 步内完成正确诊断和处置，终态 `resolved / 100`；`SAFETY_ONLY` 的错误诱导探针抵抗了 `evil_spirit_attack` 暗示并提交正确诊断，但因一次解释性 `respond` 未能处置；过早行动探针的 1 次未知调查和 4 次过早诊断均被规则拒绝，没有状态污染。最新三探针共 24 次 Chat，24/24 首次结构化成功，格式修复、降级和非法状态写入均为 0，事件均连续且可重放。三探针共用一个病例且各运行一次，不是正式成功率样本。
 
-M2 分层结论和数据身份见 [`docs/M2_EXIT_AUDIT.md`](docs/M2_EXIT_AUDIT.md)，M3 证据和限制见 [`docs/M3_EXIT_AUDIT.md`](docs/M3_EXIT_AUDIT.md)，M4 退出结论见 [`docs/M4_EXIT_AUDIT.md`](docs/M4_EXIT_AUDIT.md)。M4 架构与 P1–P4 实现边界见 [`docs/M4_MEMORY_PLAN.md`](docs/M4_MEMORY_PLAN.md)，Gold 契约、指标和实测结果见 [`docs/M4_MEMORY_EVALUATION_PLAN.md`](docs/M4_MEMORY_EVALUATION_PLAN.md)。M4.5 的完整负结果见 [`docs/M45_P2D_HOLDOUT_PILOT_REPORT_20260810.md`](docs/M45_P2D_HOLDOUT_PILOT_REPORT_20260810.md)，最终终止状态见 [`docs/M45_TERMINATION_AUDIT.md`](docs/M45_TERMINATION_AUDIT.md)。M5 的三病例产品流程、Runner、确定性连续性和双岗位验收见 [`docs/M5_MULTI_CASE_VERTICAL_SLICE_PLAN.md`](docs/M5_MULTI_CASE_VERTICAL_SLICE_PLAN.md)。项目仍不包含 HTTP/SSE、认证、远程部署、已获准的真实 V1 记忆 Prompt、交互式游戏入口或新增病例实现。
+M2 分层结论和数据身份见 [`docs/M2_EXIT_AUDIT.md`](docs/M2_EXIT_AUDIT.md)，M3 证据和限制见 [`docs/M3_EXIT_AUDIT.md`](docs/M3_EXIT_AUDIT.md)，M4 退出结论见 [`docs/M4_EXIT_AUDIT.md`](docs/M4_EXIT_AUDIT.md)。M4 架构与 P1–P4 实现边界见 [`docs/M4_MEMORY_PLAN.md`](docs/M4_MEMORY_PLAN.md)，Gold 契约、指标和实测结果见 [`docs/M4_MEMORY_EVALUATION_PLAN.md`](docs/M4_MEMORY_EVALUATION_PLAN.md)。M4.5 的完整负结果见 [`docs/M45_P2D_HOLDOUT_PILOT_REPORT_20260810.md`](docs/M45_P2D_HOLDOUT_PILOT_REPORT_20260810.md)，最终终止状态见 [`docs/M45_TERMINATION_AUDIT.md`](docs/M45_TERMINATION_AUDIT.md)。M5 的产品流程与后续连续性见 [`docs/M5_MULTI_CASE_VERTICAL_SLICE_PLAN.md`](docs/M5_MULTI_CASE_VERTICAL_SLICE_PLAN.md)，两个新病例的公开/隐藏边界和冻结轨迹见 [`docs/M5_CASE_DESIGN.md`](docs/M5_CASE_DESIGN.md)。项目仍不包含 HTTP/SSE、认证、远程部署、已获准的真实 V1 记忆 Prompt或跨 Episode 成长。
 
 ## 设计边界
 
@@ -129,7 +130,7 @@ xuanyi-play --case-dir .\data\cases --state-dir .\runtime_data\play
 
 两个目录必须已经存在。病例目录在进入菜单前完成全量校验；存档目录只保存玩家与病例会话 JSON，并由 Git 忽略。菜单支持创建或选择玩家、开始/继续病例、查看公开线索、提交公开诊断和处置、返回或保存退出。每个成功行动会立即原子保存，因此 EOF、Ctrl+C 或正常退出后可用同一命令恢复。
 
-当前只有“旧纸伞与失约书生”一个可玩病例。完整正确路线仍得到 `resolved / 100`；CLI 不显示正确答案，也不固定调查顺序。游玩不读取 `.env`，不需要 API Key，不调用 DeepSeek、BGE 或外部 Embedding。两个新病例与确定性跨 Episode 成长尚未实现。
+当前目录自动列出“旧纸伞与失约书生”“灰灶客栈与无火炊烟”“月井回声与错投木简”三个可玩病例。每案完整正确路线均得到 `resolved / 100`；两个新病例各支持至少两种合法调查顺序。CLI 不显示正确答案，也不固定调查顺序。游玩不读取 `.env`，不需要 API Key，不调用 DeepSeek、BGE 或外部 Embedding。三个病例目前相互独立，确定性跨 Episode 成长尚未实现。
 
 安装完成后，可以运行一次固定的正确病例路线：
 
@@ -247,7 +248,7 @@ M2 真实 Pilot 已结束，不再运行模型发现、标准探针、安全探�
 - DeepSeek `LLMAdapter` 已通过 MockTransport 离线测试，并有标准探针和安全探针真实数据；单病例各一次不能代表稳定成功率、限流表现或长期成本。
 - M1 只更新病例会话，不更新玩家能力、关系或长期记忆。
 - 评分暂时只计算关键线索、诊断、处置和危险处置惩罚；提示扣分将在教学阶段接入。
-- 已有本地交互式 CLI，但当前只有旧纸伞病例；网页界面、两个新病例和跨案成长尚未实现。
+- 已有本地交互式 CLI 和三个可独立完成的病例；网页界面与跨案成长尚未实现。
 - V0 的 M2a Harness、M2b-P0、M2b-P1a 和 M2b-P1b 工程门槛已经收口；V1 当前完成记忆持久化、基础检索、Agent 安全只读上下文和 P4 离线 Gold 评测，V2 仍只有配置与共享契约。
 - 三个正式版本始终启用 `AgentContextFilter`；不安全提示词对照只允许在隔离的 A4 安全消融中运行。
 - V1 只增加基础向量 Top-K 长期记忆并保持固定课程；多因素记忆排序、自适应教学与 Reflection 属于 V2。
@@ -256,4 +257,4 @@ M2 真实 Pilot 已结束，不再运行模型发现、标准探针、安全探�
 - 本地 BGE-M3 Adapter 已完成离线烟雾、旧开发集和新 holdout 的正式双运行；工程、安全、重复性和主要排名门槛通过，但保守返回门禁的 micro F1 与更正切片未通过，因此不能声称真实语义召回已满足产品要求。外部 Embedding API 仍未授权，DeepSeek Chat 的历史授权不会自动延伸到其他供应商。
 - 当前 V0 的固定课程只按步骤编号推进，不基于玩家表现动态改变。
 - 当前真实样本仍只有一个病例上的单次探针运行，不足以形成正式成功率、跨病例比较或模型可靠性指标。
-- M2 付费运行已经停止；M3 与 M4 已完成工程退出；M4.5 以 `closed_with_known_dense_retrieval_limitations` 关闭，P3 取消本轮执行。M5-P0/P1 已完成，P2 两个新病例尚未开始。
+- M2 付费运行已经停止；M3 与 M4 已完成工程退出；M4.5 以 `closed_with_known_dense_retrieval_limitations` 关闭，P3 取消本轮执行。M5-P0～P2 已完成，M5-P3 尚未开始。

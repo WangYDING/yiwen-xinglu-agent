@@ -1,0 +1,196 @@
+{
+  "case_id": "moon_well_echo",
+  "title": "月井回声与错投木简",
+  "synopsis": "送信人在月井旁听见尚未出口的话被提前复述，一枚木简也在两户收信人之间反复送错。",
+  "difficulty": 2,
+  "patient": {
+    "patient_id": "courier_qiao",
+    "display_name": "乔砚",
+    "public_profile": "替镇民递送木简的年轻行脚人，坚称井中回声知道他下一句话。",
+    "hidden_information": [
+      "木简更换系绳后被系回了相邻收信人的标记，递送顺序也被送信人紧张时记反。",
+      "月井会沿木简刻痕传回短促声响，却没有主动意图，也不会自行选择收信人。"
+    ]
+  },
+  "root_cause": "misbound_message_recipient_sequence",
+  "causal_chain": [
+    "两枚相邻住户的木简在换绳时交换了公开收信标记。",
+    "送信人按错误标记改变交接顺序，并在月井旁反复默念收信人的称呼。",
+    "井壁回响沿木简刻痕提前返回相似音节，造成声音预知下一句话的错觉。",
+    "核对原始刻痕、见证顺序和收信人后完成正确交接，回响才会停止追随木简。"
+  ],
+  "clues": {
+    "voice_echo_precedes_breath": {
+      "clue_id": "voice_echo_precedes_breath",
+      "description": "送信人闭口改换词句时，井中只重复木简上已经刻出的称呼，并未跟随新话。",
+      "is_key": true,
+      "is_misleading": false
+    },
+    "travel_exhaustion": {
+      "clue_id": "travel_exhaustion",
+      "description": "送信人连走两夜，手抖且注意力涣散，容易把普通回声听成有人模仿。",
+      "is_key": false,
+      "is_misleading": true
+    },
+    "route_order_gap": {
+      "clue_id": "route_order_gap",
+      "description": "送信人口述的两户先后次序与驿册登记相反，中途还曾返回月井寻找落物。",
+      "is_key": true,
+      "is_misleading": false
+    },
+    "nervous_repetition": {
+      "clue_id": "nervous_repetition",
+      "description": "他承认一路反复默念收信人称呼，紧张可能放大了对相似音节的注意。",
+      "is_key": false,
+      "is_misleading": true
+    },
+    "recipient_mark_mismatch": {
+      "clue_id": "recipient_mark_mismatch",
+      "description": "木简正文边角的旧刻痕与现有系绳木签属于不同住户。",
+      "is_key": true,
+      "is_misleading": false
+    },
+    "cord_rethreaded": {
+      "clue_id": "cord_rethreaded",
+      "description": "系绳结法比木简更新，绳孔内残留另一种颜色的旧纤维。",
+      "is_key": true,
+      "is_misleading": false
+    },
+    "echo_follows_inscription": {
+      "clue_id": "echo_follows_inscription",
+      "description": "井中回响只沿木简刻痕聚散；遮住刻痕后，井水仍响却不再组成称呼。",
+      "is_key": true,
+      "is_misleading": false
+    },
+    "witness_handoff_order": {
+      "clue_id": "witness_handoff_order",
+      "description": "井边卖灯人见证送信人先到北巷却拿出南巷木签，原收信人当时并未接简。",
+      "is_key": true,
+      "is_misleading": false
+    }
+  },
+  "investigations": [
+    {
+      "investigation_id": "observe_courier",
+      "action_type": "observe_patient",
+      "target_id": "courier_qiao",
+      "public_description": "观察送信人的呼吸、说话节奏，以及井中声音是否真的跟随新话。",
+      "reveals_clue_ids": ["voice_echo_precedes_breath", "travel_exhaustion"],
+      "required_skill_id": "observe_form",
+      "minimum_skill_level": 0,
+      "required_clue_ids": []
+    },
+    {
+      "investigation_id": "question_route",
+      "action_type": "question_patient",
+      "target_id": "courier_qiao",
+      "public_description": "询问送信人的行程、交接顺序和在月井旁停留的经过。",
+      "reveals_clue_ids": ["route_order_gap", "nervous_repetition"],
+      "required_skill_id": "ask_cause",
+      "minimum_skill_level": 0,
+      "required_clue_ids": []
+    },
+    {
+      "investigation_id": "inspect_wooden_slip",
+      "action_type": "inspect_object",
+      "target_id": "misdelivered_wooden_slip",
+      "public_description": "检查木简正文、边角刻痕、系绳和收信木签是否相互吻合。",
+      "reveals_clue_ids": ["recipient_mark_mismatch"],
+      "required_skill_id": "inspect_object",
+      "minimum_skill_level": 0,
+      "required_clue_ids": []
+    },
+    {
+      "investigation_id": "inspect_binding_cord",
+      "action_type": "inspect_object",
+      "target_id": "wooden_slip_cord",
+      "public_description": "沿木简绳孔核对换绳、重新穿结和旧纤维痕迹。",
+      "reveals_clue_ids": ["cord_rethreaded"],
+      "required_skill_id": "inspect_object",
+      "minimum_skill_level": 10,
+      "required_clue_ids": ["recipient_mark_mismatch"]
+    },
+    {
+      "investigation_id": "observe_well_echo_qi",
+      "action_type": "observe_qi",
+      "target_id": "moon_well",
+      "public_description": "观察回响炁息跟随井水、说话者还是木简刻痕。",
+      "reveals_clue_ids": ["echo_follows_inscription"],
+      "required_skill_id": "observe_qi",
+      "minimum_skill_level": 20,
+      "required_clue_ids": ["recipient_mark_mismatch"]
+    },
+    {
+      "investigation_id": "question_lantern_witness",
+      "action_type": "question_patient",
+      "target_id": "lantern_seller_miao",
+      "public_description": "询问井边见证人当晚看到的到访顺序、木签和实际交接。",
+      "reveals_clue_ids": ["witness_handoff_order"],
+      "required_skill_id": "ask_cause",
+      "minimum_skill_level": 10,
+      "required_clue_ids": ["route_order_gap"]
+    }
+  ],
+  "diagnosis_candidates": {
+    "malicious_echo_entity": {
+      "diagnosis_id": "malicious_echo_entity",
+      "public_description": "月井中存在会提前模仿人声的回响实体，正主动追逐送信人与木简。"
+    },
+    "anxious_echo_misperception": {
+      "diagnosis_id": "anxious_echo_misperception",
+      "public_description": "疲惫、紧张和井壁回音使送信人把重复音节误认为提前出现的话语。"
+    },
+    "misbound_message_handoff": {
+      "diagnosis_id": "misbound_message_handoff",
+      "public_description": "木简、收信标记或交接顺序发生错绑，使回声持续跟随未完成的消息交接。"
+    }
+  },
+  "valid_diagnosis_ids": ["misbound_message_handoff"],
+  "treatments": {
+    "verify_recipient_and_deliver": {
+      "treatment_id": "verify_recipient_and_deliver",
+      "public_description": "对照刻痕、旧绳和见证记录确认收信人，再完成核对后的交接。",
+      "description": "恢复木简原有收信标记并按见证顺序交付，回响随消息闭合而停止。",
+      "outcome": "resolved",
+      "required_clue_ids": ["recipient_mark_mismatch", "cord_rethreaded", "echo_follows_inscription", "witness_handoff_order"]
+    },
+    "seal_moon_well": {
+      "treatment_id": "seal_moon_well",
+      "public_description": "暂时封住井口并压低回响，避免声音继续传出。",
+      "description": "封井暂时隔绝声音，却没有修正木简收信标记和未完成的交接。",
+      "outcome": "suppressed",
+      "required_clue_ids": ["echo_follows_inscription"]
+    },
+    "destroy_wooden_slip": {
+      "treatment_id": "destroy_wooden_slip",
+      "public_description": "直接折断并焚毁被认为招来回响的木简。",
+      "description": "毁掉木简使收信内容和原始刻痕无法核对，未完成的消息回响扩散到两户门前。",
+      "outcome": "worsened",
+      "required_clue_ids": []
+    }
+  },
+  "hints": [
+    {
+      "level": 1,
+      "text": "分别核对送信人的新话、既有称呼和木简上的文字，不要只凭听感判断。",
+      "score_penalty": 2
+    },
+    {
+      "level": 2,
+      "text": "检查木简边角旧刻痕与现有系绳木签是否属于同一收信人。",
+      "score_penalty": 5
+    },
+    {
+      "level": 3,
+      "text": "让见证人的交接顺序与木简物证相互核对，再决定是否需要处置月井。",
+      "score_penalty": 10
+    }
+  ],
+  "scoring": {
+    "key_clue_points": 40,
+    "correct_diagnosis_points": 30,
+    "correct_treatment_points": 30,
+    "unsafe_treatment_penalty": 20,
+    "max_score": 100
+  }
+}

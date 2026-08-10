@@ -470,3 +470,16 @@ M4.5-P2 的最终判定是“工程、安全、重复性通过，语义质量未
 - **外部边界**：DeepSeek `/models` 0、Chat 0、本地 BGE 加载 0、Embedding API 0、网络请求 0、费用 0 CNY；没有读取 API Key，也没有创建或修改 SQLite 长期记忆。
 
 M5-P1 已完成，M5-P2 尚未开始。P2 前没有新的架构级用户决策阻塞；下一步仍需单独授权两个正式病例的产品设计落地。
+
+## 2026-08-10：M5-P2 两个完整可玩病例
+
+- **基线与范围**：基于 `91f5c3638b8e5dc9e678309b64f24eab7b43bc3d`。新增 `gray_hearth_inn.json` 与 `moon_well_echo.json`，以及内容/轨迹/Runner 集成测试和病例设计审计；`CaseEngine`、命令、事件、评分、诊断策略、`CaseCatalog`、CLI 和现有病例均未修改，也没有实现 Campaign、成长、跨案反应或模型模式。
+- **病例规模**：灰灶客栈与月井回声各有 6 个调查、8 条线索（6 关键、2 误导）、3 个无正确性标记的公开诊断、3 个处置和 3 级提示。每案处置恰好包含一个 `resolved`、一个 `suppressed` 和一个 `worsened`；至少 3 个调查初始可用，依赖图无环、无软锁，现有四项初始技能足以完成所有必需调查。
+- **多路径正确轨迹**：每案冻结两种不同调查顺序。四条轨迹均完成 6 次调查、1 次正确诊断和 1 次根因处置，产生连续事件 1–8、修订 8、`completed / resolved / 100`；从空白 Session 重放事件得到完全相同终态。旧纸伞无 LLM Demo 继续为连续 8 事件、`resolved / 100`。
+- **失败对照**：两案“正确诊断 + 压制处置”均为 `suppressed / 70`，“正确诊断 + 恶化处置”均为 `worsened / 50`；合法错误诊断被接受，诊断正确性为 false、诊断分为 0，配合根因处置最终为 70。处置前置不足、未知调查/诊断/处置和重复调查均被拒绝；持久化测试确认拒绝事件为空、修订不变、会话文件逐字节不变。
+- **公开边界**：初始 `CaseObservation` 不含任何已发现线索；序列化公开视图和目录不含 `root_cause`、`causal_chain`、`valid_diagnosis_ids`、正确性、隐藏信息或评分内部字段。病例文案全部是架空契物、炁息和消息回响，不包含现实诊断、处方或剂量。
+- **Runner/CLI**：未经代码特判，现有目录按 `case_id` 稳定发现三个病例。同一玩家可以同时保存灰灶和月井的独立 Session；完成灰灶不会改变月井文件或玩家成长字段。两个新病例分别通过两个独立 CLI 进程完成“开始→一次行动→退出→同一 Session 恢复→连续下一事件”，没有重复创建 Episode。
+- **专项与全量**：M5-P2 专项 29 passed；M5-P1/P2 Runner/CLI 组合 61 passed；MCP P0/P1 22 passed；V0 DoctorAgent/Runner 与 P0 dev 评测 25 passed；全量 420 passed（420 collected）。P0 Fake LLM 3 场景/6 轨迹全部符合预期；`pip check` 与 `git diff --check` 通过。
+- **安全与外部边界**：新病例 ID 未出现在 `src/`，证明目录和执行路径没有病例专用分支；Git 未跟踪 `.env`、运行状态、结果、模型或 SQLite 文件。DeepSeek `/models` 0、Chat 0、本地 BGE 加载 0、Embedding API 0、网络请求 0、费用 0 CNY；SQLite 语义记忆调用为 0。
+
+M5-P2 已完成，当前三个病例可以独立游玩。M5-P3 尚未开始；跨案钩子只存在于设计记录，没有进入病例真值或运行逻辑。
