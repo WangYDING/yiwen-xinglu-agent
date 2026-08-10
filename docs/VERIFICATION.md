@@ -482,4 +482,16 @@ M5-P1 已完成，M5-P2 尚未开始。P2 前没有新的架构级用户决策�
 - **专项与全量**：M5-P2 专项 29 passed；M5-P1/P2 Runner/CLI 组合 61 passed；MCP P0/P1 22 passed；V0 DoctorAgent/Runner 与 P0 dev 评测 25 passed；全量 420 passed（420 collected）。P0 Fake LLM 3 场景/6 轨迹全部符合预期；`pip check` 与 `git diff --check` 通过。
 - **安全与外部边界**：新病例 ID 未出现在 `src/`，证明目录和执行路径没有病例专用分支；Git 未跟踪 `.env`、运行状态、结果、模型或 SQLite 文件。DeepSeek `/models` 0、Chat 0、本地 BGE 加载 0、Embedding API 0、网络请求 0、费用 0 CNY；SQLite 语义记忆调用为 0。
 
-M5-P2 已完成，当前三个病例可以独立游玩。M5-P3 尚未开始；跨案钩子只存在于设计记录，没有进入病例真值或运行逻辑。
+该段保留 M5-P2 提交时的历史状态：当时三个病例可以独立游玩，M5-P3 尚未开始，跨案钩子只存在于设计记录。下方 M5-P3 记录是当前后续状态，不改写这一历史检查点。
+
+## 2026-08-10：M5-P3 确定性跨 Episode 连续性与知识成长
+
+- **基线与范围**：基于 `8fa734264ea7077459892c2a05d1b0ac174649f0`。新增严格 Campaign 领域模型、独立规则 JSON、应用投影/协调、JSON Campaign 存储、CLI 玩家历程和专项测试；`CaseEngine`、三个病例真相/评分、技能、关系、Agent/MCP/语义记忆均未改变。
+- **Campaign A**：同一玩家按旧纸伞→灰灶→月井完成三案。每案 ActionRecord/修订为连续 1–8、`completed / resolved / 100`；CampaignEvent 为连续 1–3。旧纸伞后解锁 `contract_provenance_check` 并在灰灶显示反应，灰灶后解锁 `handoff_sequence_check` 并在月井显示反应；Campaign 从空状态重放完全一致。
+- **Campaign B**：新玩家直接开始月井时三个病例仍全部可开始；月井使用中性历史反应、没有前两项知识，仍可 8 步得到 `resolved / 100`。推荐顺序不是锁关。
+- **公开规则语义**：解锁只匹配公开 case、treatment 与 outcome，不读取 `score=100` 或诊断正确性。错误诊断加公开解决处置得到 `resolved / 70` 并按规则解锁；`suppressed`/`worsened` 均不解锁。历史反应只建议既有调查，不自动行动、发现线索或改变病例规则。
+- **故障与幂等**：病例保存失败时 Campaign 写入 0；病例已保存而 Campaign 保存失败返回 `campaign_projection_pending`，随后 reconcile 补齐事件 1。重复 finish 和 reconcile 不改变 Campaign 哈希。来源 Session 删除或 ActionRecord 序号篡改时返回稳定来源错误，Campaign 文件逐字节不变。
+- **隔离与公开边界**：跨玩家 resume 拒绝且 Campaign 文件不变；玩家 B 视图无玩家 A 的事实或知识；损坏 Campaign 明确失败而非空历程。公开结果不含 `root_cause`、`causal_chain`、`valid_diagnosis_ids`、`diagnosis_correct` 或未发现线索哨兵。
+- **进程恢复**：三个独立 Python PID 依次从同一状态目录恢复并完成三个病例，Campaign revision 依次为 1、2、3；最终两项知识和全部完成摘要保持一致，子进程均正常退出。
+- **验证结果**：M5-P3 专项 18 passed；全量 438 passed。P1/P2 Runner/CLI、三病例 no-LLM、MCP、V0/Fake、M4/M4.5 历史回归全部包含在全量通过结果中；`pip check`、`git diff --check`、敏感信息和运行文件跟踪检查在最终提交前通过。
+- **外部边界**：DeepSeek `/models` 0、Chat 0、本地 BGE 加载 0、外部 Embedding API 0、网络请求 0、费用 0 CNY。M5-P4 尚未开始。

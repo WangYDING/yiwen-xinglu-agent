@@ -15,6 +15,10 @@ from xuanyi_npc.application import (
     CaseCatalogEntry,
     CaseCatalogError,
     CasePlayStatus,
+    CampaignPlayerInput,
+    CampaignProjectionStatus,
+    CampaignRuleConfigurationError,
+    CampaignRuleSet,
     CreatePlayerInput,
     FinishEpisodeInput,
     ListCasesInput,
@@ -44,9 +48,16 @@ class PlayConfigurationError(ValueError):
 class PlayConfig:
     case_dir: Path
     state_dir: Path
+    campaign_rules_path: Path | None = None
 
     @classmethod
-    def load(cls, *, case_dir: Path | str, state_dir: Path | str) -> "PlayConfig":
+    def load(
+        cls,
+        *,
+        case_dir: Path | str,
+        state_dir: Path | str,
+        campaign_rules_path: Path | str | None = None,
+    ) -> "PlayConfig":
         try:
             resolved_cases = Path(case_dir).resolve(strict=True)
             resolved_state = Path(state_dir).resolve(strict=True)
@@ -56,13 +67,36 @@ class PlayConfig:
             raise PlayConfigurationError("病例目录不可用。")
         if not resolved_state.is_dir():
             raise PlayConfigurationError("存档目录不可用。")
-        return cls(case_dir=resolved_cases, state_dir=resolved_state)
+        resolved_rules: Path | None = None
+        if campaign_rules_path is not None:
+            try:
+                resolved_rules = Path(campaign_rules_path).resolve(strict=True)
+            except OSError as exc:
+                raise PlayConfigurationError("跨案规则文件不存在或不可访问。") from exc
+            if not resolved_rules.is_file():
+                raise PlayConfigurationError("跨案规则文件不可用。")
+        else:
+            candidate = resolved_cases.parent / "campaign" / "cross_episode_rules_v1.json"
+            if candidate.is_file():
+                resolved_rules = candidate.resolve(strict=True)
+        return cls(
+            case_dir=resolved_cases,
+            state_dir=resolved_state,
+            campaign_rules_path=resolved_rules,
+        )
 
 
 def create_play_service(config: PlayConfig) -> MultiCaseEpisodeService:
+    catalog = CaseCatalog(config.case_dir)
+    rules = (
+        CampaignRuleSet.load(config.campaign_rules_path, catalog)
+        if config.campaign_rules_path is not None
+        else CampaignRuleSet.empty(catalog)
+    )
     return MultiCaseEpisodeService(
         state_store=JsonStateStore(config.state_dir),
-        case_catalog=CaseCatalog(config.case_dir),
+        case_catalog=catalog,
+        campaign_rules=rules,
     )
 
 
@@ -176,12 +210,15 @@ class PlayCLI:
         while True:
             self._print("\n玩家菜单")
             self._print("1. 查看病例目录")
+            self._print("2. 查看玩家历程")
             self._print("0. 返回主菜单")
             self._print("99. 保存并退出")
             choice = self._read("请选择：")
             if choice == "1":
                 if self._case_catalog_menu(player_id):
                     return True
+            elif choice == "2":
+                self._show_campaign(player_id)
             elif choice == "0":
                 self.current_player_id = None
                 return False
@@ -203,8 +240,13 @@ class PlayCLI:
                 CasePlayStatus.ACTIVE: "可继续",
                 CasePlayStatus.COMPLETED: "已完成",
             }[case.play_status]
-            self._print(f"{index}. {case.title}［{status}］")
+            recommendation = "｜推荐下一案" if case.is_recommended_next else ""
+            self._print(f"{index}. {case.title}［{status}{recommendation}］")
             self._print(f"   {case.synopsis}")
+            if case.recommendation_reason is not None:
+                self._print(f"   推荐理由：{case.recommendation_reason}")
+            for knowledge in case.related_knowledge:
+                self._print(f"   相关知识：{knowledge.public_description}")
         self._print("0. 返回")
         choice = self._read("请选择病例：")
         index = self._menu_index(choice, len(result.cases))
@@ -216,7 +258,10 @@ class PlayCLI:
         episode = self._open_case(player_id, case)
         if episode is None:
             return False
-        if episode.episode_result is not None and episode.episode_result.status.value == "completed":
+        if (
+            episode.episode_result is not None
+            and episode.episode_result.status.value == "completed"
+        ):
             self._print_episode_result(episode)
             return False
         return self._case_loop(episode)
@@ -251,6 +296,7 @@ class PlayCLI:
             return None
         self.current_case_id = result.case_id
         self.current_session_id = result.session_id
+        self._print_case_history_context(result)
         return result
 
     def _case_loop(self, current: MultiCaseServiceResult) -> bool:
@@ -332,8 +378,12 @@ class PlayCLI:
                 )
             )
             self._print(result.message)
+            self._print_new_knowledge(result)
             current = result
-            if result.episode_result is not None and result.episode_result.status.value == "completed":
+            if (
+                result.episode_result is not None
+                and result.episode_result.status.value == "completed"
+            ):
                 finished = self.service.finish_episode(
                     FinishEpisodeInput(
                         player_id=result.player_id or "",
@@ -343,6 +393,50 @@ class PlayCLI:
                 )
                 self._print_episode_result(finished)
                 return False
+
+    def _show_campaign(self, player_id: str) -> None:
+        result = self.service.get_campaign_view(
+            CampaignPlayerInput(player_id=player_id)
+        )
+        if not result.ok or result.campaign_view is None:
+            self._print(result.message)
+            return
+        view = result.campaign_view
+        self._print("\n玩家历程")
+        if view.completed_cases:
+            self._print("已完成病例：")
+            for case in view.completed_cases:
+                self._print(
+                    f"- {case.title}｜结局：{case.outcome.value}｜得分：{case.score}"
+                )
+        else:
+            self._print("已完成病例：暂无")
+        if view.unlocked_knowledge:
+            self._print("已解锁知识：")
+            for knowledge in view.unlocked_knowledge:
+                self._print(f"- {knowledge.public_description}")
+        else:
+            self._print("已解锁知识：暂无")
+        if view.recommended_next_case is not None:
+            recommended = view.recommended_next_case
+            self._print(f"推荐下一案：{recommended.title}")
+            self._print(f"推荐理由：{recommended.public_reason}")
+        else:
+            self._print("三个病例均已完成。")
+
+    def _print_case_history_context(self, result: MultiCaseServiceResult) -> None:
+        if result.history_reaction is not None:
+            self._print(f"历程反应：{result.history_reaction}")
+        if result.investigation_recommendation_reason is not None:
+            self._print(
+                f"调查建议：{result.investigation_recommendation_reason}"
+            )
+        if result.campaign_status is CampaignProjectionStatus.PENDING:
+            self._print("玩家历程尚待补齐，但病例进度已经安全保存。")
+
+    def _print_new_knowledge(self, result: MultiCaseServiceResult) -> None:
+        for knowledge in result.newly_unlocked_knowledge:
+            self._print(f"新解锁知识：{knowledge.public_description}")
 
     def _tool_action(
         self,
@@ -423,15 +517,29 @@ def build_parser() -> argparse.ArgumentParser:
         required=True,
         help="用于保存本地玩家和病例进度的现有目录。",
     )
+    parser.add_argument(
+        "--campaign-rules",
+        type=Path,
+        default=None,
+        help="可选的严格跨案规则 JSON；默认自动查找 data/campaign。",
+    )
     return parser
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
-        config = PlayConfig.load(case_dir=args.case_dir, state_dir=args.state_dir)
+        config = PlayConfig.load(
+            case_dir=args.case_dir,
+            state_dir=args.state_dir,
+            campaign_rules_path=args.campaign_rules,
+        )
         service = create_play_service(config)
-    except (PlayConfigurationError, CaseCatalogError):
+    except (
+        PlayConfigurationError,
+        CaseCatalogError,
+        CampaignRuleConfigurationError,
+    ):
         print("启动失败：病例或存档目录不可用。", file=sys.stderr)
         return 2
     except Exception:

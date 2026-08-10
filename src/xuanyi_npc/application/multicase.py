@@ -9,14 +9,24 @@ from enum import Enum
 from pathlib import Path
 from typing import Annotated, Mapping, Protocol
 
-from pydantic import ConfigDict, Field, StrictBool, StrictInt, ValidationError, field_validator, model_validator
+from pydantic import (
+    ConfigDict,
+    Field,
+    StrictBool,
+    StrictInt,
+    ValidationError,
+    field_validator,
+    model_validator,
+)
 
 from xuanyi_npc.domain import (
     AgentAction,
     AgentActionType,
+    CampaignState,
     CaseDefinition,
     CaseSessionState,
     CaseSessionStatus,
+    KnowledgeUnlock,
     PlayerState,
     RelationshipState,
     SkillState,
@@ -33,6 +43,14 @@ from xuanyi_npc.storage import (
 )
 
 from .diagnosis_readiness import FixedV0DiagnosisReadinessPolicy
+from .campaign import (
+    CampaignCoordinator,
+    CampaignError,
+    CampaignRuleSet,
+    CampaignSourceError,
+    CampaignView,
+    KnowledgeView,
+)
 from .v0_tools import INVESTIGATION_TOOL_ACTIONS, ToolCallError, V0ToolExecutor
 from .views import (
     AgentContextFilter,
@@ -91,6 +109,14 @@ class ListCasesInput(MultiCaseContract):
     player_id: Identifier
 
 
+class CampaignPlayerInput(MultiCaseContract):
+    player_id: Identifier
+
+
+class ReconcileCampaignInput(MultiCaseContract):
+    player_id: Identifier
+
+
 class StartEpisodeInput(MultiCaseContract):
     player_id: Identifier
     case_id: Identifier
@@ -136,6 +162,11 @@ class CasePlayStatus(str, Enum):
     COMPLETED = "completed"
 
 
+class CampaignProjectionStatus(str, Enum):
+    READY = "ready"
+    PENDING = "pending"
+
+
 class PlayerSummary(MultiCaseContract):
     player_id: Identifier
     display_name: NonEmptyText
@@ -150,6 +181,9 @@ class CaseCatalogEntry(MultiCaseContract):
     can_start: StrictBool
     active_session_id: Identifier | None = None
     completed_session_id: Identifier | None = None
+    is_recommended_next: StrictBool = False
+    recommendation_reason: NonEmptyText | None = None
+    related_knowledge: tuple[KnowledgeView, ...] = Field(default_factory=tuple)
 
 
 class PublicActionOptions(MultiCaseContract):
@@ -195,6 +229,16 @@ class MultiCaseServiceResult(MultiCaseContract):
     episode_result: PublicEpisodeResult | None = None
     players: tuple[PlayerSummary, ...] = Field(default_factory=tuple)
     cases: tuple[CaseCatalogEntry, ...] = Field(default_factory=tuple)
+    campaign_view: CampaignView | None = None
+    campaign_status: CampaignProjectionStatus | None = None
+    campaign_error_code: Identifier | None = None
+    campaign_event_sequences: tuple[
+        Annotated[StrictInt, Field(ge=1)], ...
+    ] = Field(default_factory=tuple)
+    history_reaction: NonEmptyText | None = None
+    recommended_investigation_id: Identifier | None = None
+    investigation_recommendation_reason: NonEmptyText | None = None
+    newly_unlocked_knowledge: tuple[KnowledgeView, ...] = Field(default_factory=tuple)
     event_sequences: tuple[Annotated[StrictInt, Field(ge=1)], ...] = Field(
         default_factory=tuple
     )
@@ -207,6 +251,11 @@ class MultiCaseServiceResult(MultiCaseContract):
             raise ValueError("failed result requires an error code")
         if not self.ok and self.event_sequences:
             raise ValueError("failed result cannot include events")
+        if self.campaign_status is CampaignProjectionStatus.PENDING:
+            if self.campaign_error_code != "campaign_projection_pending":
+                raise ValueError("pending campaign result requires stable error code")
+        elif self.campaign_error_code is not None:
+            raise ValueError("campaign error code requires pending status")
         if self.observation is not None:
             if self.session_revision != self.observation.session_revision:
                 raise ValueError("observation and result revisions must match")
@@ -313,6 +362,11 @@ SAFE_SERVICE_MESSAGES: Mapping[str, str] = {
     "treatment_prerequisite_missing": "该处置的公开前置条件尚未满足。",
     "session_closed": "病例已经结束，不能继续执行操作。",
     "invalid_tool_arguments": "行动参数无效，请使用刷新后的公开选项。",
+    "campaign_state_corrupt": "玩家历程存档无法安全读取，不能当作空历程继续。",
+    "campaign_projection_pending": "病例结果已经保存，但玩家历程尚待协调补齐。",
+    "campaign_source_invalid": "已提交病例与玩家历程来源不一致，已停止协调。",
+    "campaign_source_missing": "玩家历程引用的病例存档缺失，已停止协调。",
+    "campaign_source_conflict": "玩家历程与病例存档不一致，已停止协调。",
 }
 
 
@@ -329,6 +383,7 @@ class MultiCaseEpisodeService:
         clock: EpisodeClock | None = None,
         engine: CaseEngine | None = None,
         context_filter: AgentContextFilter | None = None,
+        campaign_rules: CampaignRuleSet | None = None,
     ) -> None:
         self.state_store = state_store
         self.case_catalog = case_catalog
@@ -340,6 +395,11 @@ class MultiCaseEpisodeService:
             engine=engine or CaseEngine(),
             context_filter=self.context_filter,
             diagnosis_readiness_policy=FixedV0DiagnosisReadinessPolicy(),
+        )
+        self.campaign_rules = campaign_rules or CampaignRuleSet.empty(case_catalog)
+        self.campaign_coordinator = CampaignCoordinator(
+            state_store,
+            self.campaign_rules,
         )
 
     def create_player(self, request: CreatePlayerInput) -> MultiCaseServiceResult:
@@ -391,10 +451,14 @@ class MultiCaseEpisodeService:
         if isinstance(player_or_error, MultiCaseServiceResult):
             return player_or_error
         player = player_or_error
+        campaign_or_error = self._load_campaign(player)
+        if isinstance(campaign_or_error, MultiCaseServiceResult):
+            return campaign_or_error
+        campaign = campaign_or_error
         try:
             sessions = self._sessions_for_player(player.player_id)
             entries = tuple(
-                self._catalog_entry(case_id, sessions)
+                self._catalog_entry(case_id, sessions, campaign)
                 for case_id in self.case_catalog.case_ids()
             )
         except StateCorruptionError:
@@ -409,6 +473,8 @@ class MultiCaseEpisodeService:
             player_id=player.player_id,
             player_revision=player.revision,
             cases=entries,
+            campaign_view=self.campaign_rules.view(campaign),
+            campaign_status=CampaignProjectionStatus.READY,
         )
 
     def start_episode(self, request: StartEpisodeInput) -> MultiCaseServiceResult:
@@ -419,6 +485,10 @@ class MultiCaseEpisodeService:
         case = self.case_catalog.get(request.case_id)
         if case is None:
             return self._error("case_not_found", player=player, case_id=request.case_id)
+        campaign_or_error = self._load_campaign(player)
+        if isinstance(campaign_or_error, MultiCaseServiceResult):
+            return campaign_or_error
+        campaign = campaign_or_error
         try:
             sessions = self._sessions_for_player(player.player_id)
             active = tuple(
@@ -436,6 +506,7 @@ class MultiCaseEpisodeService:
                     player=player,
                     case=case,
                     session=active[0],
+                    campaign_state=campaign,
                 )
             completed = tuple(
                 session
@@ -454,9 +525,13 @@ class MultiCaseEpisodeService:
                     player=player,
                     case=case,
                     session=latest,
+                    campaign_state=campaign,
                 )
             session_id = self.session_id_factory.new_session_id()
-            if any(session.session_id == session_id for session in self.state_store.list_case_sessions()):
+            if any(
+                session.session_id == session_id
+                for session in self.state_store.list_case_sessions()
+            ):
                 return self._error("id_conflict", player=player, case_id=case.case_id)
             session = CaseSessionState(
                 session_id=session_id,
@@ -470,6 +545,7 @@ class MultiCaseEpisodeService:
                 player=player,
                 case=case,
                 session=session,
+                campaign_state=campaign,
             )
             self.state_store.save_case_session(session)
             return result
@@ -490,7 +566,7 @@ class MultiCaseEpisodeService:
         )
         if isinstance(context, MultiCaseServiceResult):
             return context
-        player, case, session = context
+        player, case, session, campaign = context
         return self._context_result(
             ok=True,
             code=None,
@@ -502,6 +578,7 @@ class MultiCaseEpisodeService:
             player=player,
             case=case,
             session=session,
+            campaign_state=campaign,
         )
 
     def submit_action(self, request: SubmitActionInput) -> MultiCaseServiceResult:
@@ -512,7 +589,7 @@ class MultiCaseEpisodeService:
         )
         if isinstance(context, MultiCaseServiceResult):
             return context
-        player, case, session = context
+        player, case, session, campaign = context
         action = request.action
         if session.status is CaseSessionStatus.COMPLETED:
             return self._context_result(
@@ -521,6 +598,7 @@ class MultiCaseEpisodeService:
                 player=player,
                 case=case,
                 session=session,
+                campaign_state=campaign,
             )
         if (
             action.action_type is not AgentActionType.USE_TOOL
@@ -533,6 +611,7 @@ class MultiCaseEpisodeService:
                 player=player,
                 case=case,
                 session=session,
+                campaign_state=campaign,
             )
 
         try:
@@ -550,6 +629,7 @@ class MultiCaseEpisodeService:
                 player=player,
                 case=case,
                 session=session,
+                campaign_state=campaign,
             )
         except ViewContextError:
             return self._context_result(
@@ -558,6 +638,7 @@ class MultiCaseEpisodeService:
                 player=player,
                 case=case,
                 session=session,
+                campaign_state=campaign,
             )
         except Exception:
             return self._context_result(
@@ -566,20 +647,11 @@ class MultiCaseEpisodeService:
                 player=player,
                 case=case,
                 session=session,
+                campaign_state=campaign,
             )
 
         try:
-            result = self._context_result(
-                ok=True,
-                code=None,
-                message=execution.message,
-                player=player,
-                case=case,
-                session=execution.session,
-                event_sequences=tuple(event.sequence for event in execution.events),
-            )
             self.state_store.save_case_session(execution.session)
-            return result
         except StorageError:
             return self._context_result(
                 ok=False,
@@ -587,6 +659,7 @@ class MultiCaseEpisodeService:
                 player=player,
                 case=case,
                 session=session,
+                campaign_state=campaign,
             )
         except Exception:
             return self._context_result(
@@ -595,7 +668,30 @@ class MultiCaseEpisodeService:
                 player=player,
                 case=case,
                 session=session,
+                campaign_state=campaign,
             )
+
+        if execution.session.status is CaseSessionStatus.COMPLETED:
+            return self._project_completed_result(
+                player=player,
+                case=case,
+                session=execution.session,
+                prior_campaign=campaign,
+                message=execution.message,
+                event_sequences=tuple(
+                    event.sequence for event in execution.events
+                ),
+            )
+        return self._context_result(
+            ok=True,
+            code=None,
+            message=execution.message,
+            player=player,
+            case=case,
+            session=execution.session,
+            campaign_state=campaign,
+            event_sequences=tuple(event.sequence for event in execution.events),
+        )
 
     def finish_episode(self, request: FinishEpisodeInput) -> MultiCaseServiceResult:
         context = self._load_context(
@@ -605,7 +701,7 @@ class MultiCaseEpisodeService:
         )
         if isinstance(context, MultiCaseServiceResult):
             return context
-        player, case, session = context
+        player, case, session, campaign = context
         if session.status is not CaseSessionStatus.COMPLETED:
             return self._context_result(
                 ok=False,
@@ -613,14 +709,100 @@ class MultiCaseEpisodeService:
                 player=player,
                 case=case,
                 session=session,
+                campaign_state=campaign,
             )
-        return self._context_result(
-            ok=True,
-            code=None,
-            message="病例公开结果已确认。",
+        return self._project_completed_result(
             player=player,
             case=case,
             session=session,
+            prior_campaign=campaign,
+            message="病例公开结果已确认。",
+        )
+
+    def get_campaign_view(
+        self,
+        request: CampaignPlayerInput,
+    ) -> MultiCaseServiceResult:
+        return self._read_campaign_result(request.player_id, "玩家历程已刷新。")
+
+    def list_completed_cases(
+        self,
+        request: CampaignPlayerInput,
+    ) -> MultiCaseServiceResult:
+        return self._read_campaign_result(request.player_id, "已完成病例已刷新。")
+
+    def list_unlocked_knowledge(
+        self,
+        request: CampaignPlayerInput,
+    ) -> MultiCaseServiceResult:
+        return self._read_campaign_result(request.player_id, "已解锁知识已刷新。")
+
+    def recommended_next_case(
+        self,
+        request: CampaignPlayerInput,
+    ) -> MultiCaseServiceResult:
+        return self._read_campaign_result(request.player_id, "推荐下一案已刷新。")
+
+    def reconcile_campaign(
+        self,
+        request: ReconcileCampaignInput,
+    ) -> MultiCaseServiceResult:
+        player_or_error = self._load_player(request.player_id)
+        if isinstance(player_or_error, MultiCaseServiceResult):
+            return player_or_error
+        player = player_or_error
+        current_or_error = self._load_campaign(player)
+        if isinstance(current_or_error, MultiCaseServiceResult):
+            return current_or_error
+        current = current_or_error
+        try:
+            result = self.campaign_coordinator.reconcile(player)
+        except CampaignSourceError as exc:
+            return MultiCaseServiceResult(
+                ok=False,
+                error_code=exc.code,
+                message=SAFE_SERVICE_MESSAGES.get(
+                    exc.code,
+                    SAFE_SERVICE_MESSAGES["campaign_source_invalid"],
+                ),
+                player_id=player.player_id,
+                player_revision=player.revision,
+                campaign_view=self.campaign_rules.view(current),
+                campaign_status=CampaignProjectionStatus.READY,
+            )
+        except StateCorruptionError:
+            return self._error(
+                "campaign_state_corrupt",
+                player=player,
+            )
+        except StorageError:
+            return MultiCaseServiceResult(
+                ok=False,
+                error_code="campaign_projection_pending",
+                message=SAFE_SERVICE_MESSAGES["campaign_projection_pending"],
+                player_id=player.player_id,
+                player_revision=player.revision,
+                campaign_view=self.campaign_rules.view(current),
+                campaign_status=CampaignProjectionStatus.PENDING,
+                campaign_error_code="campaign_projection_pending",
+            )
+        except CampaignError:
+            return self._error("campaign_source_invalid", player=player)
+        return MultiCaseServiceResult(
+            ok=True,
+            message=(
+                "玩家历程已补齐。" if result.changed else "玩家历程已经是最新状态。"
+            ),
+            player_id=player.player_id,
+            player_revision=player.revision,
+            campaign_view=self.campaign_rules.view(result.state),
+            campaign_status=CampaignProjectionStatus.READY,
+            campaign_event_sequences=tuple(
+                range(current.revision + 1, result.state.revision + 1)
+            ),
+            newly_unlocked_knowledge=self._knowledge_views(
+                result.newly_unlocked
+            ),
         )
 
     def quit(self, request: QuitInput) -> MultiCaseServiceResult:
@@ -633,7 +815,7 @@ class MultiCaseEpisodeService:
         )
         if isinstance(context, MultiCaseServiceResult):
             return context
-        player, case, session = context
+        player, case, session, campaign = context
         return self._context_result(
             ok=True,
             code=None,
@@ -641,6 +823,7 @@ class MultiCaseEpisodeService:
             player=player,
             case=case,
             session=session,
+            campaign_state=campaign,
         )
 
     def _load_player(self, player_id: str) -> PlayerState | MultiCaseServiceResult:
@@ -653,13 +836,129 @@ class MultiCaseEpisodeService:
         except StorageError:
             return self._error("state_unavailable", player_id=player_id)
 
+    def _load_campaign(
+        self,
+        player: PlayerState,
+    ) -> CampaignState | MultiCaseServiceResult:
+        try:
+            campaign = self.campaign_coordinator.load_or_empty(player.player_id)
+        except StateCorruptionError:
+            return self._error("campaign_state_corrupt", player=player)
+        except StorageError:
+            return self._error("state_unavailable", player=player)
+        if campaign.player_id != player.player_id:
+            return self._error("campaign_source_invalid", player=player)
+        return campaign
+
+    def _read_campaign_result(
+        self,
+        player_id: str,
+        message: str,
+    ) -> MultiCaseServiceResult:
+        player_or_error = self._load_player(player_id)
+        if isinstance(player_or_error, MultiCaseServiceResult):
+            return player_or_error
+        player = player_or_error
+        campaign_or_error = self._load_campaign(player)
+        if isinstance(campaign_or_error, MultiCaseServiceResult):
+            return campaign_or_error
+        return MultiCaseServiceResult(
+            ok=True,
+            message=message,
+            player_id=player.player_id,
+            player_revision=player.revision,
+            campaign_view=self.campaign_rules.view(campaign_or_error),
+            campaign_status=CampaignProjectionStatus.READY,
+        )
+
+    def _project_completed_result(
+        self,
+        *,
+        player: PlayerState,
+        case: CaseDefinition,
+        session: CaseSessionState,
+        prior_campaign: CampaignState,
+        message: str,
+        event_sequences: tuple[int, ...] = (),
+    ) -> MultiCaseServiceResult:
+        try:
+            projection = self.campaign_coordinator.project_completed(
+                player,
+                case,
+                session,
+            )
+        except StorageError:
+            return self._context_result(
+                ok=True,
+                code=None,
+                message=(
+                    f"{message} {SAFE_SERVICE_MESSAGES['campaign_projection_pending']}"
+                ),
+                player=player,
+                case=case,
+                session=session,
+                campaign_state=prior_campaign,
+                event_sequences=event_sequences,
+                campaign_status=CampaignProjectionStatus.PENDING,
+                campaign_error_code="campaign_projection_pending",
+            )
+        except CampaignSourceError as exc:
+            return self._context_result(
+                ok=True,
+                code=None,
+                message=(
+                    f"{message} "
+                    f"{SAFE_SERVICE_MESSAGES.get(exc.code, SAFE_SERVICE_MESSAGES['campaign_source_invalid'])}"
+                ),
+                player=player,
+                case=case,
+                session=session,
+                campaign_state=prior_campaign,
+                event_sequences=event_sequences,
+                campaign_status=CampaignProjectionStatus.PENDING,
+                campaign_error_code="campaign_projection_pending",
+            )
+        return self._context_result(
+            ok=True,
+            code=None,
+            message=message,
+            player=player,
+            case=case,
+            session=session,
+            campaign_state=projection.state,
+            event_sequences=event_sequences,
+            campaign_status=CampaignProjectionStatus.READY,
+            campaign_event_sequences=(
+                (projection.event.sequence,) if projection.event is not None else ()
+            ),
+            newly_unlocked_knowledge=self._knowledge_views(
+                projection.newly_unlocked
+            ),
+        )
+
+    @staticmethod
+    def _knowledge_views(
+        values: tuple[KnowledgeUnlock, ...],
+    ) -> tuple[KnowledgeView, ...]:
+        return tuple(
+            KnowledgeView(
+                knowledge_id=item.knowledge_id,
+                public_description=item.public_description,
+                unlocked_at=item.unlocked_at,
+            )
+            for item in values
+        )
+
     def _load_context(
         self,
         *,
         player_id: str,
         case_id: str,
         session_id: str,
-    ) -> tuple[PlayerState, CaseDefinition, CaseSessionState] | MultiCaseServiceResult:
+    ) -> (
+        tuple[PlayerState, CaseDefinition, CaseSessionState, CampaignState]
+        | MultiCaseServiceResult
+    ):
         player_or_error = self._load_player(player_id)
         if isinstance(player_or_error, MultiCaseServiceResult):
             return player_or_error
@@ -703,7 +1002,10 @@ class MultiCaseEpisodeService:
             self.tool_executor.case_observation(case, player, session)
         except ViewContextError:
             return self._error("context_mismatch", player=player)
-        return player, case, session
+        campaign_or_error = self._load_campaign(player)
+        if isinstance(campaign_or_error, MultiCaseServiceResult):
+            return campaign_or_error
+        return player, case, session, campaign_or_error
 
     def _sessions_for_player(self, player_id: str) -> tuple[CaseSessionState, ...]:
         sessions = tuple(
@@ -719,6 +1021,7 @@ class MultiCaseEpisodeService:
         self,
         case_id: str,
         sessions: tuple[CaseSessionState, ...],
+        campaign: CampaignState,
     ) -> CaseCatalogEntry:
         definition = self.case_catalog.get(case_id)
         if definition is None:
@@ -748,6 +1051,8 @@ class MultiCaseEpisodeService:
             if completed
             else CasePlayStatus.AVAILABLE
         )
+        recommended = self.campaign_rules.recommended_next(campaign)
+        context = self.campaign_rules.context_for(case_id, campaign)
         return CaseCatalogEntry(
             case_id=definition.case_id,
             title=definition.title,
@@ -756,6 +1061,15 @@ class MultiCaseEpisodeService:
             can_start=not active and not completed,
             active_session_id=active[0].session_id if active else None,
             completed_session_id=completed[-1].session_id if completed else None,
+            is_recommended_next=(
+                recommended is not None and recommended.case_id == case_id
+            ),
+            recommendation_reason=(
+                recommended.public_reason
+                if recommended is not None and recommended.case_id == case_id
+                else None
+            ),
+            related_knowledge=context.related_knowledge,
         )
 
     def _context_result(
@@ -766,10 +1080,19 @@ class MultiCaseEpisodeService:
         player: PlayerState,
         case: CaseDefinition,
         session: CaseSessionState,
+        campaign_state: CampaignState,
         message: str | None = None,
         event_sequences: tuple[int, ...] = (),
+        campaign_status: CampaignProjectionStatus = CampaignProjectionStatus.READY,
+        campaign_error_code: str | None = None,
+        campaign_event_sequences: tuple[int, ...] = (),
+        newly_unlocked_knowledge: tuple[KnowledgeView, ...] = (),
     ) -> MultiCaseServiceResult:
         observation = self.tool_executor.case_observation(case, player, session)
+        campaign_context = self.campaign_rules.context_for(
+            case.case_id,
+            campaign_state,
+        )
         options = PublicActionOptions(
             investigations=observation.available_investigations,
             diagnoses=(
@@ -796,6 +1119,18 @@ class MultiCaseEpisodeService:
             action_options=options,
             episode_result=self._public_episode_result(session),
             event_sequences=event_sequences,
+            campaign_view=self.campaign_rules.view(campaign_state),
+            campaign_status=campaign_status,
+            campaign_error_code=campaign_error_code,
+            campaign_event_sequences=campaign_event_sequences,
+            history_reaction=campaign_context.history_reaction,
+            recommended_investigation_id=(
+                campaign_context.recommended_investigation_id
+            ),
+            investigation_recommendation_reason=(
+                campaign_context.recommendation_reason
+            ),
+            newly_unlocked_knowledge=newly_unlocked_knowledge,
         )
 
     @staticmethod

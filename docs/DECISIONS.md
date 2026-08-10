@@ -371,3 +371,13 @@
 - **引擎决策**：P2 只新增严格 `CaseDefinition` JSON、内容测试和设计记录，不修改 `CaseEngine`、命令、事件、评分、诊断就绪策略、`CaseCatalog` 或 CLI，也不按 `case_id` 增加专用分支。目录自动发现三个病例；同一玩家的不同病例使用独立 Session，一个病例完成不修改其他病例或 `PlayerState`。
 - **失败与未来边界**：合法错误诊断正常提交且诊断分为 0；压制、恶化、前置不足、重复和未知 ID 均保留原规则语义，拒绝零事件、零修订、文件不变。跨案钩子只记录在设计文档，P2 不创建 CampaignEvent/CampaignFact，不更新成长，也不启用 DeepSeek、BGE 或 semantic shadow。
 - **原因**：把玩法扩展限制为数据驱动病例，可以直接证明同一确定性引擎承载不同环境、证人和物证调查，而不把内容需求变成引擎特例，并为 P3 的可信跨案连续性留下清晰边界。
+
+## ADR-047：M5-P3 使用独立可重放 Campaign 与公开处置规则实现知识成长
+
+- **状态**：已接受
+- **日期**：2026-08-10
+- **权威与来源**：跨案完成摘要、公开事实和知识保存在独立 `campaigns/{player_id}.json`，不复制进 `PlayerState.skills` 或关系。只投影已经原子保存、状态为 completed、玩家/病例/Session 匹配且 ActionRecord 连续的公开收据；模型文本、respond、拒绝、隐藏真值、正确性和语义向量写入为 0。
+- **规则与成长**：`cross_episode_rules_v1` 只按来源 case、公开 treatment 和 outcome 匹配。旧纸伞的公开解决处置解锁 `contract_provenance_check`，灰灶的公开解决处置解锁 `handoff_sequence_check`；规则输出限于 CampaignFact、知识、后续公开反应、调查建议和推荐顺序。它不读取分数或诊断正确性，也不修改病例定义、工具、技能、关系、答案或评分。
+- **提交与恢复**：病例 Session 先保存，Campaign 后投影；不伪造跨 JSON 事务。后写失败返回 `campaign_projection_pending`，显式协调只从已提交 completed Session 幂等补齐。重复 finish/reconcile 不重复事件或知识；来源缺失、损坏或冲突停止协调，既有 Campaign 不变。
+- **产品边界**：推荐顺序不锁关，无前史使用中性反应且三个病例均可完成。CLI 显示历程、完成病例、知识、推荐和安全历史反应。语义记忆继续默认关闭；M5-P3 不接入 Agent Prompt、DeepSeek、BGE、shadow mode、自适应教学或网页。
+- **原因**：把正式游戏连续性建立在可审计公开事件上，可在 Dense 召回未过线时仍提供稳定、可解释的角色记忆和成长，同时保留规则层对关键状态的唯一控制权。

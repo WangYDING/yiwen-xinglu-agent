@@ -10,6 +10,7 @@ from typing import TypeVar
 from pydantic import BaseModel, TypeAdapter, ValidationError
 
 from xuanyi_npc.domain.base import Identifier
+from xuanyi_npc.domain.campaign import CampaignState
 from xuanyi_npc.domain.cases import CaseSessionState
 from xuanyi_npc.domain.player import PlayerState
 
@@ -48,6 +49,12 @@ class JsonStateStore:
     def load_case_session(self, session_id: str) -> CaseSessionState:
         return self._read("case_sessions", session_id, CaseSessionState)
 
+    def save_campaign(self, state: CampaignState) -> Path:
+        return self._write("campaigns", state.player_id, state)
+
+    def load_campaign(self, player_id: str) -> CampaignState:
+        return self._read("campaigns", player_id, CampaignState)
+
     def list_players(self) -> tuple[PlayerState, ...]:
         """Return all validated player snapshots in stable ID order."""
 
@@ -57,6 +64,11 @@ class JsonStateStore:
         """Return all validated case sessions in stable ID order."""
 
         return self._list("case_sessions", CaseSessionState, "session_id")
+
+    def list_campaigns(self) -> tuple[CampaignState, ...]:
+        """Return all validated Campaign snapshots in stable player order."""
+
+        return self._list("campaigns", CampaignState, "player_id")
 
     def _path(self, namespace: str, identifier: str) -> Path:
         try:
