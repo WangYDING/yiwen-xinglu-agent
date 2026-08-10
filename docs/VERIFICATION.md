@@ -387,3 +387,12 @@ M4.5-P2a 只形成新的离线冻结检查点，不完成 P2。任何正式 BGE 
 - **外部边界**：网络连接尝试 0、DeepSeek `/models` 0、Chat 0、外部 Embedding API 0、费用 0 CNY。输入、Gold、模型、Adapter、阈值、排序和产品实现均未修改。
 
 M4.5-P2 仍未完成且不能判断 P3 准入；下一次正式运行需要新的明确授权。M4.5-P3 与 M5 尚未开始。
+
+## 2026-08-10：M4.5-P2 v2 入口修复成功、冻结身份门禁停止
+
+- **入口修复**：使用项目 `.venv` Python、`PIP_NO_INDEX=1`、`--no-deps --no-build-isolation -e .` 完成本地 editable 重装；没有访问索引、解析/升级依赖或下载模型。`xuanyi-semantic-memory-eval.exe` 已生成，大小 `108,388` 字节，SHA `FF6C0EE3CAF015F64CD84BF5B3D664CC06407E17F17C993017B54B64E85DF7A2`；显式 `--help` 成功且 BGE 加载为 0。
+- **身份停止**：按授权原样以执行 HEAD `f573e036d456e54e5c770014e49f7af66aa32ba9`、`--freeze-commit b78033099663464bf3d7790c6fef5d4b973dc692` 启动 run1。现有运行器第一项门禁要求当前 HEAD 精确等于参数冻结提交，因此返回 `semantic Pilot requires the exact clean freeze checkpoint`。没有改参数、修改运行器、切换 HEAD、创建 worktree或启动 run2。
+- **未观测范围**：评测在 Gold/Torch/CUDA/BGE 之前停止；正式 Embedding 运行 0、模型加载 0、向量 0、两个正式结果文件均未创建。15 条 Top-K、calibration/test、阈值、全部语义/安全指标、Fake/BGE 差异、资源和重复性继续为 `not_observed`。
+- **检查点**：忽略目录 `results/m45_p2_v2_identity_stop_20260810.json`，SHA `628C24576585ACBFF2DFB6035F326FEA6B207442F0C50D73ECA01B9ADD1B0D19`；DeepSeek、外部 Embedding API、网络请求和费用均为 0。
+
+M4.5-P2 再次因工程条件停止，尚未形成质量通过或质量未通过结论。下一次运行需单独授权并明确执行 HEAD 与冻结基线的兼容方式；M4.5-P3 和 M5 尚未开始。
