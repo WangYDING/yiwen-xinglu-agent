@@ -415,3 +415,12 @@ M4.5-P2 再次因工程条件停止，不是质量失败，也不能判定通过
 - **阈值与 test 指标**：calibration 按冻结规则选择阈值 0.65。test Recall@1/Recall@3/MRR 均为 0.8888888889；macro P/R/F1 为 0.7592592593/0.8888888889/0.7962962963；micro TP/FP/FN 为 8/5/1，P/R/F1 为 0.6153846154/0.8888888889/0.7272727273；empty 为 1/1；False Memory Rate 为 5/13。
 - **安全与外部边界**：九个安全计数全部为 0；网络尝试 0、外部 API 请求 0、费用 0 CNY。合法语义负例产生的 FP 只影响语义指标。真实 Chat 0，M4.5-P3 和 M5 未开始。
 - **判定**：工程运行、安全和重复性通过；test Recall@3 未达到 0.90，False Memory Rate 未达到 0，因此 M4.5-P2 的最终结论为“语义质量未通过”。逐场景、资源和历史停止证据见 `docs/M45_P2_V2_SEMANTIC_PILOT_RESULT_20260810.md`。
+
+## 2026-08-10：M4.5-P2b 离线语义失败诊断
+
+- **只读输入**：只读取两份 P2 正式结果和其中已保存的向量；原始文件 SHA 仍为 `DD3B8482...CD6AE` 与 `FD61EC05...B2B7`。没有加载 BGE、生成新向量、执行第三次运行或修改 Gold/历史结果。
+- **可复现诊断**：新增纯离线诊断器和 5 个专项测试。派生诊断文件位于忽略目录 `results/m45_p2b_semantic_diagnostic_20260810.json`，SHA 为 `D670C2154BEA61D23ED174A04DB7BBE6DB0365563BBBD5455FC9E9003EDE8D1E`；15 条场景、60 个候选完整计分，两份结果的有序结果、指标、向量载荷一致，最大向量差为 0。
+- **失败定位**：test 的 5 个 FP 为 correction 2 个、prompt injection data 1 个、mixed-language 2 个；唯一 FN 是 0.632996、排名第 4 的正确更正记录。calibration 的“守约”也以 0.509447 排名第 4，反义高字面诱饵以 0.682341 压过间接表达的正确行为。共同模板、表示长度不对称和复合实体局部匹配形成可检验的根因假设。
+- **反事实边界**：所有 Top-N、绝对阈值和分差比较均标记 `post_hoc_exploratory_only`。阈值 0.70 可将 FP 降为 0，但 FN 增至 6；Top-1 仍无法召回 rank-4 更正记录；0.65 + 0.01/0.02 分差在已观察数据上看似无 FP，也不能作为未见验证。
+- **下一轮门槛**：原 15 条转为开发/诊断集；规划 36 条新 holdout（12 calibration、24 final test，其中至少 20 条有相关答案），优先验证 `retrieval_query_v2`、`embedding_document_v2` 与 calibration 选择的保守门禁。安全预过滤和全部零计数要求不变。
+- **外部边界**：本轮 BGE 加载 0、新向量 0、网络尝试 0、DeepSeek `/models` 0、Chat 0、外部 Embedding API 0、费用 0 CNY。M4.5-P3 与 M5 未开始。

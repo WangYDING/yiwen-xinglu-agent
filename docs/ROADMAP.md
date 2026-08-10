@@ -36,7 +36,8 @@ Word 设计总结、`xuanyi-npc-handoff` 和 `docs/algorithm-experiment-plan-v0.
 | M4.5-P1：本地 Adapter 与离线烟雾 | 已完成 | 固定依赖、BGE-M3 revision/SHA 白名单、延迟加载 Adapter、Mock、真实 CUDA/FP32 离线烟雾；未运行语义 Gold |
 | M4.5-P2a：语义 Gold v2 离线纠偏 | 已完成 | 保留 v1 冻结与停止历史；复用相同 15 条/75 文本，将相关项、合法语义负例和实际安全排除项完整分区；没有加载 BGE 或读取失败指标 |
 | M4.5-P2：真实语义 Gold | 已完成运行（语义质量未通过） | Gold `b780330`、执行提交 `cad07ff`；两次本地 BGE 运行完整且可重复，安全计数全 0；test Recall@3 `0.8889`、False Memory Rate `5/13`，未达到 P3 准入线 |
-| M4.5-P3 与退出审计 | 未开始 | P2 已形成可用负结果但未通过准入；真实 V1 Agent Pilot 与退出审计均未运行 |
+| M4.5-P2b：离线失败诊断与下一轮规划 | 已完成 | 只读重算 15×4 完整分数；确认模板/长度不对称、字面诱饵和全局阈值重叠；原 15 条转为已观察开发集，规划 36 条新 holdout |
+| M4.5-P3 与退出审计 | 未开始 | P2 语义质量未通过；必须先实现并以新 holdout 验证检索文本方案，真实 V1 Agent Pilot 与退出审计均未运行 |
 | M5 及以后 | 未开始 | 自适应教学、Reflection、界面、多 Agent 等均未开始 |
 
 ## M2a 完成边界
@@ -192,10 +193,12 @@ M4.5 不重新打开或改写 M4。P0 已完成本机只读调查、官方资料
 
 1. M4.5-P1：真实 Adapter、Mock 和离线烟雾已完成；
 2. M4.5-P2：v2 独立语义 Gold 两次正式运行已完成，工程、安全和重复性通过，但语义质量未通过；
-3. M4.5-P3：仍要求 P2 通过后再分开授权 DeepSeek Chat 和 Embedding 预算；当前不得运行；
-4. M4.5 退出审计；
-5. 之后才允许开始 M5 自适应教学规划。
+3. M4.5-P2b：离线根因分析已完成；原 15 条只作为开发/诊断集，推荐版本化 `retrieval_query_v2`、`embedding_document_v2` 和 calibration 选择的保守门禁；
+4. 下一轮须先实现最小方案并冻结 36 条全新 holdout，在未见 test 上重新取得 P2 准入证据；
+5. M4.5-P3：仍要求新 P2 验证通过后再分开授权 DeepSeek Chat 和 Embedding 预算；当前不得运行；
+6. M4.5 退出审计；
+7. 之后才允许开始 M5 自适应教学规划。
 
-M5 等待 M4.5，是为了避免把记忆召回问题与教学策略问题混为同一个实验变量。M4.5-P1 已在项目 `.venv` 中安装固定可选依赖，只下载固定 revision 的 11 个 dense safetensors 白名单文件，并以网络阻断方式完成真实本地权重烟雾；详细身份、哈希、磁盘和性能证据见 `docs/M45_P1_LOCAL_EMBEDDING_REPORT.md`。P2 v1 已在 `e813312` 冻结 15 条/75 文本，但第一次正式本地运行因评测器把合法语义负例误计为生命周期安全违规而停止；P2a 保留该历史并冻结 v2 三分区契约。v2 随后经历入口、身份和 Windows 遥测三次诚实停止，最终在 `cad07ff` 上完成两次正式运行：安全和重复性门禁通过，但 test Recall@3 与 False Memory Rate 未过线。完整证据见 `docs/M45_P2_V2_SEMANTIC_PILOT_RESULT_20260810.md`；在新的研究决策形成前不得进入 P3。
+M5 等待 M4.5，是为了避免把记忆召回问题与教学策略问题混为同一个实验变量。M4.5-P1 已在项目 `.venv` 中安装固定可选依赖，只下载固定 revision 的 11 个 dense safetensors 白名单文件，并以网络阻断方式完成真实本地权重烟雾；详细身份、哈希、磁盘和性能证据见 `docs/M45_P1_LOCAL_EMBEDDING_REPORT.md`。P2 v1 已在 `e813312` 冻结 15 条/75 文本，但第一次正式本地运行因评测器把合法语义负例误计为生命周期安全违规而停止；P2a 保留该历史并冻结 v2 三分区契约。v2 随后经历入口、身份和 Windows 遥测三次诚实停止，最终在 `cad07ff` 上完成两次正式运行：安全和重复性门禁通过，但 test Recall@3 与 False Memory Rate 未过线。P2b 只用已保存向量确认正确更正与极短相关项均落到第 4，且相关/负例分数重叠；任何阈值或 Top-N 都不能修复候选顺序。完整证据见 `docs/M45_P2B_SEMANTIC_FAILURE_ANALYSIS.md`，新 holdout 设计见 `docs/M45_HOLDOUT_VALIDATION_PLAN.md`；当前不得进入 P3。
 
 V1 只增加基础向量 Top-K 长期记忆并保持固定课程；V2 才使用多因素记忆排序、自适应教学和 Reflection。三个产品版本始终启用 `AgentContextFilter`，模型始终不能直接写永久记忆或关键状态。真实 Embedding 的供应商、数据发送边界、预算和网络调用必须另行决定并授权。
