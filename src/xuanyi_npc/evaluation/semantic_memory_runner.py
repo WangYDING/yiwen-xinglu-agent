@@ -699,8 +699,15 @@ def _peak_working_set_bytes() -> int:
     counters.cb = ctypes.sizeof(counters)
     get_current_process = ctypes.windll.kernel32.GetCurrentProcess
     get_current_process.restype = ctypes.c_void_p
+    get_process_memory_info = ctypes.windll.psapi.GetProcessMemoryInfo
+    get_process_memory_info.argtypes = (
+        ctypes.c_void_p,
+        ctypes.POINTER(_ProcessMemoryCounters),
+        ctypes.c_ulong,
+    )
+    get_process_memory_info.restype = ctypes.c_int
     process = get_current_process()
-    if not ctypes.windll.psapi.GetProcessMemoryInfo(process, ctypes.byref(counters), counters.cb):
+    if not get_process_memory_info(process, ctypes.byref(counters), counters.cb):
         raise RuntimeError("unable to read process peak memory")
     return int(counters.PeakWorkingSetSize)
 
