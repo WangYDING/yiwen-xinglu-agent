@@ -90,7 +90,7 @@ def _sha(path: Path) -> str:
 
 
 def _write(path: Path, model: object) -> None:
-    path.write_text(model.model_dump_json(indent=2) + "\n", encoding="utf-8")
+    path.write_bytes((model.model_dump_json(indent=2) + "\n").encode("utf-8"))
 
 
 def build() -> None:

@@ -129,7 +129,7 @@ Gold 预期只能进入评测器。Adapter、QueryBuilder、文档派生器、Re
 
 ## 9. P2c 实际冻结身份
 
-P2c 已按本方案冻结 36 条/144 候选。输入、Gold、配置和 manifest SHA 分别为 `D5069516...D0116`、`3DE2EDBB...D55D5D`、`F083F55E...A2845`、`703593E8...AD47`。参数网格、选择器、指标分母和安全分区已有离线契约测试；没有加载 BGE 或生成新向量。完整证据见 `docs/M45_P2C_SEMANTIC_HOLDOUT_FREEZE.md`。
+P2c 已按本方案冻结 36 条/144 候选。输入、Gold、配置和 manifest SHA 分别为 `686508EA...141EA`、`9CAF5E4C...C8896`、`D119D075...679F0`、`44424FC2...53C8`。文件规范字节为 UTF-8 + LF；参数网格、选择器、指标分母和安全分区已有离线契约测试，没有加载 BGE 或生成新向量。完整证据见 `docs/M45_P2C_SEMANTIC_HOLDOUT_FREEZE.md`。
 
 下一次只允许一组两次正式 BGE 运行；通过则进入 P3，未通过则关闭本轮 Dense-only 优化。不得自动进入 reranker、其他 Embedding 模型、向量数据库或更大合成题库。
 

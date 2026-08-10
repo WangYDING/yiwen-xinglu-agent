@@ -62,6 +62,10 @@ def test_holdout_manifest_hashes_counts_and_partitions_are_frozen() -> None:
     assert manifest.expectation_sha256 == sha(GOLD)
     assert manifest.config_sha256 == sha(CONFIG)
     assert manifest.observed_development_input_sha256 == sha(OBSERVED)
+    assert all(
+        b"\r\n" not in path.read_bytes()
+        for path in (INPUT, GOLD, CONFIG, MANIFEST)
+    )
     assert len(suite.scenarios) == 36
     assert sum(item.split is HoldoutSplit.CALIBRATION for item in suite.scenarios) == 12
     assert sum(item.split is HoldoutSplit.FINAL_TEST for item in suite.scenarios) == 24
