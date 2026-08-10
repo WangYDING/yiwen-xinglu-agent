@@ -1,8 +1,9 @@
 """Player aggregate state."""
 
 from enum import Enum
+from typing import Annotated
 
-from pydantic import Field, model_validator
+from pydantic import Field, StrictInt, model_validator
 
 from .base import DomainModel, Identifier, NonEmptyText
 from .relationship import RelationshipState
@@ -18,6 +19,7 @@ class TeachingStage(str, Enum):
 class PlayerState(DomainModel):
     player_id: Identifier
     display_name: NonEmptyText
+    revision: Annotated[StrictInt, Field(ge=0)] = 0
     teaching_stage: TeachingStage = TeachingStage.NOVICE
     handled_case_ids: frozenset[Identifier] = Field(default_factory=frozenset)
     skills: dict[Identifier, SkillState] = Field(default_factory=dict)

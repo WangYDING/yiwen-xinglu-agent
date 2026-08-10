@@ -42,7 +42,7 @@ Word 设计总结、`xuanyi-npc-handoff` 和 `docs/algorithm-experiment-plan-v0.
 | M4.5-P3：真实 V1 Agent Pilot | 本轮取消 | P2d 未达到准入线，真实语义记忆不得进入 Agent Prompt；不描述为通过或已执行 |
 | M4.5 终止审计 | 已完成：`closed_with_known_dense_retrieval_limitations` | 本地 BGE 工程、安全与重复性通过，Dense 排名主要门槛通过，但保守召回 micro F1 `0.6667`、更正切片 FN `1`；完整结论见 `docs/M45_TERMINATION_AUDIT.md` |
 | M5-P0：多病例纵向切片规划 | 已完成 | 三病例用户流程、Runner 边界、确定性跨 Episode 连续性、两个新病例概要、双岗位证据与 P1–P5 验收已冻结 |
-| M5-P1：正式多病例 Episode Runner | 未开始 | 交互式 CLI、玩家/病例选择、开始/恢复/退出与结构化故障处理 |
+| M5-P1：正式多病例 Episode Runner | 已完成 | 可注入 CaseCatalog/应用服务、严格公开结果、交互式 CLI、玩家/病例选择、原子保存、真实双进程恢复、完整旧纸伞 `resolved / 100` |
 | M5-P2：两个完整新病例 | 未开始 | 复用现有 Schema/Engine 的可玩病例、无 LLM 闭环、重放与恢复 |
 | M5-P3：确定性跨 Episode 连续性 | 未开始 | 从可信事件投影公开 CampaignFact 和至少一项可见成长；至少两处后续反应，不依赖 BGE |
 | M5-P4：Agent 运行模式 | 未开始 | no-LLM、Fake、DeepSeek V0 与只记录不注入的 semantic shadow |
@@ -210,7 +210,7 @@ P4 的 Precision、Recall、F1 与 False Memory Rate 只描述冻结合成 Gold 
 
 M4 退出审计已核对两个同名 Gold 检查点，确认 `118b3b1` 是包含 14 条场景、预期、manifest 和严格契约的最终有效冻结基线；从冻结到 P4 最终提交，三份 Gold 文件、阈值、排序规则与 P1–P3 产品实现均未修改。14/14 场景与两次确定性哈希再次通过，安全硬门槛全部为 0。完整逐项证据见 `docs/M4_EXIT_AUDIT.md`。
 
-M4 的完成只表示 Fake Embedding 下的离线工程契约与安全边界闭环。真实 V1 DoctorAgent 记忆注入、真实玩家收益、生产性能和并发多进程事务仍未验证；它们不构成 M4 退出阻塞。当前 M5-P0 只完成规划，M5 工程实现尚未开始。
+M4 的完成只表示 Fake Embedding 下的离线工程契约与安全边界闭环。真实 V1 DoctorAgent 记忆注入、真实玩家收益、生产性能和并发多进程事务仍未验证；它们不构成 M4 退出阻塞。当前 M5-P0/P1 已完成：普通用户可以通过交互式 CLI 运行并跨进程恢复旧纸伞病例；M5-P2 的两个新病例尚未开始。
 
 ## M4.5 终止边界与 M5 入口
 
@@ -224,7 +224,7 @@ M4.5 不重新打开或改写 M4。P0 已完成本机只读调查、官方资料
 4. M4.5-P2c 已实现最小方案并冻结 36 条全新 holdout；P2d 已在独立 runner 上完成唯一一组两次本地 BGE 运行；
 5. P2d 工程、安全和重复性通过，但 micro F1 与更正切片未过线；本轮 Dense-only 优化已经关闭，不进入 P3，也不自动扩展检索研究；
 6. M4.5 已以 `closed_with_known_dense_retrieval_limitations` 完成终止审计；
-7. M5-P0 已冻结三病例游戏纵向切片，P1 工程实现尚未开始。
+7. M5-P0 已冻结三病例游戏纵向切片；P1 随后完成本地交互式多病例 Runner，P2 尚未开始。
 
 M5 原先等待 M4.5，是为了避免把记忆召回问题与教学策略问题混为同一个实验变量。M4.5-P1 已在项目 `.venv` 中安装固定可选依赖，只下载固定 revision 的 11 个 dense safetensors 白名单文件，并以网络阻断方式完成真实本地权重烟雾；详细身份、哈希、磁盘和性能证据见 `docs/M45_P1_LOCAL_EMBEDDING_REPORT.md`。P2 v1 已在 `e813312` 冻结 15 条/75 文本，但第一次正式本地运行因评测器把合法语义负例误计为生命周期安全违规而停止；P2a 保留该历史并冻结 v2 三分区契约。v2 随后经历入口、身份和 Windows 遥测三次诚实停止，最终在 `cad07ff` 上完成两次正式运行：安全和重复性门禁通过，但 test Recall@3 与 False Memory Rate 未过线。P2b 只用已保存向量确认正确更正与极短相关项均落到第 4，且相关/负例分数重叠；任何阈值或 Top-N 都不能修复候选顺序。完整证据见 `docs/M45_P2B_SEMANTIC_FAILURE_ANALYSIS.md`，新 holdout 设计见 `docs/M45_HOLDOUT_VALIDATION_PLAN.md`；当前 P3 已取消本轮执行。
 
@@ -232,4 +232,4 @@ P2c 随后冻结 V2 表示和 36 条全新 holdout；P2d 在精确执行提交 `
 
 V1 语义记忆从本审计起默认关闭、仅为实验功能且不得进入正式 Agent Prompt。可选 shadow mode 只能记录“本来会召回什么”，不得影响 Agent 行动、课程、工具或玩家状态。未来只有基于真实多病例轨迹重新立项并通过独立验证，才可再次申请 Prompt 注入。
 
-M5 从游戏 AI 产品纵向切片开始：P1 提供普通用户可操作的多病例 Runner，P2 新增两个完整病例，P3 用确定性事件投影实现跨 Episode 连续性，P4 提供 no-LLM/Fake/DeepSeek V0 与语义 shadow 模式，P5 完成三病例试玩验收。自适应教学、Reflection、多 Agent 和网页界面不属于本轮 M5 最小切片。
+M5 从游戏 AI 产品纵向切片开始：P1 已提供普通用户可操作的多病例 Runner，当前目录只有旧纸伞；P2 新增两个完整病例，P3 用确定性事件投影实现跨 Episode 连续性，P4 提供 no-LLM/Fake/DeepSeek V0 与语义 shadow 模式，P5 完成三病例试玩验收。自适应教学、Reflection、多 Agent 和网页界面不属于本轮 M5 最小切片。

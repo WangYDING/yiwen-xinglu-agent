@@ -456,3 +456,17 @@ M4.5-P2 的最终判定是“工程、安全、重复性通过，语义质量未
 - **外部边界**：本轮 BGE 加载 0、真实向量生成 0、网络请求 0、DeepSeek `/models` 0、Chat 0、外部 Embedding API 0、费用 0 CNY。
 
 本轮只完成审计和规划。M4.5 的历史停止与真实负结果没有改写；M5-P1、M4.5-P3、M5 自适应教学、Reflection、网页和多 Agent 均未实现。
+
+## 2026-08-10：M5-P1 交互式多病例 Episode Runner
+
+- **基线与范围**：基于 `4d5d22d9bdb401384265297810a5f7fb7b437a1f`。新增可注入 `CaseCatalog`、`MultiCaseEpisodeService` 与 `xuanyi-play`，当前目录仍只开放“旧纸伞与失约书生”；没有新增病例、Campaign 成长、跨案影响、DeepSeek、BGE、semantic shadow、网页或自适应教学。
+- **应用边界**：CLI 只把编号选择转换为严格应用输入和既有 `AgentAction`；应用服务加载可信病例/玩家/会话，复用 `V0ToolExecutor`、`FixedV0DiagnosisReadinessPolicy`、`AgentContextFilter`、`CaseEngine` 与 `JsonStateStore`。发现线索、诊断、处置、得分和修订只能来自既有领域事件。显示名做 NFKC/空白规范化，拒绝控制字符和空名称；玩家与会话 ID、时钟均可注入。
+- **公开契约**：服务固定提供创建/列出玩家、列出病例、开始/恢复 Episode、提交行动、完成确认和退出。返回严格的成功状态、稳定错误码、安全消息、玩家/病例/会话 ID、玩家/会话修订、事件序号、`PlayerView`、`CaseObservation` 和公开可选项；不返回根因、正确性、隐藏评分、未发现线索、路径、堆栈、密钥或环境变量。
+- **跨进程恢复**：专项测试用两个独立 Python PID 和同一临时状态目录运行模块入口。进程一创建玩家、启动 Episode、提交事件 1 后以退出码 0 结束；进程二选择同一 `player_id`，恢复同一 `session_id`，提交连续事件 2 后以退出码 0 结束。修订从 1 连续到 2，磁盘上始终只有一个会话；两个 stderr 均为空，进程均已回收且没有孤儿进程。
+- **完整参考轨迹**：独立无 LLM CLI 进程完成 6 次公开调查、1 次诊断和 1 次处置，事件严格为 1–8、修订为 8，最终 `resolved / 100`；从初始状态重放事件得到完全相同终态。
+- **拒绝零写入**：未就绪诊断、未知调查/诊断/处置、重复启动、跨玩家恢复、完成后操作和保存失败均返回稳定安全错误；测试逐字节比较拒绝前后会话文件，事件序号为空、修订不变，并返回刷新后的公开选项。`finish_episode` 重复调用幂等，`quit` 不产生领域事件。
+- **安装入口**：使用项目 Python、`PIP_NO_INDEX=1`、`--no-deps --no-build-isolation -e .` 离线刷新 editable 安装；没有解析、升级或下载依赖。`xuanyi-play.exe` SHA 为 `A6C8EA48C753D1868D0A75DD97AC27561115E7641F820B6A76E72CC8110D5E3E`，`xuanyi-play --help` 和 `python -m xuanyi_npc.cli.play --help` 可用。
+- **专项与全量**：M5-P1 专项 32 passed；MCP P0/P1 22 passed；V0 DoctorAgent/Runner 与 P0 dev 评测 25 passed；全量 391 passed（391 collected）。P0 Fake LLM 3 场景/6 轨迹全部符合预期；无 LLM Demo 为 `resolved / 100`；`pip check`、`git diff --check`、敏感信息和运行文件跟踪检查通过。
+- **外部边界**：DeepSeek `/models` 0、Chat 0、本地 BGE 加载 0、Embedding API 0、网络请求 0、费用 0 CNY；没有读取 API Key，也没有创建或修改 SQLite 长期记忆。
+
+M5-P1 已完成，M5-P2 尚未开始。P2 前没有新的架构级用户决策阻塞；下一步仍需单独授权两个正式病例的产品设计落地。

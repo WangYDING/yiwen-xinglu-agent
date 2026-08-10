@@ -48,6 +48,16 @@ class JsonStateStore:
     def load_case_session(self, session_id: str) -> CaseSessionState:
         return self._read("case_sessions", session_id, CaseSessionState)
 
+    def list_players(self) -> tuple[PlayerState, ...]:
+        """Return all validated player snapshots in stable ID order."""
+
+        return self._list("players", PlayerState, "player_id")
+
+    def list_case_sessions(self) -> tuple[CaseSessionState, ...]:
+        """Return all validated case sessions in stable ID order."""
+
+        return self._list("case_sessions", CaseSessionState, "session_id")
+
     def _path(self, namespace: str, identifier: str) -> Path:
         try:
             safe_identifier = _identifier_adapter.validate_python(identifier)
@@ -99,3 +109,35 @@ class JsonStateStore:
             return model_type.model_validate_json(payload)
         except (ValidationError, ValueError) as exc:
             raise StateCorruptionError(f"{namespace} state is invalid") from exc
+
+    def _list(
+        self,
+        namespace: str,
+        model_type: type[ModelT],
+        identifier_field: str,
+    ) -> tuple[ModelT, ...]:
+        directory = self.root / namespace
+        try:
+            if not directory.exists():
+                return ()
+            if not directory.is_dir():
+                raise StateCorruptionError(f"{namespace} state namespace is invalid")
+            paths = tuple(sorted(directory.glob("*.json"), key=lambda path: path.name))
+        except OSError as exc:
+            raise StorageError(f"failed to list {namespace} state") from exc
+
+        items: list[ModelT] = []
+        for path in paths:
+            try:
+                payload = path.read_text(encoding="utf-8")
+                item = model_type.model_validate_json(payload)
+            except OSError as exc:
+                raise StorageError(f"failed to read {namespace} state") from exc
+            except (ValidationError, ValueError) as exc:
+                raise StateCorruptionError(f"{namespace} state is invalid") from exc
+            if getattr(item, identifier_field) != path.stem:
+                raise StateCorruptionError(
+                    f"{namespace} snapshot identifier does not match its file"
+                )
+            items.append(item)
+        return tuple(items)
