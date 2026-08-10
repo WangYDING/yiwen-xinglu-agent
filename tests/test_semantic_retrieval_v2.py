@@ -159,7 +159,7 @@ def test_embedding_document_v2_uses_receipts_without_changing_authority(
         documents.append(builder.build(memory=memory, source=source).text)
 
     assert documents[0] == (
-        "旧纸伞与失约书生。调查。观察书生的神色、动作、影子与周围灯火表现。"
+        "观察书生的神色、动作、影子与周围灯火表现。"
         "发现。书生近来昼夜读书,神色疲惫。疲惫能解释困倦,却不能解释契痕;"
         "灯火稳定时,书生的影缘仍比身体动作慢半拍"
     )
@@ -230,6 +230,55 @@ def test_v2_space_marks_old_vectors_stale_then_rebuilds_idempotently(
         player_id=qualified_player_state.player_id,
         embedding_space_id=DeterministicFakeEmbedding.embedding_space_id,
     )
+
+
+def test_corrected_short_memory_is_not_expanded_by_a_code_template(
+    tmp_path: Path,
+    case_definition: CaseDefinition,
+    qualified_player_state: PlayerState,
+) -> None:
+    repository = repository_at(tmp_path / "memory.sqlite3")
+    original_id = project_reference(
+        repository,
+        case_definition,
+        qualified_player_state,
+        count=1,
+        session_id="episode_short_correction",
+    )[0]
+    operation = MemoryCorrectionOperation(
+        operation_id=stable_lifecycle_operation_id(
+            "correct",
+            qualified_player_state.player_id,
+            original_id,
+            "short_correction",
+        ),
+        request_id="short_correction",
+        player_id=qualified_player_state.player_id,
+        target_memory_id=original_id,
+        reason=MemoryLifecycleReason.VERIFIED_CORRECTION,
+        trusted_boundary=TrustedMemoryBoundary.ADMINISTRATOR,
+        occurred_at=FIXED_TIME,
+        replacement_public_content="践诺",
+    )
+    replacement_id = repository.correct_memory(operation).replacement_memory_id
+    assert replacement_id is not None
+    replacement = repository.get_memory(
+        player_id=qualified_player_state.player_id,
+        memory_id=replacement_id,
+    )
+    source = repository.get_source_receipt(
+        player_id=replacement.player_id,
+        source_event_id=replacement.source_event_id,
+        projection_version=replacement.projection_version,
+        projection_ordinal=replacement.projection_ordinal,
+    )
+
+    document = EmbeddingDocumentV2Builder().build(
+        memory=replacement,
+        source=source,
+    )
+
+    assert document.text == "践诺"
 
 
 def test_conservative_margin_gate_is_deterministic_and_keeps_authority_content_in_prompt(
@@ -314,5 +363,4 @@ def test_conservative_margin_gate_is_deterministic_and_keeps_authority_content_i
         memory_id=ids[0],
     ).content
     assert authority in prompt
-    assert "更正后的历史" not in prompt
     assert "embedding_document_v2" not in prompt

@@ -1,0 +1,22 @@
+{
+  "schema_version": "m45_semantic_holdout_manifest_v1",
+  "suite_id": "m45_semantic_holdout_001",
+  "input_path": "data/evaluation/m45_semantic_holdout_inputs_v1.json",
+  "expectation_path": "data/evaluation/m45_semantic_holdout_expectations_v1.json",
+  "config_path": "data/evaluation/m45_semantic_holdout_config_v1.json",
+  "input_sha256": "d5069516a76a95918cd12c13e193e256116a219788c5b2965e9f61efcebd0116",
+  "expectation_sha256": "3de2edbbf949b9e3b887982f12605dfeec772ec98aee56d79a402aad46d55d5d",
+  "config_sha256": "f083f55e3dca9a71f4b7e44423dd19e66645abf437d34327ab893cb037da2845",
+  "observed_development_input_sha256": "ca55bebdafaa59c06eab156c44316c2f862264e9082c71b768ab54d867674f3d",
+  "scenario_count": 36,
+  "calibration_count": 12,
+  "calibration_relevant_count": 8,
+  "calibration_empty_count": 4,
+  "final_test_count": 24,
+  "final_test_relevant_count": 20,
+  "final_test_empty_count": 4,
+  "candidates_per_scenario": 4,
+  "candidate_count": 144,
+  "input_texts_are_synthetic_public_only": true,
+  "bge_loaded_or_run": false
+}

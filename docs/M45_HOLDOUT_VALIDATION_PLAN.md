@@ -19,7 +19,7 @@
 
 相关场景的主题构成为：更正替代 4、极短文本 4、否定/反义 4、高字面诱饵 4、中英混合实体 4、较长文本 2、多相关项 3、Prompt 注入文本 3，共 28 条。每类至少 1 条进入 calibration，其余进入 final test。8 条空结果在 calibration/test 各 4 条。
 
-安全状态作为正交覆盖叠加到场景中：至少各 4 条包含跨玩家、当前 Episode、superseded、invalidated、hard-deleted 候选。所有安全项仍必须在余弦排序、Top-K、阈值和分差计算前过滤。
+安全状态作为正交覆盖叠加到 calibration/test：跨玩家和当前 Episode 各 2 条，superseded、invalidated、hard-deleted 各至少 1 条。所有安全项仍必须在余弦排序、Top-K、阈值和分差计算前过滤。
 
 ## 3. Gold 契约
 
@@ -127,7 +127,13 @@ Gold 预期只能进入评测器。Adapter、QueryBuilder、文档派生器、Re
 
 不得新增永久记忆写工具、改变 `AgentAction`、扩展 MCP、引入向量数据库、自适应课程或 Reflection。
 
-## 9. 网络、模型和费用
+## 9. P2c 实际冻结身份
+
+P2c 已按本方案冻结 36 条/144 候选。输入、Gold、配置和 manifest SHA 分别为 `D5069516...D0116`、`3DE2EDBB...D55D5D`、`F083F55E...A2845`、`703593E8...AD47`。参数网格、选择器、指标分母和安全分区已有离线契约测试；没有加载 BGE 或生成新向量。完整证据见 `docs/M45_P2C_SEMANTIC_HOLDOUT_FREEZE.md`。
+
+下一次只允许一组两次正式 BGE 运行；通过则进入 P3，未通过则关闭本轮 Dense-only 优化。不得自动进入 reranker、其他 Embedding 模型、向量数据库或更大合成题库。
+
+## 10. 网络、模型和费用
 
 推荐的 A/B/C 路线继续使用现有本地 BGE-M3，不需要新增模型下载、外部 API、账号或费用。实施阶段需要重新生成新空间的派生向量，但必须获得单独本地运行授权。
 

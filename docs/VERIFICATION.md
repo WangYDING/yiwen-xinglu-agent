@@ -424,3 +424,12 @@ M4.5-P2 再次因工程条件停止，不是质量失败，也不能判定通过
 - **反事实边界**：所有 Top-N、绝对阈值和分差比较均标记 `post_hoc_exploratory_only`。阈值 0.70 可将 FP 降为 0，但 FN 增至 6；Top-1 仍无法召回 rank-4 更正记录；0.65 + 0.01/0.02 分差在已观察数据上看似无 FP，也不能作为未见验证。
 - **下一轮门槛**：原 15 条转为开发/诊断集；规划 36 条新 holdout（12 calibration、24 final test，其中至少 20 条有相关答案），优先验证 `retrieval_query_v2`、`embedding_document_v2` 与 calibration 选择的保守门禁。安全预过滤和全部零计数要求不变。
 - **外部边界**：本轮 BGE 加载 0、新向量 0、网络尝试 0、DeepSeek `/models` 0、Chat 0、外部 Embedding API 0、费用 0 CNY。M4.5-P3 与 M5 未开始。
+
+## 2026-08-10：M4.5-P2c V2 表示与新 Holdout 离线冻结
+
+- **产品表示**：新增 `retrieval_query_v2`，只使用公开检索意图与已发现线索；新增从匹配来源收据派生的 `embedding_document_v2`。权威 SQLite 内容、来源链和生命周期未修改，极短更正文本不会被固定模板扩充；V1 Agent Prompt 继续使用原始安全 `MemoryView`。
+- **索引与策略**：V2 BGE 空间为 `bge_m3_142964af_dense_fp32_d1024_cuda_l512_rq2_doc2_v1`；旧空间明确为 `stale_representation`，不混入 V2。保守策略冻结 36 组阈值/返回数/分差组合，只接受完整 calibration 结果，final test 进入选择器时明确拒绝。
+- **Holdout**：36 条/144 候选全部且仅分为 relevant、semantic negative、safety excluded；calibration 为 8 相关 + 4 空，final test 为 20 相关 + 4 空。输入/Gold/配置/manifest SHA 分别为 `D5069516...D0116`、`3DE2EDBB...D55D5D`、`F083F55E...A2845`、`703593E8...AD47`。旧 15 条明确为已观察开发集。
+- **范围**：本轮本地 BGE 加载 0、真实向量 0、网络 0、DeepSeek `/models` 0、Chat 0、外部 Embedding API 0、费用 0 CNY。P2c 没有形成新语义质量结果；P3 与 M5 未开始。
+- **停止边界**：新 holdout 未来只允许一组两次正式运行；通过则进入 P3，未通过则关闭 Dense-only 优化，不自动追加 reranker、模型、向量数据库或题库。合成指标不表示游戏产品效果或玩家收益。
+- **离线回归**：P2c 查询/文档/索引/策略与 holdout 专项 11 passed；M4-P1/P2/P3/P4 与 P2c 组合专项 90 passed；M3 MCP + V0 Agent/Runner 38 passed；全量 347 passed。M4 原 14 条 Gold 双运行 14/14 通过且两次哈希均为 `01ecf59b42e37dc2c898fd893fc0234c3d9ff18701c22f77a31bed06511cb44e`，安全总计全 0；P0 Fake LLM 3 场景/6 轨迹符合预期；无 LLM Demo 为 `resolved / 100`；`pip check` 和 `git diff --check` 通过。

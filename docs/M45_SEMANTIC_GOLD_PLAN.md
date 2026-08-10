@@ -1,5 +1,7 @@
 # M4.5 真实语义 Gold 规划
 
+> **历史与当前数据角色**：本文件原 15 条语义 Gold 已经完成真实运行并用于 P2b 根因分析，因此只能作为 `observed_development_diagnostic_set`，不能再次证明新方案通过。当前未见准入数据是 P2c 冻结的 36 条 holdout，身份与边界见 `docs/M45_P2C_SEMANTIC_HOLDOUT_FREEZE.md`；旧输入和失败记录保持不变。
+
 ## 1. 定位与冻结边界
 
 本 Gold 专供 M4.5 真实 Embedding 与真实 V1 Pilot，不修改、不替代 M4 已冻结的 14 条 Fake Embedding 工程 Gold。

@@ -115,7 +115,7 @@ class EmbeddingDocumentV2Builder:
             )
         payload = source.public_payload
         if isinstance(payload, InvestigationPublicPayload):
-            parts = [payload.case_title, "调查", payload.public_action_description]
+            parts = [payload.public_action_description]
             if payload.newly_discovered_clues:
                 parts.extend(
                     (
@@ -128,7 +128,6 @@ class EmbeddingDocumentV2Builder:
                 )
         elif isinstance(payload, DiagnosisPublicPayload):
             parts = [
-                payload.case_title,
                 "玩家曾提交假设",
                 payload.public_hypothesis_description,
             ]
@@ -144,8 +143,6 @@ class EmbeddingDocumentV2Builder:
                 )
         elif isinstance(payload, TreatmentPublicPayload):
             parts = [
-                payload.case_title,
-                "处置",
                 payload.public_action_description,
                 "可观察结果",
                 payload.public_result,
@@ -155,7 +152,7 @@ class EmbeddingDocumentV2Builder:
                 raise SemanticRepresentationError(
                     "active correction content does not match its public receipt"
                 )
-            parts = ["更正后的历史", payload.replacement_public_content]
+            parts = [payload.replacement_public_content]
         else:  # pragma: no cover - discriminated union is closed by Pydantic
             raise SemanticRepresentationError("unsupported public memory source")
         text = normalize_semantic_text_v2(

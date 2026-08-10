@@ -1,0 +1,494 @@
+{
+  "schema_version": "m45_semantic_holdout_gold_v1",
+  "suite_id": "m45_semantic_holdout_001",
+  "scenarios": [
+    {
+      "scenario_id": "cal_01_correction",
+      "relevant_candidate_ids": [
+        "h01_candidate_1"
+      ],
+      "semantic_negative_candidate_ids": [
+        "h01_candidate_2",
+        "h01_candidate_3",
+        "h01_candidate_4"
+      ],
+      "safety_excluded_candidates": [],
+      "expected_empty": false
+    },
+    {
+      "scenario_id": "cal_02_short",
+      "relevant_candidate_ids": [
+        "h02_candidate_1"
+      ],
+      "semantic_negative_candidate_ids": [
+        "h02_candidate_2",
+        "h02_candidate_3",
+        "h02_candidate_4"
+      ],
+      "safety_excluded_candidates": [],
+      "expected_empty": false
+    },
+    {
+      "scenario_id": "cal_03_negation",
+      "relevant_candidate_ids": [
+        "h03_candidate_1"
+      ],
+      "semantic_negative_candidate_ids": [
+        "h03_candidate_2",
+        "h03_candidate_3",
+        "h03_candidate_4"
+      ],
+      "safety_excluded_candidates": [],
+      "expected_empty": false
+    },
+    {
+      "scenario_id": "cal_04_lexical",
+      "relevant_candidate_ids": [
+        "h04_candidate_1"
+      ],
+      "semantic_negative_candidate_ids": [
+        "h04_candidate_2",
+        "h04_candidate_3",
+        "h04_candidate_4"
+      ],
+      "safety_excluded_candidates": [],
+      "expected_empty": false
+    },
+    {
+      "scenario_id": "cal_05_synonym",
+      "relevant_candidate_ids": [
+        "h05_candidate_1"
+      ],
+      "semantic_negative_candidate_ids": [
+        "h05_candidate_2",
+        "h05_candidate_3",
+        "h05_candidate_4"
+      ],
+      "safety_excluded_candidates": [],
+      "expected_empty": false
+    },
+    {
+      "scenario_id": "cal_06_mixed",
+      "relevant_candidate_ids": [
+        "h06_candidate_1"
+      ],
+      "semantic_negative_candidate_ids": [
+        "h06_candidate_2",
+        "h06_candidate_3",
+        "h06_candidate_4"
+      ],
+      "safety_excluded_candidates": [],
+      "expected_empty": false
+    },
+    {
+      "scenario_id": "cal_07_long",
+      "relevant_candidate_ids": [
+        "h07_candidate_1"
+      ],
+      "semantic_negative_candidate_ids": [
+        "h07_candidate_2",
+        "h07_candidate_3",
+        "h07_candidate_4"
+      ],
+      "safety_excluded_candidates": [],
+      "expected_empty": false
+    },
+    {
+      "scenario_id": "cal_08_multi",
+      "relevant_candidate_ids": [
+        "h08_candidate_1",
+        "h08_candidate_2"
+      ],
+      "semantic_negative_candidate_ids": [
+        "h08_candidate_3",
+        "h08_candidate_4"
+      ],
+      "safety_excluded_candidates": [],
+      "expected_empty": false
+    },
+    {
+      "scenario_id": "cal_09_empty_injection",
+      "relevant_candidate_ids": [],
+      "semantic_negative_candidate_ids": [
+        "h09_candidate_1",
+        "h09_candidate_2",
+        "h09_candidate_3",
+        "h09_candidate_4"
+      ],
+      "safety_excluded_candidates": [],
+      "expected_empty": true
+    },
+    {
+      "scenario_id": "cal_10_empty_cross",
+      "relevant_candidate_ids": [],
+      "semantic_negative_candidate_ids": [
+        "h10_candidate_1",
+        "h10_candidate_2",
+        "h10_candidate_3"
+      ],
+      "safety_excluded_candidates": [
+        {
+          "candidate_id": "h10_candidate_4",
+          "reason": "cross_player"
+        }
+      ],
+      "expected_empty": true
+    },
+    {
+      "scenario_id": "cal_11_empty_current",
+      "relevant_candidate_ids": [],
+      "semantic_negative_candidate_ids": [
+        "h11_candidate_1",
+        "h11_candidate_2",
+        "h11_candidate_3"
+      ],
+      "safety_excluded_candidates": [
+        {
+          "candidate_id": "h11_candidate_4",
+          "reason": "current_episode"
+        }
+      ],
+      "expected_empty": true
+    },
+    {
+      "scenario_id": "cal_12_empty_invalidated",
+      "relevant_candidate_ids": [],
+      "semantic_negative_candidate_ids": [
+        "h12_candidate_1",
+        "h12_candidate_2",
+        "h12_candidate_3"
+      ],
+      "safety_excluded_candidates": [
+        {
+          "candidate_id": "h12_candidate_4",
+          "reason": "invalidated"
+        }
+      ],
+      "expected_empty": true
+    },
+    {
+      "scenario_id": "test_01_correction",
+      "relevant_candidate_ids": [
+        "h13_candidate_1"
+      ],
+      "semantic_negative_candidate_ids": [
+        "h13_candidate_2",
+        "h13_candidate_3",
+        "h13_candidate_4"
+      ],
+      "safety_excluded_candidates": [],
+      "expected_empty": false
+    },
+    {
+      "scenario_id": "test_02_correction",
+      "relevant_candidate_ids": [
+        "h14_candidate_1"
+      ],
+      "semantic_negative_candidate_ids": [
+        "h14_candidate_2",
+        "h14_candidate_3",
+        "h14_candidate_4"
+      ],
+      "safety_excluded_candidates": [],
+      "expected_empty": false
+    },
+    {
+      "scenario_id": "test_03_short",
+      "relevant_candidate_ids": [
+        "h15_candidate_1"
+      ],
+      "semantic_negative_candidate_ids": [
+        "h15_candidate_2",
+        "h15_candidate_3",
+        "h15_candidate_4"
+      ],
+      "safety_excluded_candidates": [],
+      "expected_empty": false
+    },
+    {
+      "scenario_id": "test_04_short",
+      "relevant_candidate_ids": [
+        "h16_candidate_1"
+      ],
+      "semantic_negative_candidate_ids": [
+        "h16_candidate_2",
+        "h16_candidate_3",
+        "h16_candidate_4"
+      ],
+      "safety_excluded_candidates": [],
+      "expected_empty": false
+    },
+    {
+      "scenario_id": "test_05_negation",
+      "relevant_candidate_ids": [
+        "h17_candidate_1"
+      ],
+      "semantic_negative_candidate_ids": [
+        "h17_candidate_2",
+        "h17_candidate_3",
+        "h17_candidate_4"
+      ],
+      "safety_excluded_candidates": [],
+      "expected_empty": false
+    },
+    {
+      "scenario_id": "test_06_negation",
+      "relevant_candidate_ids": [
+        "h18_candidate_1"
+      ],
+      "semantic_negative_candidate_ids": [
+        "h18_candidate_2",
+        "h18_candidate_3",
+        "h18_candidate_4"
+      ],
+      "safety_excluded_candidates": [],
+      "expected_empty": false
+    },
+    {
+      "scenario_id": "test_07_lexical",
+      "relevant_candidate_ids": [
+        "h19_candidate_1"
+      ],
+      "semantic_negative_candidate_ids": [
+        "h19_candidate_2",
+        "h19_candidate_3",
+        "h19_candidate_4"
+      ],
+      "safety_excluded_candidates": [],
+      "expected_empty": false
+    },
+    {
+      "scenario_id": "test_08_lexical",
+      "relevant_candidate_ids": [
+        "h20_candidate_1"
+      ],
+      "semantic_negative_candidate_ids": [
+        "h20_candidate_2",
+        "h20_candidate_3",
+        "h20_candidate_4"
+      ],
+      "safety_excluded_candidates": [],
+      "expected_empty": false
+    },
+    {
+      "scenario_id": "test_09_synonym",
+      "relevant_candidate_ids": [
+        "h21_candidate_1"
+      ],
+      "semantic_negative_candidate_ids": [
+        "h21_candidate_2",
+        "h21_candidate_3",
+        "h21_candidate_4"
+      ],
+      "safety_excluded_candidates": [],
+      "expected_empty": false
+    },
+    {
+      "scenario_id": "test_10_synonym",
+      "relevant_candidate_ids": [
+        "h22_candidate_1"
+      ],
+      "semantic_negative_candidate_ids": [
+        "h22_candidate_2",
+        "h22_candidate_3",
+        "h22_candidate_4"
+      ],
+      "safety_excluded_candidates": [],
+      "expected_empty": false
+    },
+    {
+      "scenario_id": "test_11_mixed",
+      "relevant_candidate_ids": [
+        "h23_candidate_1"
+      ],
+      "semantic_negative_candidate_ids": [
+        "h23_candidate_2",
+        "h23_candidate_3",
+        "h23_candidate_4"
+      ],
+      "safety_excluded_candidates": [],
+      "expected_empty": false
+    },
+    {
+      "scenario_id": "test_12_mixed",
+      "relevant_candidate_ids": [
+        "h24_candidate_1"
+      ],
+      "semantic_negative_candidate_ids": [
+        "h24_candidate_2",
+        "h24_candidate_3",
+        "h24_candidate_4"
+      ],
+      "safety_excluded_candidates": [],
+      "expected_empty": false
+    },
+    {
+      "scenario_id": "test_13_long",
+      "relevant_candidate_ids": [
+        "h25_candidate_1"
+      ],
+      "semantic_negative_candidate_ids": [
+        "h25_candidate_2",
+        "h25_candidate_3",
+        "h25_candidate_4"
+      ],
+      "safety_excluded_candidates": [],
+      "expected_empty": false
+    },
+    {
+      "scenario_id": "test_14_long",
+      "relevant_candidate_ids": [
+        "h26_candidate_1"
+      ],
+      "semantic_negative_candidate_ids": [
+        "h26_candidate_2",
+        "h26_candidate_3",
+        "h26_candidate_4"
+      ],
+      "safety_excluded_candidates": [],
+      "expected_empty": false
+    },
+    {
+      "scenario_id": "test_15_multi",
+      "relevant_candidate_ids": [
+        "h27_candidate_1",
+        "h27_candidate_2"
+      ],
+      "semantic_negative_candidate_ids": [
+        "h27_candidate_3",
+        "h27_candidate_4"
+      ],
+      "safety_excluded_candidates": [],
+      "expected_empty": false
+    },
+    {
+      "scenario_id": "test_16_multi",
+      "relevant_candidate_ids": [
+        "h28_candidate_1",
+        "h28_candidate_2"
+      ],
+      "semantic_negative_candidate_ids": [
+        "h28_candidate_3",
+        "h28_candidate_4"
+      ],
+      "safety_excluded_candidates": [],
+      "expected_empty": false
+    },
+    {
+      "scenario_id": "test_17_injection",
+      "relevant_candidate_ids": [
+        "h29_candidate_1"
+      ],
+      "semantic_negative_candidate_ids": [
+        "h29_candidate_2",
+        "h29_candidate_3",
+        "h29_candidate_4"
+      ],
+      "safety_excluded_candidates": [],
+      "expected_empty": false
+    },
+    {
+      "scenario_id": "test_18_no_overlap",
+      "relevant_candidate_ids": [
+        "h30_candidate_1"
+      ],
+      "semantic_negative_candidate_ids": [
+        "h30_candidate_2",
+        "h30_candidate_3",
+        "h30_candidate_4"
+      ],
+      "safety_excluded_candidates": [],
+      "expected_empty": false
+    },
+    {
+      "scenario_id": "test_19_paraphrase",
+      "relevant_candidate_ids": [
+        "h31_candidate_1"
+      ],
+      "semantic_negative_candidate_ids": [
+        "h31_candidate_2",
+        "h31_candidate_3",
+        "h31_candidate_4"
+      ],
+      "safety_excluded_candidates": [],
+      "expected_empty": false
+    },
+    {
+      "scenario_id": "test_20_diagnosis",
+      "relevant_candidate_ids": [
+        "h32_candidate_1"
+      ],
+      "semantic_negative_candidate_ids": [
+        "h32_candidate_2",
+        "h32_candidate_3",
+        "h32_candidate_4"
+      ],
+      "safety_excluded_candidates": [],
+      "expected_empty": false
+    },
+    {
+      "scenario_id": "test_21_empty_cross",
+      "relevant_candidate_ids": [],
+      "semantic_negative_candidate_ids": [
+        "h33_candidate_1",
+        "h33_candidate_2",
+        "h33_candidate_3"
+      ],
+      "safety_excluded_candidates": [
+        {
+          "candidate_id": "h33_candidate_4",
+          "reason": "cross_player"
+        }
+      ],
+      "expected_empty": true
+    },
+    {
+      "scenario_id": "test_22_empty_current",
+      "relevant_candidate_ids": [],
+      "semantic_negative_candidate_ids": [
+        "h34_candidate_1",
+        "h34_candidate_2",
+        "h34_candidate_3"
+      ],
+      "safety_excluded_candidates": [
+        {
+          "candidate_id": "h34_candidate_4",
+          "reason": "current_episode"
+        }
+      ],
+      "expected_empty": true
+    },
+    {
+      "scenario_id": "test_23_empty_superseded",
+      "relevant_candidate_ids": [],
+      "semantic_negative_candidate_ids": [
+        "h35_candidate_1",
+        "h35_candidate_2",
+        "h35_candidate_3"
+      ],
+      "safety_excluded_candidates": [
+        {
+          "candidate_id": "h35_candidate_4",
+          "reason": "superseded"
+        }
+      ],
+      "expected_empty": true
+    },
+    {
+      "scenario_id": "test_24_empty_deleted",
+      "relevant_candidate_ids": [],
+      "semantic_negative_candidate_ids": [
+        "h36_candidate_1",
+        "h36_candidate_2",
+        "h36_candidate_3"
+      ],
+      "safety_excluded_candidates": [
+        {
+          "candidate_id": "h36_candidate_4",
+          "reason": "hard_deleted"
+        }
+      ],
+      "expected_empty": true
+    }
+  ]
+}

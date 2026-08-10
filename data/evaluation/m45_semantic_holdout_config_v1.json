@@ -1,0 +1,258 @@
+{
+  "config_version": "m45_semantic_holdout_config_v1",
+  "model_repository": "BAAI/bge-m3",
+  "model_revision": "142964af7e05de16511657561de8e8750fc153a0",
+  "model_manifest_sha256": "d4ee3716bb6c6c5dd850ea0cf1d64f0218aed9cfbbc52a6e8061f439a05965a4",
+  "dependency_lock_sha256": "8e4179d4177fbafb62d6e1e17878ca7a71bb12c2d3d7d2747cf7ab83a1ffc0a6",
+  "embedding_space_id": "bge_m3_142964af_dense_fp32_d1024_cuda_l512_rq2_doc2_v1",
+  "precision": "fp32",
+  "device": "cuda",
+  "dimension": 1024,
+  "max_length_tokens": 512,
+  "query_template_version": "retrieval_query_v2",
+  "document_template_version": "embedding_document_v2",
+  "normalization_version": "nfkc_casefold_ws_v2",
+  "truncation_version": "unicode_codepoint_prefix_v2",
+  "ranking_order": "similarity_desc_memory_id_asc",
+  "parameter_grid": [
+    {
+      "min_similarity": 0.45,
+      "max_results": 1,
+      "minimum_margin": 0.0
+    },
+    {
+      "min_similarity": 0.45,
+      "max_results": 1,
+      "minimum_margin": 0.03
+    },
+    {
+      "min_similarity": 0.45,
+      "max_results": 1,
+      "minimum_margin": 0.06
+    },
+    {
+      "min_similarity": 0.45,
+      "max_results": 2,
+      "minimum_margin": 0.0
+    },
+    {
+      "min_similarity": 0.45,
+      "max_results": 2,
+      "minimum_margin": 0.03
+    },
+    {
+      "min_similarity": 0.45,
+      "max_results": 2,
+      "minimum_margin": 0.06
+    },
+    {
+      "min_similarity": 0.45,
+      "max_results": 3,
+      "minimum_margin": 0.0
+    },
+    {
+      "min_similarity": 0.45,
+      "max_results": 3,
+      "minimum_margin": 0.03
+    },
+    {
+      "min_similarity": 0.45,
+      "max_results": 3,
+      "minimum_margin": 0.06
+    },
+    {
+      "min_similarity": 0.55,
+      "max_results": 1,
+      "minimum_margin": 0.0
+    },
+    {
+      "min_similarity": 0.55,
+      "max_results": 1,
+      "minimum_margin": 0.03
+    },
+    {
+      "min_similarity": 0.55,
+      "max_results": 1,
+      "minimum_margin": 0.06
+    },
+    {
+      "min_similarity": 0.55,
+      "max_results": 2,
+      "minimum_margin": 0.0
+    },
+    {
+      "min_similarity": 0.55,
+      "max_results": 2,
+      "minimum_margin": 0.03
+    },
+    {
+      "min_similarity": 0.55,
+      "max_results": 2,
+      "minimum_margin": 0.06
+    },
+    {
+      "min_similarity": 0.55,
+      "max_results": 3,
+      "minimum_margin": 0.0
+    },
+    {
+      "min_similarity": 0.55,
+      "max_results": 3,
+      "minimum_margin": 0.03
+    },
+    {
+      "min_similarity": 0.55,
+      "max_results": 3,
+      "minimum_margin": 0.06
+    },
+    {
+      "min_similarity": 0.65,
+      "max_results": 1,
+      "minimum_margin": 0.0
+    },
+    {
+      "min_similarity": 0.65,
+      "max_results": 1,
+      "minimum_margin": 0.03
+    },
+    {
+      "min_similarity": 0.65,
+      "max_results": 1,
+      "minimum_margin": 0.06
+    },
+    {
+      "min_similarity": 0.65,
+      "max_results": 2,
+      "minimum_margin": 0.0
+    },
+    {
+      "min_similarity": 0.65,
+      "max_results": 2,
+      "minimum_margin": 0.03
+    },
+    {
+      "min_similarity": 0.65,
+      "max_results": 2,
+      "minimum_margin": 0.06
+    },
+    {
+      "min_similarity": 0.65,
+      "max_results": 3,
+      "minimum_margin": 0.0
+    },
+    {
+      "min_similarity": 0.65,
+      "max_results": 3,
+      "minimum_margin": 0.03
+    },
+    {
+      "min_similarity": 0.65,
+      "max_results": 3,
+      "minimum_margin": 0.06
+    },
+    {
+      "min_similarity": 0.75,
+      "max_results": 1,
+      "minimum_margin": 0.0
+    },
+    {
+      "min_similarity": 0.75,
+      "max_results": 1,
+      "minimum_margin": 0.03
+    },
+    {
+      "min_similarity": 0.75,
+      "max_results": 1,
+      "minimum_margin": 0.06
+    },
+    {
+      "min_similarity": 0.75,
+      "max_results": 2,
+      "minimum_margin": 0.0
+    },
+    {
+      "min_similarity": 0.75,
+      "max_results": 2,
+      "minimum_margin": 0.03
+    },
+    {
+      "min_similarity": 0.75,
+      "max_results": 2,
+      "minimum_margin": 0.06
+    },
+    {
+      "min_similarity": 0.75,
+      "max_results": 3,
+      "minimum_margin": 0.0
+    },
+    {
+      "min_similarity": 0.75,
+      "max_results": 3,
+      "minimum_margin": 0.03
+    },
+    {
+      "min_similarity": 0.75,
+      "max_results": 3,
+      "minimum_margin": 0.06
+    }
+  ],
+  "selection_objective_version": "safety_empty_macrof1_recall3_mrr_irr_conservative_v1",
+  "no_valid_parameter_behavior": "fail_calibration",
+  "calibration_scenario_ids": [
+    "cal_01_correction",
+    "cal_02_short",
+    "cal_03_negation",
+    "cal_04_lexical",
+    "cal_05_synonym",
+    "cal_06_mixed",
+    "cal_07_long",
+    "cal_08_multi",
+    "cal_09_empty_injection",
+    "cal_10_empty_cross",
+    "cal_11_empty_current",
+    "cal_12_empty_invalidated"
+  ],
+  "final_test_scenario_ids": [
+    "test_01_correction",
+    "test_02_correction",
+    "test_03_short",
+    "test_04_short",
+    "test_05_negation",
+    "test_06_negation",
+    "test_07_lexical",
+    "test_08_lexical",
+    "test_09_synonym",
+    "test_10_synonym",
+    "test_11_mixed",
+    "test_12_mixed",
+    "test_13_long",
+    "test_14_long",
+    "test_15_multi",
+    "test_16_multi",
+    "test_17_injection",
+    "test_18_no_overlap",
+    "test_19_paraphrase",
+    "test_20_diagnosis",
+    "test_21_empty_cross",
+    "test_22_empty_current",
+    "test_23_empty_superseded",
+    "test_24_empty_deleted"
+  ],
+  "metrics_version": "semantic_holdout_metrics_v1",
+  "admission": {
+    "recall_at_1_minimum": 0.8,
+    "recall_at_3_minimum": 0.9,
+    "mrr_minimum": 0.85,
+    "macro_f1_minimum": 0.8,
+    "micro_f1_minimum": 0.8,
+    "irrelevant_retrieval_rate_maximum": 0.1,
+    "empty_accuracy_required": 1.0,
+    "correction_false_negative_required": 0,
+    "negation_false_negative_required": 0,
+    "safety_total_required": 0,
+    "repeated_order_and_metrics_identical": true,
+    "vector_max_abs_difference": 1e-6
+  },
+  "formal_run_limit": 2,
+  "real_vector_run_authorized": false
+}
