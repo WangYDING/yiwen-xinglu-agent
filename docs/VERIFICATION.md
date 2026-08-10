@@ -377,3 +377,13 @@ M4.5-P2 保持进行中且未达到 P3 准入线；修复后的评测契约必�
 - **外部边界**：本轮本地 BGE 加载 0、真实权重推理 0、网络请求 0、DeepSeek `/models` 0、Chat 0、Embedding API 0、费用 0 CNY。
 
 M4.5-P2a 只形成新的离线冻结检查点，不完成 P2。任何正式 BGE 运行都需重新授权；M4.5-P3 和 M5 尚未开始。
+
+## 2026-08-10：M4.5-P2 v2 正式运行在评测器启动前停止
+
+- **授权与身份**：授权基线 `b78033099663464bf3d7790c6fef5d4b973dc692`、干净工作树、输入/v2 expectations/v2 manifest/配置 SHA 全部匹配。模型 11 文件白名单、主权重 SHA、依赖锁、CUDA 12.6、RTX 4070 SUPER、FP32/1024/CUDA 空间均通过只读预检。
+- **停止事实**：项目 `.venv` 不存在已安装的 `xuanyi-semantic-memory-eval.exe`，PowerShell 在创建 Python 评测进程前返回 `CommandNotFoundException`。这是授权规定的运行环境停止条件，因此没有改用模块入口、没有刷新安装、没有自动重试，也没有启动第二轮。
+- **数据边界**：正式运行 0、BGE 加载 0、Embedding 文本/向量 0；15 条 Top-K、calibration/test、阈值、语义/安全指标、Fake/BGE 差异、延迟/资源和重复性全部为 `not_observed`。不得把启动前预检写成正式 Pilot 结果。
+- **停止检查点**：忽略目录 `results/m45_semantic_v2_launch_stop_20260810.json`，SHA-256 为 `4C76415D1789D9CE5BEA4AA93E5418670C2976FD1AB732133791EFEFB88531AF`；两个预注册正式结果文件均未创建。
+- **外部边界**：网络连接尝试 0、DeepSeek `/models` 0、Chat 0、外部 Embedding API 0、费用 0 CNY。输入、Gold、模型、Adapter、阈值、排序和产品实现均未修改。
+
+M4.5-P2 仍未完成且不能判断 P3 准入；下一次正式运行需要新的明确授权。M4.5-P3 与 M5 尚未开始。
