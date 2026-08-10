@@ -66,15 +66,27 @@ ManifestPath = Annotated[
 ]
 
 
-def bge_m3_embedding_space_id(*, device: str, max_input_length: int) -> str:
+def bge_m3_embedding_space_id(
+    *,
+    device: str,
+    max_input_length: int,
+    representation_version: str = "legacy_v1",
+) -> str:
     if device not in {"cpu", "cuda"}:
         raise ValueError("BGE-M3 device identity is unsupported")
     if max_input_length < 1 or max_input_length > 8192:
         raise ValueError("BGE-M3 maximum input length is outside the supported range")
-    return (
-        "bge_m3_142964af7e05_dense_fp32_"
-        f"d{BGE_M3_DIMENSION}_{device}_l{max_input_length}_v1"
-    )
+    if representation_version == "legacy_v1":
+        return (
+            "bge_m3_142964af7e05_dense_fp32_"
+            f"d{BGE_M3_DIMENSION}_{device}_l{max_input_length}_v1"
+        )
+    if representation_version == "retrieval_v2":
+        return (
+            "bge_m3_142964af_dense_fp32_"
+            f"d{BGE_M3_DIMENSION}_{device}_l{max_input_length}_rq2_doc2_v1"
+        )
+    raise ValueError("BGE-M3 representation identity is unsupported")
 
 
 class BgeM3VerifiedFile(StrictMemoryModel):
@@ -126,6 +138,7 @@ class BgeM3LocalEmbeddingConfig(StrictMemoryModel):
     adapter_version: Literal["bge_m3_sentence_transformers_v1"] = (
         BGE_M3_ADAPTER_VERSION
     )
+    representation_version: Literal["legacy_v1", "retrieval_v2"] = "legacy_v1"
     embedding_space_id: Identifier
     dense_only: Literal[True] = True
     local_files_only: Literal[True] = True
@@ -136,6 +149,7 @@ class BgeM3LocalEmbeddingConfig(StrictMemoryModel):
         expected = bge_m3_embedding_space_id(
             device=self.device,
             max_input_length=self.max_input_length,
+            representation_version=self.representation_version,
         )
         if self.embedding_space_id != expected:
             raise ValueError("embedding space ID does not match the local model identity")

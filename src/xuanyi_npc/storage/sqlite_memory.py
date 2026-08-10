@@ -285,6 +285,31 @@ class SQLiteMemoryRepository:
         finally:
             connection.close()
 
+    def list_player_embeddings(
+        self,
+        *,
+        player_id: str,
+    ) -> tuple[DerivedEmbeddingRecord, ...]:
+        """Read all active derived spaces for one player for version-staleness checks."""
+
+        connection = self._connect()
+        try:
+            rows = connection.execute(
+                """
+                SELECT derived.* FROM memory_embeddings AS derived
+                JOIN memory_events AS authority
+                  ON authority.player_id = derived.player_id
+                 AND authority.memory_id = derived.memory_id
+                WHERE derived.player_id = ?
+                  AND authority.status = ?
+                ORDER BY derived.embedding_space_id ASC, derived.memory_id ASC
+                """,
+                (player_id, MemoryStatus.ACTIVE.value),
+            ).fetchall()
+            return tuple(self._embedding_from_row(row) for row in rows)
+        finally:
+            connection.close()
+
     def get_embedding(
         self,
         *,

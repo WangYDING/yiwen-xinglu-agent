@@ -53,6 +53,7 @@ from .errors import (
     UnsupportedMemorySourceError,
 )
 from .embeddings import (
+    CONSERVATIVE_RETRIEVAL_CONFIG_VERSION,
     EMBEDDING_REQUEST_VERSION,
     EMBEDDING_RESULT_VERSION,
     FAKE_EMBEDDING_ALGORITHM_VERSION,
@@ -76,6 +77,9 @@ from .embeddings import (
     MemoryIndexState,
     MemoryIndexStatus,
     MemoryRetrievalConfig,
+    ConservativeRetrievalConfigV2,
+    RepresentationIndexState,
+    RepresentationIndexStatus,
     decode_float32_le,
     encode_float32_le,
     normalize_embedding_text,
@@ -83,6 +87,16 @@ from .embeddings import (
     validate_embedding_batch,
     validate_vector,
     vector_l2_norm,
+)
+from .representations import (
+    EMBEDDING_DOCUMENT_V1,
+    EMBEDDING_DOCUMENT_V2,
+    RETRIEVAL_QUERY_V2,
+    EmbeddingDocument,
+    EmbeddingDocumentV1Builder,
+    EmbeddingDocumentV2Builder,
+    SemanticRepresentationError,
+    normalize_semantic_text_v2,
 )
 from .local_bge import (
     BGE_M3_ADAPTER_VERSION,
@@ -107,6 +121,7 @@ from .projection import (
 
 __all__ = [
     "AuthoritativeMemoryRecord",
+    "CONSERVATIVE_RETRIEVAL_CONFIG_VERSION",
     "CommittedActionPublicView",
     "CommittedActionPublicViewBuilder",
     "DEFAULT_PROJECTION_VERSION",
@@ -158,6 +173,9 @@ __all__ = [
     "MemoryPlayerIsolationError",
     "MemoryProjectionError",
     "MemoryRetrievalConfig",
+    "ConservativeRetrievalConfigV2",
+    "RepresentationIndexState",
+    "RepresentationIndexStatus",
     "MemorySchemaVersionError",
     "MemorySourceEventType",
     "MemoryStatus",
@@ -198,4 +216,12 @@ __all__ = [
     "DenseEmbeddingBackend",
     "bge_m3_embedding_space_id",
     "verify_bge_m3_model_files",
+    "EMBEDDING_DOCUMENT_V1",
+    "EMBEDDING_DOCUMENT_V2",
+    "RETRIEVAL_QUERY_V2",
+    "EmbeddingDocument",
+    "EmbeddingDocumentV1Builder",
+    "EmbeddingDocumentV2Builder",
+    "SemanticRepresentationError",
+    "normalize_semantic_text_v2",
 ]

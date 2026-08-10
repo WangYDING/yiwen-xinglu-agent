@@ -3,7 +3,7 @@
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .embeddings import MemoryIndexState
+    from .embeddings import MemoryIndexState, RepresentationIndexState
 
 
 class MemoryError(RuntimeError):
@@ -103,6 +103,11 @@ class MemoryEmbeddingConflictError(MemoryStorageError):
 class MemoryIndexIncompleteError(EmbeddingError):
     code = "memory_index_incomplete"
 
-    def __init__(self, message: str, *, index_state: "MemoryIndexState") -> None:
+    def __init__(
+        self,
+        message: str,
+        *,
+        index_state: "MemoryIndexState | RepresentationIndexState",
+    ) -> None:
         super().__init__(message)
         self.index_state = index_state

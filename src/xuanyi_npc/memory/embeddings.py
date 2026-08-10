@@ -9,7 +9,7 @@ import struct
 import unicodedata
 from datetime import datetime
 from enum import Enum
-from typing import Annotated, Protocol, runtime_checkable
+from typing import Annotated, Literal, Protocol, runtime_checkable
 
 from pydantic import AfterValidator, Field, StrictInt, field_validator, model_validator
 
@@ -28,6 +28,7 @@ from .errors import (
 EMBEDDING_REQUEST_VERSION = "embedding_request_v1"
 EMBEDDING_RESULT_VERSION = "embedding_result_v1"
 MEMORY_RETRIEVAL_CONFIG_VERSION = "memory_retrieval_v1"
+CONSERVATIVE_RETRIEVAL_CONFIG_VERSION = "conservative_retrieval_v2"
 MEMORY_QUERY_TEMPLATE_VERSION = "memory_query_v1"
 FAKE_EMBEDDING_ALGORITHM_VERSION = "fake_sha256_token_buckets_v1"
 FAKE_EMBEDDING_DIMENSION = 64
@@ -266,6 +267,56 @@ class MemoryIndexStatus(str, Enum):
     INCOMPLETE = "incomplete"
 
 
+class RepresentationIndexStatus(str, Enum):
+    EMPTY = "empty"
+    READY = "ready"
+    INCOMPLETE = "incomplete"
+    STALE_REPRESENTATION = "stale_representation"
+
+
+class RepresentationIndexState(StrictMemoryModel):
+    player_id: Identifier
+    embedding_space_id: Identifier
+    active_memory_count: Annotated[StrictInt, Field(ge=0)]
+    valid_embedding_count: Annotated[StrictInt, Field(ge=0)]
+    missing_memory_ids: tuple[Identifier, ...] = Field(default_factory=tuple)
+    stale_content_memory_ids: tuple[Identifier, ...] = Field(default_factory=tuple)
+    stale_representation_memory_ids: tuple[Identifier, ...] = Field(
+        default_factory=tuple
+    )
+    status: RepresentationIndexStatus
+
+    @model_validator(mode="after")
+    def validate_representation_state(self) -> "RepresentationIndexState":
+        groups = (
+            self.missing_memory_ids,
+            self.stale_content_memory_ids,
+            self.stale_representation_memory_ids,
+        )
+        for values in groups:
+            if values != tuple(sorted(set(values))):
+                raise ValueError("representation index memory IDs must be unique and sorted")
+        if any(
+            set(left) & set(right)
+            for index, left in enumerate(groups)
+            for right in groups[index + 1 :]
+        ):
+            raise ValueError("representation index state groups must be disjoint")
+        if self.active_memory_count == 0:
+            expected = RepresentationIndexStatus.EMPTY
+        elif self.stale_representation_memory_ids:
+            expected = RepresentationIndexStatus.STALE_REPRESENTATION
+        elif self.missing_memory_ids or self.stale_content_memory_ids:
+            expected = RepresentationIndexStatus.INCOMPLETE
+        elif self.valid_embedding_count == self.active_memory_count:
+            expected = RepresentationIndexStatus.READY
+        else:
+            expected = RepresentationIndexStatus.INCOMPLETE
+        if self.status is not expected:
+            raise ValueError("representation index status does not match its counts")
+        return self
+
+
 class MemoryIndexState(StrictMemoryModel):
     player_id: Identifier
     embedding_space_id: Identifier
@@ -322,6 +373,34 @@ class MemoryRetrievalConfig(StrictMemoryModel):
             raise ValueError("memory query template version is unsupported")
         if not math.isfinite(self.min_similarity):
             raise ValueError("minimum similarity must be finite")
+        return self
+
+
+class ConservativeRetrievalConfigV2(StrictMemoryModel):
+    """Frozen V2 contract; parameter values are selected on calibration only."""
+
+    config_version: Literal["conservative_retrieval_v2"] = (
+        CONSERVATIVE_RETRIEVAL_CONFIG_VERSION
+    )
+    min_similarity: Annotated[float, Field(strict=True, ge=-1.0, le=1.0)]
+    max_results: Annotated[StrictInt, Field(ge=1, le=20)]
+    minimum_margin: Annotated[float, Field(strict=True, ge=0.0, le=2.0)]
+    embedding_space_id: Identifier
+    query_template_version: Literal["retrieval_query_v2"] = "retrieval_query_v2"
+    document_template_version: Literal["embedding_document_v2"] = (
+        "embedding_document_v2"
+    )
+    normalization_version: Literal["nfkc_casefold_ws_v2"] = "nfkc_casefold_ws_v2"
+    truncation_version: Literal["unicode_codepoint_prefix_v2"] = (
+        "unicode_codepoint_prefix_v2"
+    )
+
+    @model_validator(mode="after")
+    def require_finite_policy(self) -> "ConservativeRetrievalConfigV2":
+        if not math.isfinite(self.min_similarity) or not math.isfinite(
+            self.minimum_margin
+        ):
+            raise ValueError("conservative retrieval values must be finite")
         return self
 
 

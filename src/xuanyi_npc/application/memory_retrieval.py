@@ -7,8 +7,9 @@ from datetime import datetime, timezone
 from typing import Callable, Protocol
 
 from xuanyi_npc.domain.memory import MemoryType
-from xuanyi_npc.memory.contracts import AuthoritativeMemoryRecord
+from xuanyi_npc.memory.contracts import AuthoritativeMemoryRecord, VerifiedMemorySource
 from xuanyi_npc.memory.embeddings import (
+    ConservativeRetrievalConfigV2,
     DerivedEmbeddingRecord,
     EmbeddingAdapter,
     EmbeddingRequest,
@@ -20,6 +21,8 @@ from xuanyi_npc.memory.embeddings import (
     MemoryIndexState,
     MemoryIndexStatus,
     MemoryRetrievalConfig,
+    RepresentationIndexState,
+    RepresentationIndexStatus,
     normalize_embedding_text,
     validate_embedding_batch,
     vector_l2_norm,
@@ -28,6 +31,10 @@ from xuanyi_npc.memory.errors import (
     EmbeddingContractError,
     EmbeddingSpaceMismatchError,
     MemoryIndexIncompleteError,
+)
+from xuanyi_npc.memory.representations import (
+    EmbeddingDocumentV1Builder,
+    EmbeddingDocumentV2Builder,
 )
 
 from .views import MemoryScope
@@ -47,6 +54,21 @@ class MemoryVectorRepository(Protocol):
         player_id: str,
         embedding_space_id: str,
     ) -> tuple[DerivedEmbeddingRecord, ...]: ...
+
+    def list_player_embeddings(
+        self,
+        *,
+        player_id: str,
+    ) -> tuple[DerivedEmbeddingRecord, ...]: ...
+
+    def get_source_receipt(
+        self,
+        *,
+        player_id: str,
+        source_event_id: str,
+        projection_version: str,
+        projection_ordinal: int,
+    ) -> VerifiedMemorySource: ...
 
     def write_embeddings(
         self,
@@ -73,9 +95,11 @@ class MemoryIndexService:
         repository: MemoryVectorRepository,
         adapter: EmbeddingAdapter,
         clock: Callable[[], datetime] | None = None,
+        document_builder: EmbeddingDocumentV1Builder | EmbeddingDocumentV2Builder | None = None,
     ) -> None:
         self.repository = repository
         self.adapter = adapter
+        self.document_builder = document_builder or EmbeddingDocumentV1Builder()
         self._clock = clock or (lambda: datetime.now(timezone.utc))
 
     def inspect_index(self, *, player_id: str) -> MemoryIndexState:
@@ -129,6 +153,58 @@ class MemoryIndexService:
             valid_embedding_count=valid_count,
             missing_memory_ids=tuple(sorted(missing)),
             stale_memory_ids=tuple(sorted(stale)),
+            status=status,
+        )
+
+    def inspect_representation_candidates(
+        self,
+        *,
+        player_id: str,
+        memories: tuple[AuthoritativeMemoryRecord, ...],
+    ) -> RepresentationIndexState:
+        """Distinguish a missing V2 build from vectors in an older representation."""
+
+        legacy = self.inspect_candidates(player_id=player_id, memories=memories)
+        if not memories:
+            return RepresentationIndexState(
+                player_id=player_id,
+                embedding_space_id=self.adapter.embedding_space_id,
+                active_memory_count=0,
+                valid_embedding_count=0,
+                status=RepresentationIndexStatus.EMPTY,
+            )
+        old_ids: set[str] = set()
+        if legacy.missing_memory_ids:
+            all_embeddings = self.repository.list_player_embeddings(player_id=player_id)
+            current_space = self.adapter.embedding_space_id
+            old_ids = {
+                item.memory_id
+                for item in all_embeddings
+                if item.embedding_space_id != current_space
+            }
+        stale_representation = tuple(
+            sorted(set(legacy.missing_memory_ids) & old_ids)
+        )
+        missing = tuple(
+            sorted(set(legacy.missing_memory_ids) - set(stale_representation))
+        )
+        status = (
+            RepresentationIndexStatus.STALE_REPRESENTATION
+            if stale_representation
+            else (
+                RepresentationIndexStatus.INCOMPLETE
+                if missing or legacy.stale_memory_ids
+                else RepresentationIndexStatus.READY
+            )
+        )
+        return RepresentationIndexState(
+            player_id=player_id,
+            embedding_space_id=self.adapter.embedding_space_id,
+            active_memory_count=legacy.active_memory_count,
+            valid_embedding_count=legacy.valid_embedding_count,
+            missing_memory_ids=missing,
+            stale_content_memory_ids=legacy.stale_memory_ids,
+            stale_representation_memory_ids=stale_representation,
             status=status,
         )
 
@@ -187,12 +263,28 @@ class MemoryIndexService:
     ) -> tuple[DerivedEmbeddingRecord, ...]:
         if not memories:
             return ()
+        documents = tuple(
+            self.document_builder.build(
+                memory=memory,
+                source=(
+                    self.repository.get_source_receipt(
+                        player_id=player_id,
+                        source_event_id=memory.source_event_id,
+                        projection_version=memory.projection_version,
+                        projection_ordinal=memory.projection_ordinal,
+                    )
+                    if self.document_builder.requires_source
+                    else None
+                ),
+            )
+            for memory in memories
+        )
         request = EmbeddingRequest(
             embedding_space_id=self.adapter.embedding_space_id,
             dimension=self.adapter.dimension,
             items=tuple(
-                EmbeddingRequestItem(item_id=memory.memory_id, text=memory.content)
-                for memory in memories
+                EmbeddingRequestItem(item_id=memory.memory_id, text=document.text)
+                for memory, document in zip(memories, documents, strict=True)
             ),
         )
         result = self.adapter.embed(request)
@@ -221,12 +313,14 @@ class BasicCosineMemoryRetriever:
         *,
         repository: MemoryVectorRepository,
         adapter: EmbeddingAdapter,
+        document_builder: EmbeddingDocumentV1Builder | EmbeddingDocumentV2Builder | None = None,
     ) -> None:
         self.repository = repository
         self.adapter = adapter
         self.index_service = MemoryIndexService(
             repository=repository,
             adapter=adapter,
+            document_builder=document_builder,
         )
 
     def retrieve(
@@ -259,12 +353,29 @@ class BasicCosineMemoryRetriever:
             excluded_source_session_id=scope.excluded_source_session_id,
         )
 
+    def retrieve_conservative_scoped(
+        self,
+        *,
+        scope: MemoryScope,
+        query_text: str,
+        config: ConservativeRetrievalConfigV2,
+    ) -> InternalMemorySearchResult:
+        """Use V2 representation completeness plus an absolute and relative gate."""
+
+        return self._retrieve(
+            player_id=scope.player_id,
+            query_text=query_text,
+            config=config,
+            allowed_memory_types=scope.allowed_memory_types,
+            excluded_source_session_id=scope.excluded_source_session_id,
+        )
+
     def _retrieve(
         self,
         *,
         player_id: str,
         query_text: str,
-        config: MemoryRetrievalConfig,
+        config: MemoryRetrievalConfig | ConservativeRetrievalConfigV2,
         allowed_memory_types: tuple[MemoryType, ...] | None = None,
         excluded_source_session_id: str | None = None,
     ) -> InternalMemorySearchResult:
@@ -284,10 +395,28 @@ class BasicCosineMemoryRetriever:
             )
             and memory.source_session_id != excluded_source_session_id
         )
-        state = self.index_service.inspect_candidates(
-            player_id=player_id,
-            memories=memories,
-        )
+        if isinstance(config, ConservativeRetrievalConfigV2):
+            representation_state = self.index_service.inspect_representation_candidates(
+                player_id=player_id,
+                memories=memories,
+            )
+            if representation_state.status in {
+                RepresentationIndexStatus.INCOMPLETE,
+                RepresentationIndexStatus.STALE_REPRESENTATION,
+            }:
+                raise MemoryIndexIncompleteError(
+                    "active memory representation index is incomplete or stale",
+                    index_state=representation_state,
+                )
+            state = self.index_service.inspect_candidates(
+                player_id=player_id,
+                memories=memories,
+            )
+        else:
+            state = self.index_service.inspect_candidates(
+                player_id=player_id,
+                memories=memories,
+            )
         normalized_query = normalize_embedding_text(query_text)
         if state.status is MemoryIndexStatus.INCOMPLETE:
             raise MemoryIndexIncompleteError(
@@ -345,11 +474,20 @@ class BasicCosineMemoryRetriever:
                 )
             )
         scored.sort(key=lambda item: (-item.similarity, item.memory_id))
+        if isinstance(config, ConservativeRetrievalConfigV2):
+            maximum = config.max_results
+            if len(scored) >= 2 and (
+                scored[0].similarity - scored[1].similarity
+                < config.minimum_margin
+            ):
+                scored = []
+        else:
+            maximum = config.top_k
         return InternalMemorySearchResult(
             player_id=player_id,
             embedding_space_id=config.embedding_space_id,
             query_template_version=config.query_template_version,
             normalized_query=normalized_query,
             index_state=state,
-            hits=tuple(scored[: config.top_k]),
+            hits=tuple(scored[:maximum]),
         )

@@ -330,3 +330,13 @@
 - **验证决策**：新建 36 条未见 holdout，其中 calibration 12 条、final test 24 条；final test 至少 20 条有相关答案，并另含 4 条空结果。输入、Gold、manifest、文本版本、空间 ID、参数网格、指标和停止条件必须在任何新 BGE 推理前冻结；final test 不得反向调参，第二次运行只核对重复性。
 - **指标决策**：历史 `False Memory Rate` 名称和数值继续保留。新数据对合法无关召回使用 `irrelevant_retrieval_rate`，与跨玩家、当前 Episode、inactive、删除复活和隐藏泄漏等安全计数分开；所有安全计数仍必须为 0。合成指标不称为产品准确率。
 - **范围决策**：本决策不修改当前检索实现、不生成新向量、不下载 reranker、不调用网络/API，也不授权 M4.5-P3 或 M5。
+
+## ADR-043：M4.5-P2c 以版本化派生文本和新 holdout 完成 Dense-only 最后一次验证
+
+- **状态**：已接受
+- **日期**：2026-08-10
+- **查询表示**：`retrieval_query_v2` 只对当前用户明确检索意图与已发现公开线索说明做 NFKC、casefold、空白折叠和固定 Unicode 码点前缀截断。病例标题因装饰性和跨查询重复而不进入本版本；通用简介、固定课程、JSON 字段名、Prompt 指令及隐藏字段均不进入 Embedding 查询。Agent Prompt 仍接收原有完整安全视图，检索文本不替代 Agent 上下文。
+- **文档表示**：`embedding_document_v2` 从对应 `VerifiedMemorySource` 的允许列表公开负载确定性派生，保留公开病例语境、实际行动、线索、假设来源语义、处置公开结果和更正后的内容，移除动作枚举、通用模板套话与“未发现新线索”等低辨识文本。SQLite 权威记忆原文、来源链、生命周期与内容哈希不变；派生表示通过独立空间身份隔离，可删除并从 active 权威记录重建。
+- **索引与策略**：SQLite Schema 继续为 v2，无需修改权威表。模型 revision、CUDA/FP32/维度、`retrieval_query_v2`、`embedding_document_v2`、规范化及截断由新的检索身份共同绑定；旧空间向量不会参与 V2 检索，并显式报告 `stale_representation`。保守策略固定提供绝对相似度、最大返回数和最小首二名分差，正式参数只允许由新 calibration 按预注册目标选择，final test 不得参与选择。
+- **验证与停止边界**：原 15 条 P2 场景保留为已观察开发/诊断集。新 36 条 holdout 在任何 BGE 运行前单独冻结；之后只允许一组两次正式运行。通过则进入 P3；不通过则如实关闭本轮 Dense-only 优化，不自动增加 reranker、其他模型、向量数据库或更大题库。合成 Gold 指标不得称为游戏产品效果或玩家收益。
+- **作品集主线**：项目同时服务 Agent 应用岗与游戏 AI 产品岗。M4.5 收口后主线转向游戏纵向切片：新增至少两个可玩病例、正式 V1 Episode Runner、跨 Episode 记忆闭环与普通用户入口。后续路线图分别标注两类岗位证据贡献。

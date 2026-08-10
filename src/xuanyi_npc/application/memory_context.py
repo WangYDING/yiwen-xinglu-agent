@@ -20,9 +20,11 @@ from xuanyi_npc.domain.base import DomainModel
 from xuanyi_npc.domain.cases import CaseDefinition, CaseSessionState
 from xuanyi_npc.domain.player import PlayerState
 from xuanyi_npc.memory.embeddings import (
+    ConservativeRetrievalConfigV2,
     MEMORY_QUERY_TEMPLATE_VERSION,
     MemoryRetrievalConfig,
 )
+from xuanyi_npc.application.retrieval_query import RetrievalQueryV2Builder
 from xuanyi_npc.memory.errors import MemoryError
 
 from .memory_retrieval import BasicCosineMemoryRetriever
@@ -142,10 +144,10 @@ class V1AgentContextService:
         *,
         doctor_agent: V1DoctorAgentInterface,
         retriever: BasicCosineMemoryRetriever,
-        retrieval_config: MemoryRetrievalConfig,
+        retrieval_config: MemoryRetrievalConfig | ConservativeRetrievalConfigV2,
         context_filter: AgentContextFilter | None = None,
         tool_executor: V0ToolExecutor | None = None,
-        query_builder: MemoryQueryBuilder | None = None,
+        query_builder: MemoryQueryBuilder | RetrievalQueryV2Builder | None = None,
         curriculum: FixedV0Curriculum | None = None,
     ) -> None:
         self.doctor_agent = doctor_agent
@@ -185,11 +187,18 @@ class V1AgentContextService:
                 case_observation=observation,
                 fixed_lesson=lesson,
             )
-            result = self.retriever.retrieve_scoped(
-                scope=scope,
-                query_text=query.text,
-                config=self.retrieval_config,
-            )
+            if isinstance(self.retrieval_config, ConservativeRetrievalConfigV2):
+                result = self.retriever.retrieve_conservative_scoped(
+                    scope=scope,
+                    query_text=query.text,
+                    config=self.retrieval_config,
+                )
+            else:
+                result = self.retriever.retrieve_scoped(
+                    scope=scope,
+                    query_text=query.text,
+                    config=self.retrieval_config,
+                )
             memories = self.context_filter.memory_views(scope, result)
         except (MemoryError, MemoryQueryError, ViewContextError, ValueError):
             return V1AgentContextResult(

@@ -12,6 +12,7 @@ from .memory_retrieval import (
     MemoryIndexService,
     MemoryVectorRepository,
 )
+from .retrieval_query import RetrievalQueryV2, RetrievalQueryV2Builder
 from .views import (
     AgentContextFilter,
     AvailableSkillView,
@@ -37,6 +38,8 @@ __all__ = [
     "MemoryVectorRepository",
     "MemoryIndexService",
     "BasicCosineMemoryRetriever",
+    "RetrievalQueryV2",
+    "RetrievalQueryV2Builder",
     "V1MemoryCoordinator",
     "AgentContextFilter",
     "AvailableSkillView",
