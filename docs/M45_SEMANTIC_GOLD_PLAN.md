@@ -14,6 +14,8 @@ P0 只冻结设计，不创建场景数据或预填结果。P2 v1 已在提交 `
 
 P2a 保留所有 v1 文件与停止证据，复用完全相同的输入文件，并新增 `m45_semantic_gold_expectations_v2.json`、`m45_semantic_gold_manifest_v2.json`。v2 删除歧义字段 `forbidden_candidate_ids`，将每个候选完整划分为相关项、合法语义负例或带精确产品状态原因的安全排除项。详细迁移和 SHA 见 `M45_P2A_SEMANTIC_GOLD_V2_FREEZE.md`。
 
+P2 v2 已在执行提交 `cad07ff42a5c665d49cdb25c2379f2026558554a` 上完成两次正式本地 BGE-M3 运行。两次排序、指标和向量完全一致，所有安全计数为 0；但 test Recall@3 为 0.8889、False Memory Rate 为 5/13，未达到本文件预注册的 P3 准入线。详见 `M45_P2_V2_SEMANTIC_PILOT_RESULT_20260810.md`。该负结果不修改本文件的 Gold、阈值或准入线。
+
 冻结提交必须早于任何新的真实向量生成。运行后不得根据结果改写输入、Gold、阈值、排序或产品实现；确需修订时保留原提交和原结果，升级 Gold 版本并重新取得运行授权。
 
 ## 2. 数据规模与身份

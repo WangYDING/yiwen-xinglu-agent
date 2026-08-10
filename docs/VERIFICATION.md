@@ -406,3 +406,12 @@ M4.5-P2 再次因工程条件停止，尚未形成质量通过或质量未通过
 - **失败检查点**：忽略目录 `results/m45_p2_v2_0ed89c1_run1_failure_20260810.json`，SHA `D853266CAA8C24D0F37A705F8EC5B3C1784E63EDBB24140C6933AA3E1B431517`；run1/run2 正式 JSON 均未创建。网络尝试、DeepSeek、外部 Embedding API 和费用均为 0。
 
 M4.5-P2 再次因工程条件停止，不是质量失败，也不能判定通过。修复资源遥测和后续运行需要新的授权；M4.5-P3 与 M5 尚未开始。
+
+## 2026-08-10：M4.5-P2 v2 两次正式本地 BGE 运行完成，语义质量未通过
+
+- **身份与最小修复**：Gold v2 原始冻结提交为 `b78033099663464bf3d7790c6fef5d4b973dc692`；本次精确执行提交为 `cad07ff42a5c665d49cdb25c2379f2026558554a`。后者只为 `GetProcessMemoryInfo` 增加已在烟雾脚本验证的 Windows 64 位 `ctypes` 参数/返回类型声明，并增加 5 个离线回归测试；输入、Gold、配置、Adapter、模型、阈值、排序和产品实现未变。
+- **离线回归**：遥测专项 5 passed；全量 331 passed；`pip check` 与 `git diff --check` 通过。正式运行前，Gold/expectations/manifest/配置、依赖锁、11 文件模型白名单、主权重、console entry、CUDA 和干净工作树均匹配。
+- **两次正式结果**：run1 SHA `DD3B8482D3929B6A8F9F2B9C5D4BA0609CF2D3FA433C72E3F194E90A2D8CD6AE`；run2 SHA `FD61EC0535621975DE4CFE63A4F6550EAEBBD06EE9CCFAAABDAAB99E665AB2B7`。两次有序结果 SHA 均为 `6f3efbd0625ac4f38fdd44c934146f04f6a6f3f3e0e73437bb6000329375d9f1`，向量载荷 SHA 均为 `2010c84f315139a2dc50ca4e33843c7eb5461362808f7e50b0223acd1b8b8204`，最大向量差为 0，指标完全一致。
+- **阈值与 test 指标**：calibration 按冻结规则选择阈值 0.65。test Recall@1/Recall@3/MRR 均为 0.8888888889；macro P/R/F1 为 0.7592592593/0.8888888889/0.7962962963；micro TP/FP/FN 为 8/5/1，P/R/F1 为 0.6153846154/0.8888888889/0.7272727273；empty 为 1/1；False Memory Rate 为 5/13。
+- **安全与外部边界**：九个安全计数全部为 0；网络尝试 0、外部 API 请求 0、费用 0 CNY。合法语义负例产生的 FP 只影响语义指标。真实 Chat 0，M4.5-P3 和 M5 未开始。
+- **判定**：工程运行、安全和重复性通过；test Recall@3 未达到 0.90，False Memory Rate 未达到 0，因此 M4.5-P2 的最终结论为“语义质量未通过”。逐场景、资源和历史停止证据见 `docs/M45_P2_V2_SEMANTIC_PILOT_RESULT_20260810.md`。
