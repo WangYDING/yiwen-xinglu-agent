@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import sys
 from dataclasses import dataclass
+from decimal import Decimal
 from pathlib import Path
 from typing import Callable, Sequence, TextIO
 
@@ -30,6 +31,24 @@ from xuanyi_npc.application import (
     StartEpisodeInput,
     SubmitActionInput,
 )
+from xuanyi_npc.application.gameplay_modes import (
+    GameplayMode,
+    GameplayModeConfig,
+    ModeAwareEpisodeRunner,
+    ModeRunInput,
+    SemanticShadowMode,
+)
+from xuanyi_npc.application.semantic_shadow import (
+    EmptyMockShadowSearch,
+    RecordingSemanticShadowObserver,
+)
+from xuanyi_npc.agents import (
+    DeepSeekChatAdapter,
+    DeepSeekGameplayAuthorization,
+    DoctorAgentInterface,
+    build_authorized_deepseek_v0_agent,
+    build_reference_fake_agent,
+)
 from xuanyi_npc.domain import (
     AgentAction,
     AgentActionType,
@@ -49,6 +68,8 @@ class PlayConfig:
     case_dir: Path
     state_dir: Path
     campaign_rules_path: Path | None = None
+    gameplay_mode: GameplayMode = GameplayMode.MANUAL
+    semantic_shadow_mode: SemanticShadowMode = SemanticShadowMode.OFF
 
     @classmethod
     def load(
@@ -57,6 +78,8 @@ class PlayConfig:
         case_dir: Path | str,
         state_dir: Path | str,
         campaign_rules_path: Path | str | None = None,
+        gameplay_mode: GameplayMode = GameplayMode.MANUAL,
+        semantic_shadow_mode: SemanticShadowMode = SemanticShadowMode.OFF,
     ) -> "PlayConfig":
         try:
             resolved_cases = Path(case_dir).resolve(strict=True)
@@ -83,6 +106,8 @@ class PlayConfig:
             case_dir=resolved_cases,
             state_dir=resolved_state,
             campaign_rules_path=resolved_rules,
+            gameplay_mode=gameplay_mode,
+            semantic_shadow_mode=semantic_shadow_mode,
         )
 
 
@@ -119,18 +144,44 @@ class PlayCLI:
         input_fn: Callable[[str], str] = input,
         stdout: TextIO = sys.stdout,
         stderr: TextIO = sys.stderr,
+        config: PlayConfig | None = None,
+        doctor_agent: DoctorAgentInterface | None = None,
+        shadow_observer: RecordingSemanticShadowObserver | None = None,
+        paid_confirmed: bool = False,
     ) -> None:
         self.service = service
         self.input_fn = input_fn
         self.stdout = stdout
         self.stderr = stderr
+        self.config = config or PlayConfig(
+            case_dir=Path("."),
+            state_dir=Path("."),
+        )
+        self.doctor_agent = doctor_agent
+        self.shadow_observer = shadow_observer
+        self.paid_confirmed = paid_confirmed
         self.current_player_id: str | None = None
         self.current_case_id: str | None = None
         self.current_session_id: str | None = None
 
     def run(self) -> int:
         self._print("玄医问道 · 病例修习")
-        self._print("当前为无 LLM 的确定性游玩模式。")
+        mode_label = {
+            GameplayMode.MANUAL: "manual（玩家操作，无 LLM）",
+            GameplayMode.FAKE: "fake（离线演示 Agent）",
+            GameplayMode.DEEPSEEK_V0: "deepseek-v0",
+        }[self.config.gameplay_mode]
+        shadow_label = (
+            "关闭"
+            if self.config.semantic_shadow_mode is SemanticShadowMode.OFF
+            else "record-only（离线 Mock，不注入行动）"
+        )
+        self._print(f"行动模式：{mode_label}")
+        self._print(f"语义 shadow：{shadow_label}")
+        if self.config.gameplay_mode is GameplayMode.DEEPSEEK_V0:
+            self._print(f"付费确认：{'已确认' if self.paid_confirmed else '未确认'}")
+        else:
+            self._print("本模式无需 API Key。")
         while True:
             self._print("\n主菜单")
             self._print("1. 创建玩家")
@@ -264,6 +315,8 @@ class PlayCLI:
         ):
             self._print_episode_result(episode)
             return False
+        if self.config.gameplay_mode is not GameplayMode.MANUAL:
+            return self._run_agent_episode(episode)
         return self._case_loop(episode)
 
     def _open_case(
@@ -369,7 +422,7 @@ class PlayCLI:
                 continue
 
             action = menu[index][1]
-            result = self.service.submit_action(
+            receipt = self.service.submit_action_with_receipt(
                 SubmitActionInput(
                     player_id=current.player_id or "",
                     case_id=current.case_id or "",
@@ -377,6 +430,9 @@ class PlayCLI:
                     action=action,
                 )
             )
+            result = receipt.result
+            if receipt.events and self.shadow_observer is not None:
+                self.shadow_observer.observe(result, receipt.events)
             self._print(result.message)
             self._print_new_knowledge(result)
             current = result
@@ -393,6 +449,53 @@ class PlayCLI:
                 )
                 self._print_episode_result(finished)
                 return False
+
+    def _run_agent_episode(self, current: MultiCaseServiceResult) -> bool:
+        case_id = current.case_id or ""
+        session_id = current.session_id or ""
+        player_id = current.player_id or ""
+        if self.config.gameplay_mode is GameplayMode.FAKE:
+            case = self.service.case_catalog.get(case_id)
+            if case is None:
+                self._print("病例无法安全加载。")
+                return False
+            session = self.service.state_store.load_case_session(session_id)
+            agent, _ = build_reference_fake_agent(
+                case,
+                completed_event_count=len(session.action_history),
+            )
+        else:
+            agent = self.doctor_agent
+        if agent is None:
+            self._print("Agent 模式尚未通过启动门禁。")
+            return False
+        runner = ModeAwareEpisodeRunner(
+            service=self.service,
+            doctor_agent=agent,
+            config=GameplayModeConfig(
+                gameplay_mode=self.config.gameplay_mode,
+                semantic_shadow_mode=self.config.semantic_shadow_mode,
+                max_steps=8,
+            ),
+            shadow_observer=self.shadow_observer,
+        )
+        result = runner.run(
+            ModeRunInput(
+                player_id=player_id,
+                case_id=case_id,
+                session_id=session_id,
+            )
+        )
+        for step in result.episode_result.steps:
+            tool = (
+                step.action.tool_call.name.value
+                if step.action.tool_call is not None
+                else step.action.action_type.value
+            )
+            outcome = "已执行" if step.accepted else f"被拒绝：{step.error_code}"
+            self._print(f"第 {step.step_index} 步｜{tool}｜{outcome}")
+        self._print_episode_result(result.public_result)
+        return False
 
     def _show_campaign(self, player_id: str) -> None:
         result = self.service.get_campaign_view(
@@ -523,18 +626,92 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="可选的严格跨案规则 JSON；默认自动查找 data/campaign。",
     )
+    parser.add_argument(
+        "--mode",
+        choices=("manual", "fake", "deepseek-v0"),
+        default="manual",
+        help="行动模式；默认 manual，不调用模型。",
+    )
+    parser.add_argument(
+        "--semantic-shadow",
+        choices=("off", "record-only"),
+        default="off",
+        help="语义召回旁路；record-only 仅写脱敏 Mock 记录。",
+    )
+    parser.add_argument(
+        "--confirm-paid-agent",
+        action="store_true",
+        help="显式确认 DeepSeek V0 可能产生费用。",
+    )
+    parser.add_argument(
+        "--max-cost-cny",
+        type=Decimal,
+        default=None,
+        help="DeepSeek V0 的严格人民币预算上限。",
+    )
+    parser.add_argument(
+        "--results-dir",
+        type=Path,
+        default=None,
+        help="DeepSeek 结果目录，必须位于 results 或 runtime_data。",
+    )
     return parser
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    gameplay_mode = {
+        "manual": GameplayMode.MANUAL,
+        "fake": GameplayMode.FAKE,
+        "deepseek-v0": GameplayMode.DEEPSEEK_V0,
+    }[args.mode]
+    shadow_mode = {
+        "off": SemanticShadowMode.OFF,
+        "record-only": SemanticShadowMode.RECORD_ONLY,
+    }[args.semantic_shadow]
+    deepseek_adapter: DeepSeekChatAdapter | None = None
+    if gameplay_mode is not GameplayMode.DEEPSEEK_V0 and (
+        args.confirm_paid_agent
+        or args.max_cost_cny is not None
+        or args.results_dir is not None
+    ):
+        print("启动失败：付费参数只适用于 deepseek-v0 模式。", file=sys.stderr)
+        return 2
     try:
         config = PlayConfig.load(
             case_dir=args.case_dir,
             state_dir=args.state_dir,
             campaign_rules_path=args.campaign_rules,
+            gameplay_mode=gameplay_mode,
+            semantic_shadow_mode=shadow_mode,
         )
         service = create_play_service(config)
+        shadow_observer = (
+            RecordingSemanticShadowObserver(
+                EmptyMockShadowSearch(),
+                config.state_dir / "shadow" / "semantic_shadow.jsonl",
+            )
+            if shadow_mode is SemanticShadowMode.RECORD_ONLY
+            else None
+        )
+        doctor_agent: DoctorAgentInterface | None = None
+        if gameplay_mode is GameplayMode.DEEPSEEK_V0:
+            if (
+                not args.confirm_paid_agent
+                or args.max_cost_cny is None
+                or args.results_dir is None
+            ):
+                raise PlayConfigurationError(
+                    "DeepSeek 模式缺少付费确认、预算或安全结果目录。"
+                )
+            authorization = DeepSeekGameplayAuthorization(
+                confirm_paid=True,
+                max_cost_cny=args.max_cost_cny,
+                results_dir=args.results_dir,
+            )
+            doctor_agent, deepseek_adapter, _ = build_authorized_deepseek_v0_agent(
+                authorization
+            )
     except (
         PlayConfigurationError,
         CaseCatalogError,
@@ -546,7 +723,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         print("启动失败：无法安全初始化游戏。", file=sys.stderr)
         return 1
 
-    cli = PlayCLI(service)
+    cli = PlayCLI(
+        service,
+        config=config,
+        doctor_agent=doctor_agent,
+        shadow_observer=shadow_observer,
+        paid_confirmed=args.confirm_paid_agent,
+    )
     try:
         return cli.run()
     except (EOFError, KeyboardInterrupt):
@@ -557,6 +740,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         cli.safe_quit()
         print("游戏发生内部错误，已按最后一次成功行动保留进度。", file=sys.stderr)
         return 1
+    finally:
+        if deepseek_adapter is not None:
+            deepseek_adapter.close()
 
 
 if __name__ == "__main__":

@@ -24,6 +24,7 @@ from xuanyi_npc.domain import (
     AgentActionType,
     CampaignState,
     CaseDefinition,
+    CaseEvent,
     CaseSessionState,
     CaseSessionStatus,
     KnowledgeUnlock,
@@ -34,7 +35,7 @@ from xuanyi_npc.domain import (
     TreatmentOutcome,
 )
 from xuanyi_npc.domain.base import DomainModel, Identifier, NonEmptyText
-from xuanyi_npc.engine import CaseEngine, RuleViolation
+from xuanyi_npc.engine import CaseEngine, RuleViolation, ScoreBreakdown
 from xuanyi_npc.storage import (
     JsonStateStore,
     StateCorruptionError,
@@ -261,6 +262,23 @@ class MultiCaseServiceResult(MultiCaseContract):
                 raise ValueError("observation and result revisions must match")
             if self.case_id != self.observation.case_id:
                 raise ValueError("observation and result case IDs must match")
+        return self
+
+
+class MultiCaseActionReceipt(MultiCaseContract):
+    """Internal orchestration receipt without widening the public CLI contract."""
+
+    result: MultiCaseServiceResult
+    events: tuple[CaseEvent, ...] = Field(default_factory=tuple)
+    score_breakdown: ScoreBreakdown | None = None
+
+    @model_validator(mode="after")
+    def validate_receipt(self) -> "MultiCaseActionReceipt":
+        sequences = tuple(event.sequence for event in self.events)
+        if sequences != self.result.event_sequences:
+            raise ValueError("receipt events must match the public event sequences")
+        if not self.result.ok and self.events:
+            raise ValueError("rejected actions cannot carry domain events")
         return self
 
 
@@ -582,36 +600,46 @@ class MultiCaseEpisodeService:
         )
 
     def submit_action(self, request: SubmitActionInput) -> MultiCaseServiceResult:
+        return self.submit_action_with_receipt(request).result
+
+    def submit_action_with_receipt(
+        self,
+        request: SubmitActionInput,
+    ) -> MultiCaseActionReceipt:
         context = self._load_context(
             player_id=request.player_id,
             case_id=request.case_id,
             session_id=request.session_id,
         )
         if isinstance(context, MultiCaseServiceResult):
-            return context
+            return MultiCaseActionReceipt(result=context)
         player, case, session, campaign = context
         action = request.action
         if session.status is CaseSessionStatus.COMPLETED:
-            return self._context_result(
-                ok=False,
-                code="session_closed",
-                player=player,
-                case=case,
-                session=session,
-                campaign_state=campaign,
+            return MultiCaseActionReceipt(
+                result=self._context_result(
+                    ok=False,
+                    code="session_closed",
+                    player=player,
+                    case=case,
+                    session=session,
+                    campaign_state=campaign,
+                )
             )
         if (
             action.action_type is not AgentActionType.USE_TOOL
             or action.tool_call is None
             or action.tool_call.name not in MUTATING_CASE_TOOLS
         ):
-            return self._context_result(
-                ok=False,
-                code="unsupported_action",
-                player=player,
-                case=case,
-                session=session,
-                campaign_state=campaign,
+            return MultiCaseActionReceipt(
+                result=self._context_result(
+                    ok=False,
+                    code="unsupported_action",
+                    player=player,
+                    case=case,
+                    session=session,
+                    campaign_state=campaign,
+                )
             )
 
         try:
@@ -623,56 +651,66 @@ class MultiCaseEpisodeService:
                 self.clock.now(),
             )
         except (RuleViolation, ToolCallError) as exc:
-            return self._context_result(
-                ok=False,
-                code=exc.code,
-                player=player,
-                case=case,
-                session=session,
-                campaign_state=campaign,
+            return MultiCaseActionReceipt(
+                result=self._context_result(
+                    ok=False,
+                    code=exc.code,
+                    player=player,
+                    case=case,
+                    session=session,
+                    campaign_state=campaign,
+                )
             )
         except ViewContextError:
-            return self._context_result(
-                ok=False,
-                code="context_mismatch",
-                player=player,
-                case=case,
-                session=session,
-                campaign_state=campaign,
+            return MultiCaseActionReceipt(
+                result=self._context_result(
+                    ok=False,
+                    code="context_mismatch",
+                    player=player,
+                    case=case,
+                    session=session,
+                    campaign_state=campaign,
+                )
             )
         except Exception:
-            return self._context_result(
-                ok=False,
-                code="internal_error",
-                player=player,
-                case=case,
-                session=session,
-                campaign_state=campaign,
+            return MultiCaseActionReceipt(
+                result=self._context_result(
+                    ok=False,
+                    code="internal_error",
+                    player=player,
+                    case=case,
+                    session=session,
+                    campaign_state=campaign,
+                )
             )
 
         try:
             self.state_store.save_case_session(execution.session)
         except StorageError:
-            return self._context_result(
-                ok=False,
-                code="state_unavailable",
-                player=player,
-                case=case,
-                session=session,
-                campaign_state=campaign,
+            return MultiCaseActionReceipt(
+                result=self._context_result(
+                    ok=False,
+                    code="state_unavailable",
+                    player=player,
+                    case=case,
+                    session=session,
+                    campaign_state=campaign,
+                )
             )
         except Exception:
-            return self._context_result(
-                ok=False,
-                code="internal_error",
-                player=player,
-                case=case,
-                session=session,
-                campaign_state=campaign,
+            return MultiCaseActionReceipt(
+                result=self._context_result(
+                    ok=False,
+                    code="internal_error",
+                    player=player,
+                    case=case,
+                    session=session,
+                    campaign_state=campaign,
+                )
             )
 
         if execution.session.status is CaseSessionStatus.COMPLETED:
-            return self._project_completed_result(
+            result = self._project_completed_result(
                 player=player,
                 case=case,
                 session=execution.session,
@@ -682,7 +720,12 @@ class MultiCaseEpisodeService:
                     event.sequence for event in execution.events
                 ),
             )
-        return self._context_result(
+            return MultiCaseActionReceipt(
+                result=result,
+                events=execution.events,
+                score_breakdown=execution.score_breakdown,
+            )
+        result = self._context_result(
             ok=True,
             code=None,
             message=execution.message,
@@ -691,6 +734,11 @@ class MultiCaseEpisodeService:
             session=execution.session,
             campaign_state=campaign,
             event_sequences=tuple(event.sequence for event in execution.events),
+        )
+        return MultiCaseActionReceipt(
+            result=result,
+            events=execution.events,
+            score_breakdown=execution.score_breakdown,
         )
 
     def finish_episode(self, request: FinishEpisodeInput) -> MultiCaseServiceResult:

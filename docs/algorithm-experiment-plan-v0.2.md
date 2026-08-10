@@ -6,7 +6,7 @@
 - **日期**：2026-08-04
 - **最近同步**：2026-08-10
 - **验证状态**：M2/M3/M4 ENGINEERING EXIT VERIFIED / M4 FAKE-EMBEDDING GOLD 14/14 / M4.5 CLOSED WITH KNOWN DENSE RETRIEVAL LIMITATIONS
-- **当前工程阶段**：M2、M3 与 M4 工程里程碑已完成；M4.5 新 holdout 的唯一双运行已完成，工程、安全、重复性和主要排名门槛通过，但保守返回门禁的 micro F1 与更正切片未通过。M4.5-P3 本轮取消，语义记忆默认不进入 Agent Prompt。M5-P0～P3 已完成：三个病例始终可玩，确定性 Campaign 提供可重放完成历史、两项知识和两处公开反应；M5-P4 尚未开始
+- **当前工程阶段**：M2、M3 与 M4 工程里程碑已完成；M4.5 新 holdout 的唯一双运行已完成，工程、安全、重复性和主要排名门槛通过，但保守返回门禁的 micro F1 与更正切片未通过。M4.5-P3 本轮取消，语义记忆默认不进入 Agent Prompt。M5-P0～P4a 已完成：三个病例始终可玩，确定性 Campaign 提供可重放完成历史、两项知识和两处公开反应；manual/Fake/DeepSeek V0 与 record-only shadow 已完成离线隔离装配，真实 P4b 与 P5 尚未开始
 - **取代范围**：取代 v0.1 的当前执行口径；v0.1 原文件保留为历史版本
 - **结论边界**：不提供现实医疗能力，不把研究目标写成已经实现的结果
 

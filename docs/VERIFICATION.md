@@ -495,3 +495,13 @@ M5-P1 已完成，M5-P2 尚未开始。P2 前没有新的架构级用户决策�
 - **进程恢复**：三个独立 Python PID 依次从同一状态目录恢复并完成三个病例，Campaign revision 依次为 1、2、3；最终两项知识和全部完成摘要保持一致，子进程均正常退出。
 - **验证结果**：M5-P3 专项 18 passed；全量 438 passed。P1/P2 Runner/CLI、三病例 no-LLM、MCP、V0/Fake、M4/M4.5 历史回归全部包含在全量通过结果中；`pip check`、`git diff --check`、敏感信息和运行文件跟踪检查在最终提交前通过。
 - **外部边界**：DeepSeek `/models` 0、Chat 0、本地 BGE 加载 0、外部 Embedding API 0、网络请求 0、费用 0 CNY。M5-P4 尚未开始。
+
+## 2026-08-10：M5-P4a Agent 模式装配与 semantic shadow 隔离
+
+- **基线**：`d641ed4d841f453a298c1f0669693bb4c16001b5`。
+- **模式契约**：`GameplayMode` 固定为 manual/Fake/DeepSeek V0，`SemanticShadowMode` 固定为 off/record-only，默认 manual/off。manual 不构造 Agent 或 shadow；Fake/DeepSeek 由 `ModeAwareEpisodeRunner` 经 `MultiCaseEpisodeService` 和既有规则/事件/存储/Campaign 路径执行。
+- **Fake 证据**：三个病例分别以 6 次调查、1 次诊断、1 次处置完成，事件均为 1–8，终态均为 `completed / resolved / 100`，模型用量保持缺省；退出后可从既有 Session 修订继续。Campaign A 的三案事件连续为 1–3，两项知识及灰灶/月井历史反应保持可见。
+- **shadow 隔离**：捕获型 Fake 比较证明 off/record-only 的 Agent 请求字节、行动、领域事件、终态和 Campaign 相同；DeepSeek Mock 的 Chat 请求字节也相同且不含 `retrieved_memories`、相似度、Memory ID 或 CampaignFact 全文。shadow 故障与跨玩家候选只形成脱敏安全记录，不改变正式结果。off 不创建 shadow 文件。
+- **可靠性**：无效 JSON 只修复一次；过早诊断由 `diagnosis_not_ready` 拒绝且零事件/零修订；连续确定性降级在最大步骤停止且不污染病例或 Campaign。DeepSeek 缺少付费确认、预算或安全结果目录时在网络前停止；认证、超时、429、5xx、用量缺失和预算冻结继续由既有 MockTransport 回归覆盖。
+- **验证结果**：P4a 专项 21 passed；全量 459 passed。P1～P3、三病例 manual/Fake、Campaign A/B、MCP、V0/dev、M4/M4.5 历史回归均在全量套件中通过；`pip check`、`git diff --check` 和敏感/运行文件跟踪检查在提交前通过。
+- **外部边界**：DeepSeek `/models` 0、Chat 0，本地 BGE 加载 0，外部 Embedding API 0，网络请求 0，费用 0 CNY。真实 P4b 与 M5-P5 尚未开始。

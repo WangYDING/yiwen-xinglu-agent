@@ -381,3 +381,13 @@
 - **提交与恢复**：病例 Session 先保存，Campaign 后投影；不伪造跨 JSON 事务。后写失败返回 `campaign_projection_pending`，显式协调只从已提交 completed Session 幂等补齐。重复 finish/reconcile 不重复事件或知识；来源缺失、损坏或冲突停止协调，既有 Campaign 不变。
 - **产品边界**：推荐顺序不锁关，无前史使用中性反应且三个病例均可完成。CLI 显示历程、完成病例、知识、推荐和安全历史反应。语义记忆继续默认关闭；M5-P3 不接入 Agent Prompt、DeepSeek、BGE、shadow mode、自适应教学或网页。
 - **原因**：把正式游戏连续性建立在可审计公开事件上，可在 Dense 召回未过线时仍提供稳定、可解释的角色记忆和成长，同时保留规则层对关键状态的唯一控制权。
+
+## ADR-048：M5-P4a 将行动模式与 semantic shadow 正交隔离
+
+- **状态**：已接受
+- **日期**：2026-08-10
+- **模式决策**：产品装配使用独立的 `GameplayMode`（manual、Fake、DeepSeek V0）和 `SemanticShadowMode`（off、record-only），默认 manual/off。semantic shadow 不是 Agent，也没有行动或状态写权限。manual 不初始化 LLM、记忆库或 shadow；Fake 和 DeepSeek V0 统一经 `ModeAwareEpisodeRunner` 读取安全视图、生成既有 `AgentAction`，再交给 `MultiCaseEpisodeService`、规则引擎、原子存储和 Campaign 协调。
+- **Agent 决策**：Fake 参考脚本只属于测试/演示资产，不进入病例 JSON、公开菜单或真实 Prompt。DeepSeek V0 保持 `v0.2.1` Prompt、Flash-only、一次格式修复、无隐式重试和既有预算/错误契约；真实启动必须同时通过 API Key、显式付费确认、正预算、超时、安全结果目录和模型发现门禁。P4a 只用 MockTransport，不授权真实请求。
+- **shadow 决策**：record-only 只在领域事件已经保存后消费权限过滤公开观察，过滤其他玩家和当前 Episode，写入 Git 忽略目录中的脱敏记录后丢弃结果。记录固定声明未注入 Prompt、未影响行动、未影响状态；不保存完整 Prompt、原始聊天、隐藏真值或未发现线索。shadow 失败或安全拒绝不改变病例和 Campaign；off 对 Repository、Embedding、Torch、BGE 与 shadow 文件调用为 0。
+- **证据边界**：离线捕获测试证明 shadow off/on 的 Agent 请求、Schema、工具、固定课程、行动、领域事件、终态和 Campaign 一致，DeepSeek Mock 请求不含语义记忆。该证据不代表真实模型完成率或真实 BGE 语义效果。真实 P4b 仍需单独模型与预算授权，M5-P5 尚未开始。
+- **原因**：把观察型检索与行动 Agent 分离，可以保留 RAG 工程和真实负结果的展示价值，同时保证未过准入线的 Dense 召回不能暗中影响可玩产品。

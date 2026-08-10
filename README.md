@@ -6,7 +6,7 @@
 
 ## 当前状态
 
-**M2、M3 与 M4 工程里程碑已经完成；M4.5 已以 `closed_with_known_dense_retrieval_limitations` 终止，M5-P0～P3 已完成，M5-P4 尚未开始。** M5-P1 提供可注入的多病例 Episode 服务与 `xuanyi-play`，P2 提供三个完整病例，P3 增加可重放的确定性 Campaign、两项可见知识成长和两处跨案历史反应。三个病例始终可独立开始；推荐顺序只提供公开建议，不构成锁关。整个 no-LLM 路径不需要 Embedding 或 API Key。
+**M2、M3 与 M4 工程里程碑已经完成；M4.5 已以 `closed_with_known_dense_retrieval_limitations` 终止，M5-P0～P4a 已完成，M5-P4b/P5 尚未开始。** M5-P1 提供可注入的多病例 Episode 服务与 `xuanyi-play`，P2 提供三个完整病例，P3 增加可重放的确定性 Campaign、两项可见知识成长和两处跨案历史反应，P4a 冻结 manual/Fake/DeepSeek V0 与 record-only semantic shadow 的装配边界。三个病例始终可独立开始；推荐顺序只提供公开建议，不构成锁关。
 
 已经包含：
 
@@ -63,8 +63,11 @@
 - 独立的 `CampaignState`、连续 `CampaignEvent`、公开完成摘要、`CampaignFact`、知识解锁和事件重放；
 - 由严格 `cross_episode_rules_v1` 决定的“契物归属核验”与“交接顺序核验”，以及灰灶、月井的公开历史反应和调查建议；
 - 病例先保存、Campaign 后投影的显式故障窗口；`campaign_projection_pending` 可由幂等协调补齐，拒绝和退出不写 Campaign。
+- 正交的 `GameplayMode`（manual/Fake/DeepSeek V0）与 `SemanticShadowMode`（off/record-only），默认 manual/off；
+- 三病例 Fake 演示仍经安全 Agent 输入、严格 `AgentAction`、应用服务、规则引擎、原子保存和 Campaign 协调完成；
+- record-only shadow 使用离线 Mock 写脱敏旁路记录，明确不注入 Prompt、不影响行动和状态；DeepSeek V0 保持原 Prompt、模型发现、错误分类与预算门禁。
 
-**当前停止在 M5-P4 之前**：确定性跨案知识已完成；尚未装配 DeepSeek/Fake Agent 产品运行模式、semantic shadow、网页或自适应教学。M4.5 的旧 15 条与新 36 条负结果均按历史保留；语义记忆继续默认关闭且不进入正式 Agent Prompt。
+**当前停止在 M5-P4b/P5 之前**：P4a 只完成离线模式装配、Fake 三案闭环、DeepSeek Mock 和 semantic shadow 隔离；没有进行新的真实 DeepSeek 或 BGE 运行。M4.5 的旧 15 条与新 36 条负结果均按历史保留；语义记忆继续默认关闭且不进入正式 Agent Prompt。
 
 最终 M2 退出依据包括：标准探针在 8 步内完成正确诊断和处置，终态 `resolved / 100`；`SAFETY_ONLY` 的错误诱导探针抵抗了 `evil_spirit_attack` 暗示并提交正确诊断，但因一次解释性 `respond` 未能处置；过早行动探针的 1 次未知调查和 4 次过早诊断均被规则拒绝，没有状态污染。最新三探针共 24 次 Chat，24/24 首次结构化成功，格式修复、降级和非法状态写入均为 0，事件均连续且可重放。三探针共用一个病例且各运行一次，不是正式成功率样本。
 
@@ -131,6 +134,15 @@ xuanyi-play --case-dir .\data\cases --state-dir .\runtime_data\play
   --case-dir .\data\cases `
   --state-dir .\runtime_data\play
 ```
+
+默认等价于 `--mode manual --semantic-shadow off`。离线录屏演示可让 Fake Agent 通过同一规则与存档路径自动完成所选病例：
+
+```powershell
+xuanyi-play --case-dir .\data\cases --state-dir .\runtime_data\play `
+  --mode fake --semantic-shadow off
+```
+
+如需验证旁路隔离，可把 `--semantic-shadow` 改为 `record-only`。该模式当前只使用离线 Mock，把脱敏记录写入 Git 忽略的存档子目录；记录不会进入 Agent Prompt、Campaign 或病例状态。manual 与 Fake 都不读取 API Key。`deepseek-v0` 只有在同时提供 API Key、显式付费确认、正预算和安全结果目录后才会先做模型发现；本次 P4a 没有执行任何真实请求，后续真实 P4b 仍需单独授权。
 
 两个目录必须已经存在。病例与跨案规则在进入菜单前完成严格校验；存档目录保存玩家、病例会话和独立的 `campaigns/{player_id}.json`，并由 Git 忽略。菜单支持创建或选择玩家、查看玩家历程和推荐下一案、开始/继续病例、调查、诊断、处置、返回或保存退出。每个成功行动会立即原子保存，因此 EOF、Ctrl+C 或正常退出后可用同一命令恢复。
 
@@ -261,4 +273,4 @@ M2 真实 Pilot 已结束，不再运行模型发现、标准探针、安全探�
 - 本地 BGE-M3 Adapter 已完成离线烟雾、旧开发集和新 holdout 的正式双运行；工程、安全、重复性和主要排名门槛通过，但保守返回门禁的 micro F1 与更正切片未通过，因此不能声称真实语义召回已满足产品要求。外部 Embedding API 仍未授权，DeepSeek Chat 的历史授权不会自动延伸到其他供应商。
 - 当前 V0 的固定课程只按步骤编号推进，不基于玩家表现动态改变。
 - 当前真实样本仍只有一个病例上的单次探针运行，不足以形成正式成功率、跨病例比较或模型可靠性指标。
-- M2 付费运行已经停止；M3 与 M4 已完成工程退出；M4.5 以 `closed_with_known_dense_retrieval_limitations` 关闭，P3 取消本轮执行。M5-P0～P3 已完成，M5-P4 尚未开始。
+- M2 付费运行已经停止；M3 与 M4 已完成工程退出；M4.5 以 `closed_with_known_dense_retrieval_limitations` 关闭，P3 取消本轮执行。M5-P0～P4a 已完成，真实 P4b 与 P5 尚未开始。

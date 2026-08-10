@@ -10,6 +10,11 @@ from .doctor import (
     FixedV0Curriculum,
 )
 from .fake_llm import ScriptedFakeLLM
+from .gameplay_fake import (
+    FakeReferenceScript,
+    REFERENCE_FAKE_SCRIPTS,
+    build_reference_fake_agent,
+)
 from .deepseek import (
     DeepSeekAdapterConfig,
     DeepSeekAdapterError,
@@ -31,6 +36,10 @@ from .deepseek import (
     DeepSeekTransportError,
     DeepSeekTruncatedOutputError,
     DeepSeekUsageUnavailableError,
+)
+from .deepseek_gameplay import (
+    DeepSeekGameplayAuthorization,
+    build_authorized_deepseek_v0_agent,
 )
 from .llm import (
     ChatMessage,
@@ -79,11 +88,16 @@ __all__ = [
     "DeepSeekTransportError",
     "DeepSeekTruncatedOutputError",
     "DeepSeekUsageUnavailableError",
+    "DeepSeekGameplayAuthorization",
+    "build_authorized_deepseek_v0_agent",
     "LLMAdapter",
     "LLMAdapterError",
     "LLMRequest",
     "LLMResponse",
     "ScriptedFakeLLM",
+    "FakeReferenceScript",
+    "REFERENCE_FAKE_SCRIPTS",
+    "build_reference_fake_agent",
     "V1_SYSTEM_PROMPT",
     "V1DoctorAgent",
     "V1DoctorAgentConfig",

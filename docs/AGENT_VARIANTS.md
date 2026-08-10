@@ -55,7 +55,7 @@ M2b-P1b 已完成工程退出：
 - 最新三探针共 24 次 Chat 均首次结构化成功，无格式修复、降级或非法状态写入，事件连续且重放一致；
 - P0 Fake LLM suite 继续冻结为工程故障注入基线；真实三探针不重跑，不形成正式成功率。
 
-M2、M3 与 M4 工程里程碑已经完成。M3-P0 已完成进程内 MCP 工具契约验证，M3-P1 已完成独立 stdio 子进程集成验证，退出审计的 15 项条件全部通过。M4-P0 冻结 V1 长期记忆架构与离线评测规划，P1 完成确定性投影、SQLite 权威存储、生命周期和协调恢复，P2 完成确定性 Fake Embedding、Schema v2 派生向量和按玩家余弦 Top-K，P3 完成安全只读 V1 Agent 上下文，P4 的 14 条冻结合成 Gold 与安全评测全部通过；M4 退出审计确认 Gold 未漂移、产品未反向调参且安全硬门槛均为 0。M4.5 的旧开发集和 36 条新 holdout 均已完成真实本地 BGE 验证：工程、安全、重复性和主要排名门槛通过，但保守返回门禁的 micro F1 与更正切片未过线。M4.5 以 `closed_with_known_dense_retrieval_limitations` 终止，P3 本轮取消。M5-P0～P3 已完成：交互式 Runner 自动发现三个病例，确定性 Campaign 提供两项知识和两处安全历史反应；语义记忆仍不进入 Agent Prompt，M5-P4 尚未开始。
+M2、M3 与 M4 工程里程碑已经完成。M3-P0 已完成进程内 MCP 工具契约验证，M3-P1 已完成独立 stdio 子进程集成验证，退出审计的 15 项条件全部通过。M4-P0 冻结 V1 长期记忆架构与离线评测规划，P1 完成确定性投影、SQLite 权威存储、生命周期和协调恢复，P2 完成确定性 Fake Embedding、Schema v2 派生向量和按玩家余弦 Top-K，P3 完成安全只读 V1 Agent 上下文，P4 的 14 条冻结合成 Gold 与安全评测全部通过；M4 退出审计确认 Gold 未漂移、产品未反向调参且安全硬门槛均为 0。M4.5 的旧开发集和 36 条新 holdout 均已完成真实本地 BGE 验证：工程、安全、重复性和主要排名门槛通过，但保守返回门禁的 micro F1 与更正切片未过线。M4.5 以 `closed_with_known_dense_retrieval_limitations` 终止，P3 本轮取消。M5-P0～P4a 已完成：交互式 Runner 自动发现三个病例，确定性 Campaign 提供两项知识和两处安全历史反应，manual/Fake/DeepSeek V0 与 off/record-only shadow 已正交装配；语义记忆仍不进入 Agent Prompt，真实 P4b 与 P5 尚未开始。
 
 M2a/M2b-P0/P1a/P1b 均不实现：
 
@@ -146,3 +146,12 @@ M4.5 的本地 Dense-only 结果没有达到真实 V1 Prompt 准入线。因此�
 - 真实多病例轨迹形成前，不重新进行阈值调优、reranker 或其他模型比较。
 
 这里的“关闭”是产品装配决策，不删除 M4 已验证的存储、检索、权限过滤和 V1 Prompt 代码，也不改写 M4.5 的真实负结果。
+
+## M5-P4a 产品运行模式
+
+- manual：正式默认，玩家通过公开菜单行动；不初始化 LLM 或任何语义记忆组件。
+- Fake：离线测试/演示 Agent，使用三案显式参考脚本；输出仍由 `DoctorAgent` 校验并通过正式应用服务与规则层执行。
+- DeepSeek V0：复用 `deepseek-v4-flash` Adapter 与 V0 Prompt，不读取 `MemoryView`；真实调用必须另行付费确认。
+- semantic shadow off/record-only 与上述三种行动模式正交。record-only 当前只接受离线 Mock/Recording 依赖，输出只能进入 Git 忽略记录，不能进入任何 Agent 消息、工具、课程、Campaign 或状态。
+
+P4a 的捕获测试只能证明代码边界和请求结构隔离，不能证明真实 DeepSeek 行为或真实语义检索效果。
