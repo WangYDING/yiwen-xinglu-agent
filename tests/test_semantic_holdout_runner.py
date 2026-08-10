@@ -22,6 +22,7 @@ from xuanyi_npc.evaluation.semantic_holdout_runner import (
     HoldoutRunnerError,
     RecordingCachingAdapter,
     _blocked_network,
+    _canonical_model_manifest_sha256,
     _prepare_scenario,
     _public_view,
     _query_text,
@@ -346,6 +347,9 @@ def test_runner_is_independent_of_observed_15_case_entry_and_frozen_files_unchan
     assert GOLD_FREEZE_COMMIT == "98d08eef52bfb164f454bd50c08c0d3feab1bb26"
     _, _, manifest = load_frozen_holdout()
     assert hashlib.sha256(DEFAULT_GOLD.read_bytes()).hexdigest() == manifest.expectation_sha256
+    assert _canonical_model_manifest_sha256(
+        Path("config/model_manifests/bge_m3_142964af7e05_dense_fp32_verified.json")
+    ) == "d4ee3716bb6c6c5dd850ea0cf1d64f0218aed9cfbbc52a6e8061f439a05965a4"
 
 
 def test_result_schema_keeps_undefined_denominators_and_strict_fields() -> None:

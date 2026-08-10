@@ -73,6 +73,7 @@ from xuanyi_npc.memory.local_bge import (
     BGE_M3_VERIFIED_MANIFEST_SHA256,
     BgeM3LocalEmbeddingAdapter,
     BgeM3LocalEmbeddingConfig,
+    BgeM3VerifiedManifest,
 )
 from xuanyi_npc.memory.projection import (
     CommittedActionPublicView,
@@ -246,6 +247,13 @@ def _sha256_file(path: Path) -> str:
         for chunk in iter(lambda: stream.read(8 * 1024**2), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _canonical_model_manifest_sha256(path: Path) -> str:
+    manifest = BgeM3VerifiedManifest.model_validate_json(
+        path.read_text(encoding="utf-8")
+    )
+    return sha256_hex(manifest)
 
 
 def _git_value(*args: str) -> str:
@@ -902,7 +910,7 @@ def _validate_execution_identity(freeze_commit: str, output_path: Path) -> tuple
     suite, config, manifest = load_frozen_holdout()
     if _sha256_file(DEFAULT_MANIFEST) != "44424fc212d382c98799b67ce0d70a222acd4cf0e0809ebc0b4c070fb7f653c8":
         raise HoldoutRunnerError("holdout_identity_mismatch", "holdout manifest changed")
-    if _sha256_file(DEFAULT_MODEL_MANIFEST) != config.model_manifest_sha256:
+    if _canonical_model_manifest_sha256(DEFAULT_MODEL_MANIFEST) != config.model_manifest_sha256:
         raise HoldoutRunnerError("model_identity_mismatch", "model manifest changed")
     if _sha256_file(DEFAULT_DEPENDENCY_LOCK) != config.dependency_lock_sha256:
         raise HoldoutRunnerError("dependency_identity_mismatch", "embedding dependency lock changed")
