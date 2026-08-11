@@ -505,3 +505,14 @@ M5-P1 已完成，M5-P2 尚未开始。P2 前没有新的架构级用户决策�
 - **可靠性**：无效 JSON 只修复一次；过早诊断由 `diagnosis_not_ready` 拒绝且零事件/零修订；连续确定性降级在最大步骤停止且不污染病例或 Campaign。DeepSeek 缺少付费确认、预算或安全结果目录时在网络前停止；认证、超时、429、5xx、用量缺失和预算冻结继续由既有 MockTransport 回归覆盖。
 - **验证结果**：P4a 专项 21 passed；全量 459 passed。P1～P3、三病例 manual/Fake、Campaign A/B、MCP、V0/dev、M4/M4.5 历史回归均在全量套件中通过；`pip check`、`git diff --check` 和敏感/运行文件跟踪检查在提交前通过。
 - **外部边界**：DeepSeek `/models` 0、Chat 0，本地 BGE 加载 0，外部 Embedding API 0，网络请求 0，费用 0 CNY。真实 P4b 与 M5-P5 尚未开始。
+
+## 2026-08-11：M5-P4b DeepSeek V0 Campaign 小型验证
+
+- **身份与预检**：授权基线 `bb06270878c8dd10cbd98cdb72fa42cbcaa0f53d`；离线运行器、7 项专项测试和安全结果契约形成执行提交 `2b3fe6abec82b46021d11f3671697c4acd997a6c`。运行前 HEAD 精确匹配、工作树干净，配置解析为 `deepseek-v4-flash`、`0.05 CNY`、180 秒、512 输出 Token、Prompt `v0.2.1`、shadow off；只确认 Key 存在，没有输出密钥。
+- **离线回归**：执行提交前全量 `466 passed`；no-LLM 旧纸伞为 `resolved / 100`；P0 Fake dev 的 3 场景/6 轨迹全部符合冻结预期；`pip check` 与 `git diff --check` 通过。
+- **免费前史**：旧纸伞没有调用 DeepSeek，8 个连续事件得到 `resolved / 100`，处置为 `return_token_and_fulfill_vow`；CampaignEvent 1 解锁 `contract_provenance_check`。病例和 Campaign 重放均一致。
+- **真实执行**：`/models` 1 次，Flash 可用；灰灶 Chat 8 次，月井 Chat 0。灰灶第 1、4 步接受调查并产生事件 1、2；第 2、3 步因 `invalid_tool_arguments` 拒绝，第 5 步解释性 `respond` 因 `unsupported_action` 拒绝，第 6～8 步诊断因 `diagnosis_not_ready` 拒绝。最终 Session active、revision 2，无提交诊断、处置、结局或得分。月井因灰灶未形成 `completed/resolved` 和 `handoff_sequence_check` 而未启动。
+- **协议与成本**：8/8 首次结构化成功，格式修复 0、降级 0、超时 0。输入 Token 14,377（缓存命中 3,328、未命中 11,049），输出 834，推理 0，总 Chat 延迟 15,000.352 ms，确认费用与运行结束时最大已承诺费用均为 `0.01278356 CNY`，未触发预算冻结。
+- **安全与重放**：6 个拒绝步骤事件为空，最终病例修订等于 2 个接受事件；病例与 Campaign 重放一致，Campaign 保持 revision 1，没有灰灶投影或非法状态写入。8 个发送前请求审计的语义记忆字段命中均为 0；BGE、Embedding API、其他模型和月井网络调用均为 0。
+- **原始结果**：Git 忽略文件 `results/m5_p4b_campaign_20260811.json`，SHA-256 `EFDC6B37692CAA117B352DD199B52AAFF20D765945E5C8FB585994453B712C2B`。仓库只提交脱敏报告，不包含供应商请求 ID、完整 Prompt、`.env` 或 API Key。
+- **分层结论**：工程与规则安全通过；灰灶行为未完成；月井未运行；跨 Episode 只验证了旧纸伞前史进入灰灶公开开场，未验证灰灶到月井的真实连续体验。这是一次诚实负结果，不是成功率。P4b 等待监督审查，M5-P5 尚未开始。

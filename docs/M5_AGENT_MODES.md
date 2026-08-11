@@ -27,4 +27,8 @@ shadow 仅在成功领域事件已经保存后运行。它只接收刷新后的�
 
 捕获型 Fake/Mock 已验证 shadow off/on 的 Agent 请求字节、`AgentAction`、工具、固定课程、行动序列、病例事件、终态和 Campaign 一致；唯一允许差异是 Git 忽略目录中的 shadow 记录。DeepSeek Mock 请求不含 `retrieved_memories`、相似度、Memory ID 或 CampaignFact 全文。
 
-该结论只证明程序化装配隔离，不证明真实 DeepSeek 的三病例完成率，也不证明真实 BGE shadow 的语义质量。M4.5 的 Dense 负结果保持不变，语义记忆仍不得进入正式 Prompt。真实 P4b 必须另行限定模型、病例次数、预算和停止条件；P5 尚未开始。
+该结论只证明程序化装配隔离，不证明真实 DeepSeek 的三病例完成率，也不证明真实 BGE shadow 的语义质量。M4.5 的 Dense 负结果保持不变，语义记忆仍不得进入正式 Prompt。
+
+## P4b 一次真实验证
+
+2026-08-11 的冻结 P4b 窗口使用免费 Fake 路径建立旧纸伞前史，再以 `deepseek-v4-flash`、shadow off 和 `0.05 CNY` 上限运行灰灶。模型发现 1 次，灰灶 Chat 8 次，实际费用 `0.01278356 CNY`；8/8 首次结构化成功，格式修复、降级、超时和语义记忆字段命中均为 0。灰灶只接受 2 个调查事件，随后出现 2 次参数错误、1 次解释性 `respond` 和 3 次 `diagnosis_not_ready`，未形成诊断、处置或 Campaign 解锁。月井因此按门禁保持 0 次调用。工程与规则安全通过，完整行为目标未达到。详见 `docs/M5_P4B_DEEPSEEK_CAMPAIGN_PILOT_20260811.md`；P5 尚未开始。
