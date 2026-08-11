@@ -572,3 +572,11 @@ M5-P1 已完成，M5-P2 尚未开始。P2 前没有新的架构级用户决策�
 - **全量与验收**：离线测试 `492 passed`，其中 P2 文档/素材专项 `4 passed`。M5 验收再次通过，Git 忽略结果 SHA-256 为 `FC6DDFBCC7249DA5C22845E1ADB5DE877E31497F4840EEC5A67EEE348E1A005A`。
 - **分发回归**：wheel SHA-256 `A60B13CEB50D3B8B15C6DD4E1A06833311C9039AC44070FDB8B4D51DBFCA8243`（252,271 bytes），sdist SHA-256 `A1FD3EFC9BA7780DFD75B4EBDE8EADD860C35960D7B5936018EAE20FF2D5CD93`（310,912 bytes）。包内容审计、仓库外三入口/三病例/M5 验收、`pip check`、`git diff --check` 和禁止跟踪检查通过。
 - **外部边界**：DeepSeek `/models` 0、Chat 0、本地 BGE 加载 0、Embedding API 0、其他网络模型请求 0、费用 `0 CNY`。没有远程、推送、Tag、Release、媒体上传或远程 CI；M6-P3 尚未开始。详细证据见 `docs/M6_P2_PORTFOLIO_VERIFICATION.md`。
+## 2026-08-11：R1 长期状态与确定性成长验收
+
+- **专项测试**：R1 领域、规则、存储、协调和 CLI 共 16 项通过。覆盖旧纸伞 `resolved / 100`、错误诊断 70 分、`suppressed`、`worsened`、三病例共用、规则拒绝零写入、跨玩家隔离、重复完成/协调、来源篡改、病例/Campaign/成长保存失败和两进程补齐。
+- **全量回归**：仓库正式 `.venv` 下 `508 passed`；M5 分组 `124 passed`，MCP 分组 `29 passed`，Fake LLM/Runner 分组 `54 passed`。
+- **离线入口**：无 LLM Demo 保持 8 个连续事件、`resolved / 100`；`m5_acceptance_v1` 独立临时目录验收通过，三病例均为 8 个连续事件、`resolved / 100`，Campaign 事件 1～3、恢复、隔离、拒绝零写入和 record-only shadow 均通过。
+- **状态证据**：六项能力初始均为 20；旧纸伞正确轨迹后察形 21、问因 22、验物 22、辨证 22、施治 22、守则 21，亲近保持 10、信任 11、认可 12。成长事件可完整重放，重复完成和协调保持文件逐字节不变。
+- **工程卫生**：`pip check` 与 `git diff --check` 通过；没有跟踪 `.env`、`runtime_data`、`results` 或 `runtime_models` 文件，变更文件未发现凭据样式内容。
+- **外部边界**：未调用 DeepSeek `/models`、Chat、Embedding 或其他外部 API，未加载或下载 BGE/模型，网络请求与费用均为 0。R2 导师教学尚未开始。

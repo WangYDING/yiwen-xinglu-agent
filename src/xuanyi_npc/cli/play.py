@@ -451,7 +451,16 @@ class PlayCLI:
                         session_id=result.session_id or "",
                     )
                 )
-                self._print_episode_result(finished)
+                display_result = (
+                    finished
+                    if finished.ability_changes
+                    or finished.relationship_changes
+                    or result.apprenticeship_status is not None
+                    and result.apprenticeship_status.value == "pending"
+                    else result
+                )
+                self._print_episode_result(display_result)
+                self._print_growth(display_result)
                 return False
 
     def _run_agent_episode(self, current: MultiCaseServiceResult) -> bool:
@@ -499,6 +508,7 @@ class PlayCLI:
             outcome = "已执行" if step.accepted else f"被拒绝：{step.error_code}"
             self._print(f"第 {step.step_index} 步｜{tool}｜{outcome}")
         self._print_episode_result(result.public_result)
+        self._print_growth(result.public_result)
         return False
 
     def _show_campaign(self, player_id: str) -> None:
@@ -589,6 +599,29 @@ class PlayCLI:
             self._print(f"已提交诊断：{episode.submitted_diagnosis_id}")
         if episode.selected_treatment_id is not None:
             self._print(f"已执行处置：{episode.selected_treatment_id}")
+
+    def _print_growth(self, result: MultiCaseServiceResult) -> None:
+        if (
+            result.apprenticeship_status is not None
+            and result.apprenticeship_status.value == "pending"
+        ):
+            self._print("长期成长尚待协调，但病例结果已经安全保存。")
+            return
+        if not result.ability_changes and not result.relationship_changes:
+            return
+        self._print("\n本次成长")
+        for change in result.ability_changes:
+            self._print(
+                f"- {change.display_name}：{change.proficiency_before} → "
+                f"{change.proficiency_after}（+{change.delta}）"
+            )
+        labels = {"affinity": "亲近", "trust": "信任", "recognition": "认可"}
+        for change in result.relationship_changes:
+            sign = "+" if change.delta > 0 else ""
+            self._print(
+                f"- {labels[change.dimension.value]}：{change.value_before} → "
+                f"{change.value_after}（{sign}{change.delta}）"
+            )
 
     def _read(self, prompt: str) -> str:
         return self.input_fn(prompt).strip()

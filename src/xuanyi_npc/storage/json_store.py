@@ -10,6 +10,11 @@ from typing import TypeVar
 from pydantic import BaseModel, TypeAdapter, ValidationError
 
 from xuanyi_npc.domain.base import Identifier
+from xuanyi_npc.domain.apprenticeship import (
+    ApprenticeshipEventReplayer,
+    ApprenticeshipReplayError,
+    ApprenticeshipState,
+)
 from xuanyi_npc.domain.campaign import CampaignState
 from xuanyi_npc.domain.cases import CaseSessionState
 from xuanyi_npc.domain.player import PlayerState
@@ -55,6 +60,22 @@ class JsonStateStore:
     def load_campaign(self, player_id: str) -> CampaignState:
         return self._read("campaigns", player_id, CampaignState)
 
+    def save_apprenticeship(self, state: ApprenticeshipState) -> Path:
+        replayed = ApprenticeshipEventReplayer().replay(state.events)
+        if replayed != state:
+            raise StateCorruptionError("apprenticeship snapshot does not match replay")
+        return self._write("apprenticeships", state.player_id, state)
+
+    def load_apprenticeship(self, player_id: str) -> ApprenticeshipState:
+        state = self._read("apprenticeships", player_id, ApprenticeshipState)
+        try:
+            replayed = ApprenticeshipEventReplayer().replay(state.events)
+        except ApprenticeshipReplayError as exc:
+            raise StateCorruptionError("apprenticeship event stream is invalid") from exc
+        if replayed != state:
+            raise StateCorruptionError("apprenticeship snapshot does not match replay")
+        return state
+
     def list_players(self) -> tuple[PlayerState, ...]:
         """Return all validated player snapshots in stable ID order."""
 
@@ -69,6 +90,17 @@ class JsonStateStore:
         """Return all validated Campaign snapshots in stable player order."""
 
         return self._list("campaigns", CampaignState, "player_id")
+
+    def list_apprenticeships(self) -> tuple[ApprenticeshipState, ...]:
+        values = self._list("apprenticeships", ApprenticeshipState, "player_id")
+        for value in values:
+            try:
+                replayed = ApprenticeshipEventReplayer().replay(value.events)
+            except ApprenticeshipReplayError as exc:
+                raise StateCorruptionError("apprenticeship event stream is invalid") from exc
+            if replayed != value:
+                raise StateCorruptionError("apprenticeship snapshot does not match replay")
+        return values
 
     def _path(self, namespace: str, identifier: str) -> Path:
         try:

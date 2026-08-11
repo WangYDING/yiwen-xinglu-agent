@@ -52,6 +52,15 @@ from .campaign import (
     CampaignView,
     KnowledgeView,
 )
+from .progression import (
+    AbilityChangeView,
+    ApprenticeshipCoordinator,
+    ApprenticeshipView,
+    ProgressionError,
+    ProgressionPolicy,
+    ProgressionSourceError,
+    RelationshipChangeView,
+)
 from .v0_tools import INVESTIGATION_TOOL_ACTIONS, ToolCallError, V0ToolExecutor
 from .views import (
     AgentContextFilter,
@@ -118,6 +127,10 @@ class ReconcileCampaignInput(MultiCaseContract):
     player_id: Identifier
 
 
+class ApprenticeshipPlayerInput(MultiCaseContract):
+    player_id: Identifier
+
+
 class StartEpisodeInput(MultiCaseContract):
     player_id: Identifier
     case_id: Identifier
@@ -164,6 +177,11 @@ class CasePlayStatus(str, Enum):
 
 
 class CampaignProjectionStatus(str, Enum):
+    READY = "ready"
+    PENDING = "pending"
+
+
+class ApprenticeshipProjectionStatus(str, Enum):
     READY = "ready"
     PENDING = "pending"
 
@@ -240,6 +258,14 @@ class MultiCaseServiceResult(MultiCaseContract):
     recommended_investigation_id: Identifier | None = None
     investigation_recommendation_reason: NonEmptyText | None = None
     newly_unlocked_knowledge: tuple[KnowledgeView, ...] = Field(default_factory=tuple)
+    apprenticeship_view: ApprenticeshipView | None = None
+    apprenticeship_status: ApprenticeshipProjectionStatus | None = None
+    apprenticeship_error_code: Identifier | None = None
+    apprenticeship_event_sequences: tuple[
+        Annotated[StrictInt, Field(ge=1)], ...
+    ] = Field(default_factory=tuple)
+    ability_changes: tuple[AbilityChangeView, ...] = Field(default_factory=tuple)
+    relationship_changes: tuple[RelationshipChangeView, ...] = Field(default_factory=tuple)
     event_sequences: tuple[Annotated[StrictInt, Field(ge=1)], ...] = Field(
         default_factory=tuple
     )
@@ -257,6 +283,11 @@ class MultiCaseServiceResult(MultiCaseContract):
                 raise ValueError("pending campaign result requires stable error code")
         elif self.campaign_error_code is not None:
             raise ValueError("campaign error code requires pending status")
+        if self.apprenticeship_status is ApprenticeshipProjectionStatus.PENDING:
+            if self.apprenticeship_error_code != "apprenticeship_projection_pending":
+                raise ValueError("pending apprenticeship result requires stable error code")
+        elif self.apprenticeship_error_code is not None:
+            raise ValueError("apprenticeship error code requires pending status")
         if self.observation is not None:
             if self.session_revision != self.observation.session_revision:
                 raise ValueError("observation and result revisions must match")
@@ -385,6 +416,11 @@ SAFE_SERVICE_MESSAGES: Mapping[str, str] = {
     "campaign_source_invalid": "已提交病例与玩家历程来源不一致，已停止协调。",
     "campaign_source_missing": "玩家历程引用的病例存档缺失，已停止协调。",
     "campaign_source_conflict": "玩家历程与病例存档不一致，已停止协调。",
+    "apprenticeship_state_corrupt": "弟子长期成长存档无法安全读取，不能当作空状态继续。",
+    "apprenticeship_projection_pending": "病例和玩家历程已经保存，但本次成长尚待协调补齐。",
+    "apprenticeship_source_invalid": "已提交病例与成长来源不一致，已停止协调。",
+    "apprenticeship_source_missing": "成长记录引用的病例存档缺失，已停止协调。",
+    "apprenticeship_source_conflict": "成长记录与病例存档不一致，已停止协调。",
 }
 
 
@@ -402,6 +438,7 @@ class MultiCaseEpisodeService:
         engine: CaseEngine | None = None,
         context_filter: AgentContextFilter | None = None,
         campaign_rules: CampaignRuleSet | None = None,
+        progression_policy: ProgressionPolicy | None = None,
     ) -> None:
         self.state_store = state_store
         self.case_catalog = case_catalog
@@ -419,6 +456,12 @@ class MultiCaseEpisodeService:
             state_store,
             self.campaign_rules,
         )
+        self.progression_policy = progression_policy or ProgressionPolicy.load_default()
+        self.apprenticeship_coordinator = ApprenticeshipCoordinator(
+            state_store,
+            case_catalog,
+            self.progression_policy,
+        )
 
     def create_player(self, request: CreatePlayerInput) -> MultiCaseServiceResult:
         try:
@@ -429,15 +472,20 @@ class MultiCaseEpisodeService:
             ):
                 return self._error("id_conflict")
             player = self._initial_player(player_id, request.display_name)
-            result = MultiCaseServiceResult(
+            self.state_store.save_player(player)
+            apprenticeship = self.apprenticeship_coordinator.initialize(
+                player.player_id,
+                self.clock.now(),
+            )
+            return MultiCaseServiceResult(
                 ok=True,
                 message="玩家已创建。",
                 player_id=player.player_id,
                 player_revision=player.revision,
                 players=(self._player_summary(player),),
+                apprenticeship_view=self.progression_policy.view(apprenticeship),
+                apprenticeship_status=ApprenticeshipProjectionStatus.READY,
             )
-            self.state_store.save_player(player)
-            return result
         except StateCorruptionError:
             return self._error("state_corrupt")
         except StorageError:
@@ -473,6 +521,9 @@ class MultiCaseEpisodeService:
         if isinstance(campaign_or_error, MultiCaseServiceResult):
             return campaign_or_error
         campaign = campaign_or_error
+        apprenticeship_or_error = self._load_apprenticeship(player)
+        if isinstance(apprenticeship_or_error, MultiCaseServiceResult):
+            return apprenticeship_or_error
         try:
             sessions = self._sessions_for_player(player.player_id)
             entries = tuple(
@@ -493,6 +544,8 @@ class MultiCaseEpisodeService:
             cases=entries,
             campaign_view=self.campaign_rules.view(campaign),
             campaign_status=CampaignProjectionStatus.READY,
+            apprenticeship_view=self.progression_policy.view(apprenticeship_or_error),
+            apprenticeship_status=ApprenticeshipProjectionStatus.READY,
         )
 
     def start_episode(self, request: StartEpisodeInput) -> MultiCaseServiceResult:
@@ -773,6 +826,25 @@ class MultiCaseEpisodeService:
     ) -> MultiCaseServiceResult:
         return self._read_campaign_result(request.player_id, "玩家历程已刷新。")
 
+    def get_apprenticeship_view(
+        self,
+        request: ApprenticeshipPlayerInput,
+    ) -> MultiCaseServiceResult:
+        player_or_error = self._load_player(request.player_id)
+        if isinstance(player_or_error, MultiCaseServiceResult):
+            return player_or_error
+        state_or_error = self._load_apprenticeship(player_or_error)
+        if isinstance(state_or_error, MultiCaseServiceResult):
+            return state_or_error
+        return MultiCaseServiceResult(
+            ok=True,
+            message="弟子长期成长已刷新。",
+            player_id=player_or_error.player_id,
+            player_revision=player_or_error.revision,
+            apprenticeship_view=self.progression_policy.view(state_or_error),
+            apprenticeship_status=ApprenticeshipProjectionStatus.READY,
+        )
+
     def list_completed_cases(
         self,
         request: CampaignPlayerInput,
@@ -836,6 +908,31 @@ class MultiCaseEpisodeService:
             )
         except CampaignError:
             return self._error("campaign_source_invalid", player=player)
+        try:
+            growth = self.apprenticeship_coordinator.reconcile(
+                player,
+                self.clock.now(),
+            )
+        except (StorageError, ProgressionError):
+            return MultiCaseServiceResult(
+                ok=True,
+                message=(
+                    "玩家历程已协调；"
+                    f"{SAFE_SERVICE_MESSAGES['apprenticeship_projection_pending']}"
+                ),
+                player_id=player.player_id,
+                player_revision=player.revision,
+                campaign_view=self.campaign_rules.view(result.state),
+                campaign_status=CampaignProjectionStatus.READY,
+                campaign_event_sequences=tuple(
+                    range(current.revision + 1, result.state.revision + 1)
+                ),
+                newly_unlocked_knowledge=self._knowledge_views(
+                    result.newly_unlocked
+                ),
+                apprenticeship_status=ApprenticeshipProjectionStatus.PENDING,
+                apprenticeship_error_code="apprenticeship_projection_pending",
+            )
         return MultiCaseServiceResult(
             ok=True,
             message=(
@@ -851,6 +948,19 @@ class MultiCaseEpisodeService:
             newly_unlocked_knowledge=self._knowledge_views(
                 result.newly_unlocked
             ),
+            apprenticeship_view=self.progression_policy.view(growth.state),
+            apprenticeship_status=ApprenticeshipProjectionStatus.READY,
+            apprenticeship_event_sequences=growth.event_sequences,
+            ability_changes=growth.ability_changes,
+            relationship_changes=growth.relationship_changes,
+        )
+
+    def reconcile_apprenticeship(
+        self,
+        request: ApprenticeshipPlayerInput,
+    ) -> MultiCaseServiceResult:
+        return self.reconcile_campaign(
+            ReconcileCampaignInput(player_id=request.player_id)
         )
 
     def quit(self, request: QuitInput) -> MultiCaseServiceResult:
@@ -897,6 +1007,23 @@ class MultiCaseEpisodeService:
         if campaign.player_id != player.player_id:
             return self._error("campaign_source_invalid", player=player)
         return campaign
+
+    def _load_apprenticeship(
+        self,
+        player: PlayerState,
+    ):
+        try:
+            state = self.apprenticeship_coordinator.load_or_initialize(
+                player.player_id,
+                self.clock.now(),
+            )
+        except StateCorruptionError:
+            return self._error("apprenticeship_state_corrupt", player=player)
+        except StorageError:
+            return self._error("state_unavailable", player=player)
+        if state.player_id != player.player_id:
+            return self._error("apprenticeship_source_invalid", player=player)
+        return state
 
     def _read_campaign_result(
         self,
@@ -966,6 +1093,44 @@ class MultiCaseEpisodeService:
                 campaign_status=CampaignProjectionStatus.PENDING,
                 campaign_error_code="campaign_projection_pending",
             )
+        try:
+            growth = self.apprenticeship_coordinator.project_completed(
+                player,
+                case,
+                session,
+                session.action_history[-1].occurred_at,
+            )
+        except (StorageError, ProgressionSourceError, ProgressionError):
+            apprenticeship_view = None
+            try:
+                apprenticeship_view = self.progression_policy.view(
+                    self.state_store.load_apprenticeship(player.player_id)
+                )
+            except StorageError:
+                pass
+            return self._context_result(
+                ok=True,
+                code=None,
+                message=(
+                    f"{message} "
+                    f"{SAFE_SERVICE_MESSAGES['apprenticeship_projection_pending']}"
+                ),
+                player=player,
+                case=case,
+                session=session,
+                campaign_state=projection.state,
+                event_sequences=event_sequences,
+                campaign_status=CampaignProjectionStatus.READY,
+                campaign_event_sequences=(
+                    (projection.event.sequence,) if projection.event is not None else ()
+                ),
+                newly_unlocked_knowledge=self._knowledge_views(
+                    projection.newly_unlocked
+                ),
+                apprenticeship_view=apprenticeship_view,
+                apprenticeship_status=ApprenticeshipProjectionStatus.PENDING,
+                apprenticeship_error_code="apprenticeship_projection_pending",
+            )
         return self._context_result(
             ok=True,
             code=None,
@@ -982,6 +1147,11 @@ class MultiCaseEpisodeService:
             newly_unlocked_knowledge=self._knowledge_views(
                 projection.newly_unlocked
             ),
+            apprenticeship_view=self.progression_policy.view(growth.state),
+            apprenticeship_status=ApprenticeshipProjectionStatus.READY,
+            apprenticeship_event_sequences=growth.event_sequences,
+            ability_changes=growth.ability_changes,
+            relationship_changes=growth.relationship_changes,
         )
 
     @staticmethod
@@ -1135,6 +1305,12 @@ class MultiCaseEpisodeService:
         campaign_error_code: str | None = None,
         campaign_event_sequences: tuple[int, ...] = (),
         newly_unlocked_knowledge: tuple[KnowledgeView, ...] = (),
+        apprenticeship_view: ApprenticeshipView | None = None,
+        apprenticeship_status: ApprenticeshipProjectionStatus | None = None,
+        apprenticeship_error_code: str | None = None,
+        apprenticeship_event_sequences: tuple[int, ...] = (),
+        ability_changes: tuple[AbilityChangeView, ...] = (),
+        relationship_changes: tuple[RelationshipChangeView, ...] = (),
     ) -> MultiCaseServiceResult:
         observation = self.tool_executor.case_observation(case, player, session)
         campaign_context = self.campaign_rules.context_for(
@@ -1179,6 +1355,12 @@ class MultiCaseEpisodeService:
                 campaign_context.recommendation_reason
             ),
             newly_unlocked_knowledge=newly_unlocked_knowledge,
+            apprenticeship_view=apprenticeship_view,
+            apprenticeship_status=apprenticeship_status,
+            apprenticeship_error_code=apprenticeship_error_code,
+            apprenticeship_event_sequences=apprenticeship_event_sequences,
+            ability_changes=ability_changes,
+            relationship_changes=relationship_changes,
         )
 
     @staticmethod

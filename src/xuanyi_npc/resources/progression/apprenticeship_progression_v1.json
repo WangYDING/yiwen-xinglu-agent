@@ -1,0 +1,36 @@
+{
+  "policy_version": "apprenticeship_progression_v1",
+  "state_schema_version": "apprenticeship_state_v1",
+  "teaching_stage": "novice",
+  "ability_levels": [
+    {"level": "novice", "minimum_proficiency": 0},
+    {"level": "apprentice", "minimum_proficiency": 25},
+    {"level": "competent", "minimum_proficiency": 50},
+    {"level": "advanced", "minimum_proficiency": 75},
+    {"level": "mastered", "minimum_proficiency": 90}
+  ],
+  "abilities": [
+    {"ability_id": "observe_form", "display_name": "察形", "initial_proficiency": 20, "unlocked": true},
+    {"ability_id": "ask_cause", "display_name": "问因", "initial_proficiency": 20, "unlocked": true},
+    {"ability_id": "inspect_evidence", "display_name": "验物", "initial_proficiency": 20, "unlocked": true},
+    {"ability_id": "reason_diagnosis", "display_name": "辨证", "initial_proficiency": 20, "unlocked": true},
+    {"ability_id": "apply_treatment", "display_name": "施治", "initial_proficiency": 20, "unlocked": true},
+    {"ability_id": "ethical_practice", "display_name": "守则", "initial_proficiency": 20, "unlocked": true}
+  ],
+  "initial_relationship": {"affinity": 10, "trust": 10, "recognition": 10},
+  "maximum_positive_growth_per_ability_per_episode": 2,
+  "investigation_action_ability_map": {
+    "observe_patient": "observe_form",
+    "question_patient": "ask_cause",
+    "inspect_object": "inspect_evidence",
+    "investigate_location": "inspect_evidence",
+    "observe_qi": "reason_diagnosis"
+  },
+  "relationship_rules": [
+    {"outcome": "resolved", "minimum_score": 90, "maximum_score": 100, "affinity": 0, "trust": 1, "recognition": 2, "public_reason_code": "resolved_excellent", "public_description": "本案得到安全而可靠的圆满解决。"},
+    {"outcome": "resolved", "minimum_score": 70, "maximum_score": 89, "affinity": 0, "trust": 0, "recognition": 1, "public_reason_code": "resolved_sound", "public_description": "本案得到解决，能力表现获得认可。"},
+    {"outcome": "resolved", "minimum_score": 0, "maximum_score": 69, "affinity": 0, "trust": 0, "recognition": 0, "public_reason_code": "resolved_limited", "public_description": "本案已经解决，但尚不足以改变师徒关系评价。"},
+    {"outcome": "suppressed", "minimum_score": 0, "maximum_score": 100, "affinity": 0, "trust": 0, "recognition": 0, "public_reason_code": "outcome_suppressed", "public_description": "本案仅被暂时压制，关系评价保持不变。"},
+    {"outcome": "worsened", "minimum_score": 0, "maximum_score": 100, "affinity": 0, "trust": -1, "recognition": -1, "public_reason_code": "outcome_worsened", "public_description": "本案结果恶化，可靠性与能力认可需要重新建立。"}
+  ]
+}

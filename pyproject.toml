@@ -74,6 +74,7 @@ include-package-data = false
     "campaign/*.json",
     "cases/*.json",
     "pilot/*.json",
+    "progression/*.json",
     "release/*.json",
 ]
 
