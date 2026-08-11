@@ -6,7 +6,7 @@
 
 ## 当前状态
 
-**M2、M3 与 M4 工程里程碑已经完成；M4.5 已以 `closed_with_known_dense_retrieval_limitations` 终止，M5-P0～P4c 已完成，M5-P5 尚未开始。** M5-P1 提供可注入的多病例 Episode 服务与 `xuanyi-play`，P2 提供三个完整病例，P3 增加可重放的确定性 Campaign、两项可见知识成长和两处跨案历史反应，P4a 冻结 manual/Fake/DeepSeek V0 与 record-only semantic shadow 的装配边界。P4b 中旧纸伞前史建立成功，但灰灶在 8 步内未闭环，因此月井按门禁未启动；这不是三病例成功率。P4c 只离线增加通用公开行动契约、结构化拒绝反馈和一次有界行动修复，不改写 P4b，也没有调用真实模型。三个病例始终可独立开始；推荐顺序只提供公开建议，不构成锁关。
+**M2、M3 与 M4 工程里程碑已经完成；M4.5 已以 `closed_with_known_dense_retrieval_limitations` 终止，M5-P0～P4 已完成，M5-P5 尚未开始。** M5-P1 提供可注入的多病例 Episode 服务与 `xuanyi-play`，P2 提供三个完整病例，P3 增加可重放的确定性 Campaign、两项可见知识成长和两处跨案历史反应，P4a 冻结 manual/Fake/DeepSeek V0 与 record-only semantic shadow 的装配边界。P4b 保留灰灶未闭环、月井未运行的真实负结果；P4c 离线增加通用公开行动契约、结构化拒绝反馈和一次有界行动修复；P4d 最终单次验证触发 5 次真实契约修复并全部成功，灰灶与月井均达到 `resolved / 100`。这些是单次工程案例，不是正式成功率。三个病例始终可独立开始；推荐顺序只提供公开建议，不构成锁关。
 
 已经包含：
 
@@ -68,7 +68,7 @@
 - record-only shadow 使用离线 Mock 写脱敏旁路记录，明确不注入 Prompt、不影响行动和状态；DeepSeek V0 保持原 Prompt、模型发现、错误分类与预算门禁。
 - 结构有效的 Agent 提案还会在状态服务之前通过当前公开行动契约；首次上下文错误使用一次独立记录的 `action_contract_repair`，第二次仍错误则安全降级且不产生第三次模型调用。
 
-**当前停止在未授权的 M5-P4d 与尚未开始的 M5-P5 之前**：P4b 使用 `deepseek-v4-flash` 完成 1 次模型发现和 8 次灰灶 Chat，实际费用 `0.01278356 CNY`。工程与规则安全通过，但灰灶只产生 2 个合法调查事件，未完成诊断或处置；月井没有启动。完整脱敏证据见 [P4b Pilot 报告](docs/M5_P4B_DEEPSEEK_CAMPAIGN_PILOT_20260811.md)。P4c 的[离线行动契约审计](docs/M5_P4C_AGENT_CONTRACT_AUDIT.md)没有重新运行病例或修改历史结论。M4.5 的旧 15 条与新 36 条负结果均按历史保留；语义记忆继续默认关闭且不进入正式 Agent Prompt。
+**当前停止在尚未开始的 M5-P5 之前**：P4b 的[历史负结果](docs/M5_P4B_DEEPSEEK_CAMPAIGN_PILOT_20260811.md)保持不变；P4c 的[离线行动契约审计](docs/M5_P4C_AGENT_CONTRACT_AUDIT.md)没有回写该结果；P4d 的[最终单次恢复验证](docs/M5_P4D_DEEPSEEK_RECOVERY_VALIDATION_20260811.md)以 21 次 Chat、`0.02345744 CNY` 完成灰灶和月井，并验证 5/5 行动契约修复。M5-P4 此后停止付费重跑和 Prompt 调优。M4.5 的旧 15 条与新 36 条负结果均按历史保留；语义记忆继续默认关闭且不进入正式 Agent Prompt。
 
 最终 M2 退出依据包括：标准探针在 8 步内完成正确诊断和处置，终态 `resolved / 100`；`SAFETY_ONLY` 的错误诱导探针抵抗了 `evil_spirit_attack` 暗示并提交正确诊断，但因一次解释性 `respond` 未能处置；过早行动探针的 1 次未知调查和 4 次过早诊断均被规则拒绝，没有状态污染。最新三探针共 24 次 Chat，24/24 首次结构化成功，格式修复、降级和非法状态写入均为 0，事件均连续且可重放。三探针共用一个病例且各运行一次，不是正式成功率样本。
 
@@ -274,4 +274,4 @@ M2 真实 Pilot 已结束，不再运行模型发现、标准探针、安全探�
 - 本地 BGE-M3 Adapter 已完成离线烟雾、旧开发集和新 holdout 的正式双运行；工程、安全、重复性和主要排名门槛通过，但保守返回门禁的 micro F1 与更正切片未通过，因此不能声称真实语义召回已满足产品要求。外部 Embedding API 仍未授权，DeepSeek Chat 的历史授权不会自动延伸到其他供应商。
 - 当前 V0 的固定课程只按步骤编号推进，不基于玩家表现动态改变。
 - 当前真实样本仍只有一个病例上的单次探针运行，不足以形成正式成功率、跨病例比较或模型可靠性指标。
-- M2 付费运行已经停止；M3 与 M4 已完成工程退出；M4.5 以 `closed_with_known_dense_retrieval_limitations` 关闭，P3 取消本轮执行。M5-P0～P4c 已完成；P4b 一次真实运行的工程安全通过，但灰灶行为未闭环、月井未启动；P4c 只改进通用接口和离线恢复，P4d 尚未授权，P5 尚未开始。
+- M2 付费运行已经停止；M3 与 M4 已完成工程退出；M4.5 以 `closed_with_known_dense_retrieval_limitations` 关闭，P3 取消本轮执行。M5-P0～P4 已完成；P4b 负结果、P4c 通用接口修复和 P4d 单次真实恢复结果全部保留，P4 不再重跑或调优；P5 尚未开始。

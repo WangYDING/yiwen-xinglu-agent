@@ -526,3 +526,17 @@ M5-P1 已完成，M5-P2 尚未开始。P2 前没有新的架构级用户决策�
 - **三病例与隔离**：`target_id` 错误在旧纸伞、灰灶和月井均可由一次公开契约修复变成准确调查，且只产生一个事件。三个 Fake 参考脚本仍各以 8 个连续事件得到 `resolved / 100`；Campaign A/B、manual、事件重放、MCP 与 shadow off/on 请求/行动/状态隔离均通过。请求和反馈未出现根因、正确性、评分、未发现线索或语义记忆字段。
 - **专项与全量**：P4c 专项 `10 passed`；P4a/P3/P4b 历史组合 `46 passed`；MCP P0/P1 `22 passed`；全量 `476 passed`（`476 collected`）。无 LLM Demo 继续为事件 1–8、`resolved / 100`；P0 Fake dev 的 3 场景/6 轨迹全部符合冻结预期；`pip check` 与 `git diff --check` 通过。
 - **外部边界**：DeepSeek `/models` 0、Chat 0、本地 BGE 加载 0、Embedding API 0、其他网络请求 0、费用 0 CNY。P4d 尚未授权，M5-P5 尚未开始。
+
+## 2026-08-11：M5-P4d DeepSeek V0 最终真实恢复验证
+
+- **冻结与历史**：精确执行提交 `60f54a5d20f684f5e922c617c7c795a1d622613d`，运行前工作树干净；模型 `deepseek-v4-flash`、Prompt `v0.2.1`、shadow off、180 秒和 `0.05 CNY` 均通过预检。P4b 原始结果未修改，SHA-256 仍为 `EFDC6B37692CAA117B352DD199B52AAFF20D765945E5C8FB585994453B712C2B`。
+- **免费前史**：旧纸伞继续使用确定性 Fake，Chat 0；8 个连续事件得到 `resolved / 100`，CampaignEvent 1 解锁 `contract_provenance_check`，病例和 Campaign 重放一致。
+- **真实接口恢复**：灰灶与月井共 16 个决策步骤，首次 JSON Schema 成功 16/16。5 个首次提案触发 `action_contract_repair`：`invalid_tool_arguments` 2、`unknown_investigation` 1、`diagnosis_not_ready` 2；5/5 修复成功。错误码由 16/16 基础请求 SHA 完整复现和 5 个修复请求唯一 SHA 匹配离线核对，没有保存或提交完整 Prompt/错误输出。
+- **灰灶结果**：Chat 12；步骤 Chat 数为 1/2/2/1/2/2/1/1。6 次调查、诊断 `displaced_hearth_contract`、处置 `restore_token_and_clear_flue` 均被接受，事件 1–8，`completed / resolved / 100`；CampaignEvent 2 解锁 `handoff_sequence_check`。
+- **月井结果**：Chat 9；步骤 Chat 数为 1/1/1/2/1/1/1/1。6 次调查、诊断 `misbound_message_handoff`、处置 `verify_recipient_and_deliver` 均被接受，事件 1–8，`completed / resolved / 100`；CampaignEvent 3 正常产生。
+- **协议与行为**：全部 21 个 Chat 输出结构化合法；格式修复 0、契约修复失败 0、降级 0。实际进入应用服务的付费行动 16，全部接受；首次无效提案进入服务 0、规则拒绝 0、空耗 `respond` 0、重复调查 0、错误处置 0。两次过早诊断提案均在契约层修复为调查，没有状态变化。
+- **状态与安全**：三个病例磁盘终态均等于事件重放终态；Campaign revision 3、事件 1–3，重放一致；两项知识和两段公开前史出现。语义记忆标记命中、跨玩家污染、非法状态写入、拒绝后事件和隐藏泄漏均为 0；BGE、Embedding API 和其他供应商请求为 0。
+- **用量**：`/models` 1、Chat 21；输入 40,868（缓存命中 22,272、未命中 18,596），输出 2,208，推理 0，总延迟 44,257.525 ms，实际与运行结束时最大已承诺费用均为 `0.02345744 CNY`，没有超时、用量缺失或预算冻结。
+- **原始身份**：Git 忽略结果 `results/m5_p4d_recovery_20260811.json`，83,606 bytes，SHA-256 `24B4105E1607F84FA0E1D15810BAF9051FBAADCEF3D90470411EB7A0543BADD8`。仓库只保存脱敏报告。
+- **离线收口**：运行后全量 `476 passed`；`pip check`、`git diff --check`、敏感信息与运行文件跟踪检查通过。提交范围只有脱敏报告和当前状态文档，没有产品代码或测试改动。
+- **结论边界**：P4c 通用接口在一次真实运行中被触发并成功纠正 5/5 行动，完整旧纸伞→灰灶→月井 Campaign 得到单次验证；P4b/P4d 各一个案例，不是统计因果、正式成功率或玩家收益。M5-P4 已关闭，不再重跑或调 Prompt；M5-P5 尚未开始。

@@ -47,4 +47,14 @@ P4c 不改 Prompt `v0.2.1`、病例、规则、Campaign 或 8 步上限。它把
 
 三病例 Fake 使用同一实现继续得到事件 1–8 和 `resolved / 100`；manual、MCP、Campaign、事件重放与 shadow off/on 隔离保持不变。冻结 P0/Pilot 历史轨迹仍按原历史语义重评，避免新修复步骤篡改既有结果。完整根因、证据与推断边界见 `docs/M5_P4C_AGENT_CONTRACT_AUDIT.md`。
 
-本阶段只有离线 Fake/Mock 证据。它不能证明 DeepSeek 会在拒绝后选择高效动作，也没有解决解释性 `respond` 或一般策略选择问题。P4b 仍是灰灶未完成、月井未运行的历史负结果；P4d 真实恢复复核尚未授权，P5 尚未开始。
+该 P4c 检查点只有离线 Fake/Mock 证据，当时不能证明 DeepSeek 会在拒绝后选择高效动作，也没有解决解释性 `respond` 或一般策略选择问题。P4b 仍是灰灶未完成、月井未运行的历史负结果；后续 P4d 结果不得改写它。
+
+## P4d 最终真实恢复验证
+
+P4d 在精确提交 `60f54a5d20f684f5e922c617c7c795a1d622613d` 上使用 `deepseek-v4-flash`、Prompt `v0.2.1`、shadow off 和 `0.05 CNY` 上限执行一次，不修改代码、病例、Prompt、规则或步骤上限。旧纸伞仍由免费 Fake 路径建史；灰灶和月井各运行一次。
+
+两个新病例的 16 个首次输出全部通过 JSON Schema，其中 5 个不符合当前公开行动契约，分别触发 `invalid_tool_arguments` 2 次、`unknown_investigation` 1 次和 `diagnosis_not_ready` 2 次。5/5 `action_contract_repair` 成功，格式修复、降级、规则拒绝、`respond`、重复调查和错误处置均为 0。灰灶与月井都以 8 个连续事件得到 `resolved / 100`；CampaignEvent 连续 1–3，两项知识和两段公开历史反应完整出现且可重放。
+
+本次 `/models` 1 次、Chat 21 次，费用 `0.02345744 CNY`；语义记忆标记命中 0，BGE 和 Embedding 请求 0。它证明 P4c 接口在一次真实运行中被触发并成功纠正行动，也验证了一次完整三病例产品链路；但修复前后各只有一个案例，不能声明统计因果、正式成功率或稳定玩家收益。详细证据见 `docs/M5_P4D_DEEPSEEK_RECOVERY_VALIDATION_20260811.md`。
+
+M5-P4 已按真实正负结果关闭，不再授权新的 P4 重跑或 Prompt 调优。M5-P5 尚未开始。
