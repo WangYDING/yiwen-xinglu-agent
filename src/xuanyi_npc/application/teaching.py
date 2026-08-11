@@ -13,6 +13,11 @@ from xuanyi_npc.agents.mentor import (
 )
 from xuanyi_npc.agents.mentor_contract import MentorActionContractError, validate_mentor_action
 from xuanyi_npc.application.assessment import AssessmentBuilder, AssessmentSourceError
+from xuanyi_npc.application.curriculum import CurriculumCatalog, TeachingPlanService
+from xuanyi_npc.application.structured_memory import (
+    StructuredMentorMemorySelector,
+    StructuredTeachingMemoryProjector,
+)
 from xuanyi_npc.application.multicase import (
     CaseCatalog,
     MultiCaseEpisodeService,
@@ -43,12 +48,9 @@ from xuanyi_npc.domain.teaching import (
     TeachingSessionCompleted,
     TeachingSessionState,
 )
-from xuanyi_npc.resources.runtime import (
-    MENTOR_PROFILE_RESOURCE_NAME,
-    R2_LESSON_RESOURCE_NAME,
-    read_runtime_text,
-)
+from xuanyi_npc.resources.runtime import MENTOR_PROFILE_RESOURCE_NAME, read_runtime_text
 from xuanyi_npc.storage import JsonStateStore, StateNotFoundError, StorageError
+from xuanyi_npc.storage.sqlite_memory import SQLiteMemoryRepository
 
 
 class TeachingSessionIdFactory(Protocol):
@@ -92,6 +94,7 @@ class MentorTeachingService:
         case_service: MultiCaseEpisodeService,
         mentor_agent: MentorAgentInterface,
         id_factory: TeachingSessionIdFactory | None = None,
+        memory_repository: SQLiteMemoryRepository | None = None,
     ) -> None:
         self.case_service = case_service
         self.store: JsonStateStore = case_service.state_store
@@ -100,9 +103,17 @@ class MentorTeachingService:
         self.profile = MentorProfile.model_validate_json(
             read_runtime_text(f"mentor/{MENTOR_PROFILE_RESOURCE_NAME}")
         )
-        self.lesson = LessonDefinition.model_validate_json(
-            read_runtime_text(f"curriculum/{R2_LESSON_RESOURCE_NAME}")
+        self.curriculum = CurriculumCatalog.load()
+        self.lesson = self.curriculum.lessons["evidence_before_diagnosis_v1"]
+        self.plan_service = TeachingPlanService(
+            self.store, clock=self.case_service.clock, catalog=self.curriculum
         )
+        self.memory_repository = memory_repository or SQLiteMemoryRepository(
+            self.store.root / "memories.sqlite3"
+        )
+        self.memory_repository.initialize()
+        self.memory_projector = StructuredTeachingMemoryProjector(self.memory_repository)
+        self.memory_selector = StructuredMentorMemorySelector(self.memory_repository)
         self.assessment_builder = AssessmentBuilder()
 
     def create(self, request: CreateTeachingSessionInput) -> TeachingServiceResult:
@@ -112,8 +123,15 @@ class MentorTeachingService:
             apprenticeship = self.store.load_apprenticeship(request.player_id)
             if case_session.player_id != request.player_id:
                 return self._error("teaching_access_denied", "不能访问其他玩家的教学会话。")
-            if case_session.case_id != self.lesson.assigned_case_id:
-                return self._error("lesson_case_not_allowed", "R2 教学只开放旧纸伞病例。")
+            lesson = self.curriculum.lessons_by_case.get(case_session.case_id)
+            if lesson is None:
+                return self._error("lesson_case_not_allowed", "当前病例没有可信课程资源。")
+            plan = self.plan_service.ensure(request.player_id)
+            plan = self.plan_service.record_deviation(
+                player_id=request.player_id,
+                case_session_id=case_session.session_id,
+                chosen_lesson_id=lesson.lesson_id,
+            )
             duplicates = tuple(
                 item for item in self.store.list_teaching_sessions()
                 if item.case_session_id == case_session.session_id
@@ -131,7 +149,7 @@ class MentorTeachingService:
                 occurred_at=now,
                 player_id=request.player_id,
                 mentor_id=self.profile.mentor_id,
-                lesson_id=self.lesson.lesson_id,
+                lesson_id=lesson.lesson_id,
                 case_session_id=case_session.session_id,
             )
             state = TeachingEventReplayer().replay((assigned,))
@@ -140,6 +158,9 @@ class MentorTeachingService:
                 apprenticeship=apprenticeship,
                 phase=MentorInteractionPhase.LESSON_START,
                 allowed=(MentorActionType.SPEAK,),
+                lesson=lesson,
+                plan=plan,
+                excluded_episode_id=case_session.session_id,
             )
             action = self.mentor_agent.decide(agent_input).action
             try:
@@ -160,7 +181,7 @@ class MentorTeachingService:
             )
             self.store.save_teaching_session(state)
             return TeachingServiceResult(
-                ok=True, message="导师已布置固定课程。", state=state, mentor_action=action
+                ok=True, message="导师已布置确定性课程。", state=state, mentor_action=action
             )
         except (StateNotFoundError, StorageError):
             return self._error("teaching_state_unavailable", "教学会话暂不可用。")
@@ -180,11 +201,12 @@ class MentorTeachingService:
         if state.reflection_status is not ReflectionStatus.NOT_REQUESTED:
             return self._with_state(False, "reflection_already_requested", "本课反思已经请求过。", state)
         case_session = self.store.load_case_session(state.case_session_id)
+        lesson = self._lesson(state)
         categories = {
             record.action_type for record in case_session.action_history
             if record.action_type in INVESTIGATION_ACTIONS
         }
-        if len(categories) < self.lesson.reflection_checkpoint.minimum_investigation_categories:
+        if len(categories) < lesson.reflection_checkpoint.minimum_investigation_categories:
             return self._with_state(False, "reflection_checkpoint_not_reached", "完成至少三类调查后再反思。", state)
         agent_input = self._active_input(state, (MentorActionType.ASK_REFLECTION,))
         action = self.mentor_agent.decide(agent_input).action
@@ -193,7 +215,7 @@ class MentorTeachingService:
         except MentorActionContractError:
             action = MentorAction(
                 action_type=MentorActionType.ASK_REFLECTION,
-                message=self.lesson.reflection_checkpoint.question,
+                message=lesson.reflection_checkpoint.question,
             )
         updated = self._append(
             state,
@@ -229,8 +251,9 @@ class MentorTeachingService:
             return state
         if state.phase is not TeachingPhase.ACTIVE:
             return self._with_state(False, "hint_not_available", "当前阶段不能请求提示。", state)
+        lesson = self._lesson(state)
         cards = tuple(
-            card for card in self.lesson.public_hint_cards
+            card for card in lesson.public_hint_cards
             if card.hint_id not in state.used_hint_ids
         )
         if not cards:
@@ -262,8 +285,6 @@ class MentorTeachingService:
         state = self._owned(request)
         if isinstance(state, TeachingServiceResult):
             return state
-        if state.phase is TeachingPhase.COMPLETED:
-            return TeachingServiceResult(ok=True, message="教学会话已经完成。", state=state)
         try:
             case_session = self.store.load_case_session(state.case_session_id)
             if case_session.status is not CaseSessionStatus.COMPLETED:
@@ -290,7 +311,7 @@ class MentorTeachingService:
                     session=case_session,
                     case=self.case_service.case_catalog.get(case_session.case_id),
                     apprenticeship=apprenticeship,
-                    lesson=self.lesson,
+                    lesson=self._lesson(state),
                     used_hint_ids=state.used_hint_ids,
                 )
                 state = self._append(
@@ -327,9 +348,9 @@ class MentorTeachingService:
                 except MentorActionContractError:
                     next_action = MentorAction(
                         action_type=MentorActionType.RECOMMEND_FIXED_NEXT_STEP,
-                        message=self.lesson.fixed_next_step,
+                        message=self._lesson(state).fixed_next_step,
                     )
-                next_action = next_action.model_copy(update={"message": self.lesson.fixed_next_step})
+                next_action = next_action.model_copy(update={"message": self._lesson(state).fixed_next_step})
                 state = self._append(
                     state,
                     MentorReviewIssued(
@@ -352,6 +373,17 @@ class MentorTeachingService:
                     ),
                 )
                 self.store.save_teaching_session(state)
+            if state.phase is TeachingPhase.COMPLETED and state.assessment is not None:
+                try:
+                    plan = self.plan_service.record_assessment(state.assessment)
+                except StorageError:
+                    return self._with_state(False, "teaching_plan_pending", "长期教学计划尚待协调。", state)
+                try:
+                    self.memory_projector.project_assessment(
+                        state.assessment, occurred_at=case_session.action_history[-1].occurred_at
+                    )
+                except Exception:
+                    return self._with_state(False, "memory_projection_pending", "结构化教学记忆尚待协调。", state)
             return TeachingServiceResult(
                 ok=True,
                 message="病例、R1 成长、结构化师评与导师回顾已形成闭环。",
@@ -386,6 +418,9 @@ class MentorTeachingService:
             allowed=allowed,
             case_view=self.case_service.context_filter.case_observation(case, player, case_session),
             cards=cards,
+            lesson=self._lesson(state),
+            plan=self.plan_service.ensure(state.player_id),
+            excluded_episode_id=state.case_session_id,
         )
 
     def _review_input(self, state):
@@ -405,24 +440,65 @@ class MentorTeachingService:
                 selected_treatment_id=case_session.selected_treatment_id,
             ),
             assessment=state.assessment,
+            lesson=self._lesson(state),
+            plan=self.plan_service.ensure(state.player_id),
+            excluded_episode_id=state.case_session_id,
         )
 
-    def _input(self, *, player, apprenticeship, phase, allowed, case_view=None, cards=(), public_result=None, assessment=None):
+    def _input(self, *, player, apprenticeship, phase, allowed, lesson, plan, excluded_episode_id, case_view=None, cards=(), public_result=None, assessment=None):
         view = self.case_service.progression_policy.view(apprenticeship)
+        target_abilities = {
+            "evidence_before_diagnosis_v1": ("observe_form", "ask_cause", "inspect_evidence", "reason_diagnosis"),
+            "provenance_before_intent_v1": ("inspect_evidence", "reason_diagnosis", "ethical_practice"),
+            "corroborate_before_handoff_v1": ("ask_cause", "inspect_evidence", "reason_diagnosis"),
+        }[lesson.lesson_id]
+        from xuanyi_npc.domain.apprenticeship import AbilityId
+        memories = self.memory_selector.select(
+            player_id=apprenticeship.player_id,
+            current_lesson_id=lesson.lesson_id,
+            current_case_id=lesson.assigned_case_id,
+            target_ability_ids=tuple(AbilityId(item) for item in target_abilities),
+            unresolved_improvement_areas=plan.unresolved_improvement_areas,
+            current_teaching_stage=view.teaching_stage.value,
+            excluded_episode_id=excluded_episode_id,
+        )
+        from xuanyi_npc.agents.mentor import (
+            RelationshipExpressionTier,
+            RelationshipExpressionView,
+        )
+        def tier(value):
+            if value < 10:
+                return RelationshipExpressionTier.LOW
+            if value >= 20:
+                return RelationshipExpressionTier.HIGH
+            return RelationshipExpressionTier.NEUTRAL
         return MentorAgentInput(
             mentor_public_profile=self.profile.public_view(),
             interaction_phase=phase,
-            lesson_public_view=self.lesson,
+            lesson_public_view=lesson,
             apprenticeship_public_view=view,
             relationship_public_view=RelationshipPublicView(
                 affinity=view.affinity, trust=view.trust, recognition=view.recognition
+            ),
+            relationship_expression=RelationshipExpressionView(
+                trust_tier=tier(view.trust), recognition_tier=tier(view.recognition)
             ),
             public_case_view=case_view,
             latest_public_case_result=public_result,
             allowed_hint_cards=cards,
             assessment_public_view=assessment,
+            retrieved_structured_memories=memories,
+            curriculum_reason_codes=(
+                plan.recommendation_reason_codes
+                if plan.current_recommendation is not None
+                and plan.current_recommendation.recommendation_id == lesson.lesson_id
+                else ("manual_case_deviation",)
+            ),
             allowed_mentor_actions=allowed,
         )
+
+    def _lesson(self, state: TeachingSessionState) -> LessonDefinition:
+        return self.curriculum.lessons[state.lesson_id]
 
     def _append(self, state: TeachingSessionState, event: TeachingEvent) -> TeachingSessionState:
         return TeachingEventReplayer().replay((*state.events, event))

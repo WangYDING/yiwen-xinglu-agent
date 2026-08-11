@@ -4,6 +4,7 @@ import hashlib
 import json
 
 from xuanyi_npc.domain.apprenticeship import (
+    AbilityId,
     AbilityEvidenceRecorded,
     AbilityProgressed,
     ApprenticeshipState,
@@ -63,6 +64,24 @@ class AssessmentBuilder:
             event.evidence.ability_id for event in evidence_events
             if event.evidence.polarity is EvidencePolarity.NEEDS_IMPROVEMENT
         }
+        investigated_ids = {
+            record.reference_id for record in session.action_history
+            if record.action_type in INVESTIGATION_ACTIONS
+        }
+        missing_investigations = tuple(
+            item for item in case.investigations
+            if item.investigation_id not in investigated_ids
+        )
+        investigation_ability = {
+            CaseActionType.OBSERVE_PATIENT: AbilityId.OBSERVE_FORM,
+            CaseActionType.QUESTION_PATIENT: AbilityId.ASK_CAUSE,
+            CaseActionType.INSPECT_OBJECT: AbilityId.INSPECT_EVIDENCE,
+            CaseActionType.INVESTIGATE_LOCATION: AbilityId.INSPECT_EVIDENCE,
+            CaseActionType.OBSERVE_QI: AbilityId.REASON_DIAGNOSIS,
+        }
+        improvement.update(
+            investigation_ability[item.action_type] for item in missing_investigations
+        )
         ability_changes = tuple(
             PublicAbilityChange(
                 ability_id=event.ability_id,
@@ -88,10 +107,6 @@ class AssessmentBuilder:
             and event.source_session_id == session.session_id
         )
 
-        investigated_ids = {
-            record.reference_id for record in session.action_history
-            if record.action_type in INVESTIGATION_ACTIONS
-        }
         required_ids = {item.investigation_id for item in case.investigations}
         diagnosis = next(
             (record for record in session.action_history
@@ -99,10 +114,25 @@ class AssessmentBuilder:
             None,
         )
         completed: list[str] = []
-        if required_ids.issubset(investigated_ids):
-            completed.extend(("cover_public_investigations", "separate_fact_inference_lure"))
-        if diagnosis is not None and diagnosis.evidence_clue_ids:
-            completed.append("cite_discovered_evidence")
+        complete_investigation = required_ids.issubset(investigated_ids)
+        cited_evidence = diagnosis is not None and bool(diagnosis.evidence_clue_ids)
+        if not cited_evidence:
+            improvement.add(AbilityId.INSPECT_EVIDENCE)
+        if complete_investigation:
+            completed.extend((
+                "cover_public_investigations",
+                "separate_fact_inference_lure",
+                "verify_contract_provenance",
+                "separate_anomaly_from_malice",
+                "corroborate_witness_and_object",
+                "avoid_single_testimony",
+                "identify_timing_and_handoff",
+            ))
+        if cited_evidence:
+            completed.extend((
+                "cite_discovered_evidence",
+                "separate_prior_case_from_current_truth",
+            ))
         diagnosis_positive = any(
             event.evidence.public_reason_code == "diagnosis_positive"
             for event in evidence_events
@@ -111,7 +141,11 @@ class AssessmentBuilder:
             session.outcome is TreatmentOutcome.RESOLVED
             and diagnosis_positive
         ):
-            completed.append("align_treatment_with_judgment")
+            completed.extend((
+                "align_treatment_with_judgment",
+                "avoid_harming_related_roles",
+                "align_action_with_public_cause",
+            ))
         if session.submitted_diagnosis_id != "evil_spirit_attack":
             completed.append("avoid_prejudging_anomaly")
         objective_ids = tuple(item.objective_id for item in lesson.learning_objectives)

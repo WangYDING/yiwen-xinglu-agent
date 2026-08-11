@@ -18,6 +18,10 @@ from pydantic import (
 
 from xuanyi_npc.domain.base import DomainModel, Identifier, NonEmptyText
 from xuanyi_npc.domain.cases import CaseActionType
+from xuanyi_npc.domain.curriculum import (
+    StructuredMemorySourceType,
+    StructuredTeachingMemoryType,
+)
 from xuanyi_npc.domain.memory import MemoryType, RelationshipImpact
 
 from .canonical import (
@@ -57,6 +61,7 @@ class MemoryWriteReason(str, Enum):
     VERIFIED_DIAGNOSIS_SUBMISSION = "verified_diagnosis_submission"
     VERIFIED_TREATMENT_OBSERVATION = "verified_treatment_observation"
     VERIFIED_MEMORY_CORRECTION = "verified_memory_correction"
+    VERIFIED_STRUCTURED_TEACHING_FACT = "verified_structured_teaching_fact"
 
 
 class MemorySourceEventType(str, Enum):
@@ -64,6 +69,7 @@ class MemorySourceEventType(str, Enum):
     DIAGNOSIS_SUBMITTED = "diagnosis_submitted"
     TREATMENT_EXECUTED = "treatment_executed"
     MEMORY_CORRECTION = "memory_correction"
+    STRUCTURED_TEACHING_FACT = "structured_teaching_fact"
 
 
 class PublicClueFact(StrictMemoryModel):
@@ -122,11 +128,24 @@ class CorrectionPublicPayload(StrictMemoryModel):
     reason: NonEmptyText
 
 
+class StructuredTeachingPublicPayload(StrictMemoryModel):
+    payload_type: Literal["structured_teaching_fact"] = "structured_teaching_fact"
+    structured_memory_type: StructuredTeachingMemoryType
+    source_type: StructuredMemorySourceType
+    source_reference_id: Identifier
+    public_summary: NonEmptyText
+    reason_code: Identifier
+    source_case_id: Identifier | None = None
+    lesson_id: Identifier | None = None
+    ability_ids: tuple[Identifier, ...] = ()
+
+
 PublicMemoryPayload: TypeAlias = Annotated[
     InvestigationPublicPayload
     | DiagnosisPublicPayload
     | TreatmentPublicPayload
-    | CorrectionPublicPayload,
+    | CorrectionPublicPayload
+    | StructuredTeachingPublicPayload,
     Field(discriminator="payload_type"),
 ]
 
@@ -248,6 +267,9 @@ class AuthoritativeMemoryRecord(StrictMemoryModel):
             ),
             MemorySourceEventType.MEMORY_CORRECTION: (
                 MemoryWriteReason.VERIFIED_MEMORY_CORRECTION
+            ),
+            MemorySourceEventType.STRUCTURED_TEACHING_FACT: (
+                MemoryWriteReason.VERIFIED_STRUCTURED_TEACHING_FACT
             ),
         }
         if self.write_reason is not expected_reasons[self.source_event_type]:

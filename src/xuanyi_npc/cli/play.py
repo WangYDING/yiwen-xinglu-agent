@@ -55,6 +55,7 @@ from xuanyi_npc.agents import (
     DeterministicFakeMentor,
 )
 from xuanyi_npc.domain import (
+    AbilityId,
     AgentAction,
     AgentActionType,
     CaseActionType,
@@ -302,17 +303,36 @@ class PlayCLI:
             self._print(result.message)
             return False
         self._print("\n病例目录")
-        visible_cases = tuple(
-            case for case in result.cases
-            if self.teaching_service is None or case.case_id == "old_paper_umbrella"
-        )
+        visible_cases = result.cases
+        teaching_plan = None
+        recommended_lesson_id = None
+        if self.teaching_service is not None:
+            teaching_plan = self.teaching_service.plan_service.ensure(player_id)
+            recommendation = teaching_plan.current_recommendation
+            if recommendation is not None:
+                self._print(f"教学推荐：{recommendation.recommendation_id}")
+                self._print("推荐原因：" + "、".join(recommendation.reason_codes))
+                if recommendation.kind.value == "core_lesson":
+                    recommended_lesson_id = recommendation.recommendation_id
+                elif recommendation.kind.value == "remediation":
+                    self._print("未解决补课：" + recommendation.recommendation_id)
+            completed = set(teaching_plan.completed_core_lessons)
+            self._print("三门核心课程：")
+            for lesson_id in self.teaching_service.curriculum.policy.core_lesson_order:
+                marker = "已完成" if lesson_id in completed else "未完成"
+                self._print(f"- {lesson_id}：{marker}")
         for index, case in enumerate(visible_cases, start=1):
             status = {
                 CasePlayStatus.AVAILABLE: "可开始",
                 CasePlayStatus.ACTIVE: "可继续",
                 CasePlayStatus.COMPLETED: "已完成",
             }[case.play_status]
-            recommendation = "｜推荐下一案" if case.is_recommended_next else ""
+            lesson = (
+                self.teaching_service.curriculum.lessons_by_case.get(case.case_id)
+                if self.teaching_service is not None else None
+            )
+            is_teaching_recommended = lesson is not None and lesson.lesson_id == recommended_lesson_id
+            recommendation = "｜推荐课程" if is_teaching_recommended else ("｜推荐下一案" if case.is_recommended_next else "")
             self._print(f"{index}. {case.title}［{status}{recommendation}］")
             self._print(f"   {case.synopsis}")
             if case.recommendation_reason is not None:
@@ -320,7 +340,16 @@ class PlayCLI:
             for knowledge in case.related_knowledge:
                 self._print(f"   相关知识：{knowledge.public_description}")
         self._print("0. 返回")
+        if (
+            teaching_plan is not None
+            and teaching_plan.current_recommendation is not None
+            and teaching_plan.current_recommendation.kind.value == "remediation"
+        ):
+            self._print("R. 进行推荐补课")
         choice = self._read("请选择病例：")
+        if choice.lower() == "r" and teaching_plan is not None:
+            self._run_remediation(player_id, teaching_plan.current_recommendation.recommendation_id)
+            return False
         index = self._menu_index(choice, len(visible_cases))
         if index is None:
             if choice != "0":
@@ -390,12 +419,13 @@ class PlayCLI:
                 self._print(teaching.message)
                 return None
             self.current_teaching_session_id = teaching.state.teaching_session_id
-            self._print("\n导师课程：证据齐备再定证")
-            self._print(self.teaching_service.lesson.public_description)
+            lesson = self.teaching_service.curriculum.lessons[teaching.state.lesson_id]
+            self._print(f"\n导师课程：{lesson.title}")
+            self._print(lesson.public_description)
             self._print("课程目标：")
-            for objective in self.teaching_service.lesson.learning_objectives:
+            for objective in lesson.learning_objectives:
                 self._print(f"- {objective.description}")
-            remaining = self.teaching_service.lesson.maximum_hints - len(teaching.state.used_hint_ids)
+            remaining = lesson.maximum_hints - len(teaching.state.used_hint_ids)
             self._print(f"可用提示次数：{remaining}")
             if teaching.mentor_action is not None:
                 self._print(f"玄医先生：{teaching.mentor_action.message}")
@@ -485,7 +515,8 @@ class PlayCLI:
                 if hint.mentor_action is not None:
                     self._print(f"玄医先生：{hint.mentor_action.message}")
                 if hint.state is not None:
-                    remaining = self.teaching_service.lesson.maximum_hints - len(hint.state.used_hint_ids)
+                    lesson = self.teaching_service.curriculum.lessons[hint.state.lesson_id]
+                    remaining = lesson.maximum_hints - len(hint.state.used_hint_ids)
                     self._print(f"可用提示次数：{remaining}")
                 continue
             receipt = self.service.submit_action_with_receipt(
@@ -580,6 +611,50 @@ class PlayCLI:
         )
         if review_event is not None:
             self._print(f"下一步：{review_event.fixed_next_step_action.message}")
+        if self.teaching_service is not None:
+            plan = self.teaching_service.plan_service.ensure(report.player_id)
+            if plan.current_recommendation is not None:
+                self._print(f"当前推荐：{plan.current_recommendation.recommendation_id}")
+                self._print("推荐原因：" + "、".join(plan.recommendation_reason_codes))
+
+    def _run_remediation(self, player_id: str, remediation_id: str) -> None:
+        definition = self.teaching_service.curriculum.remediations[remediation_id]
+        self._print(f"\n补课：{definition.title}")
+        self._print(definition.public_explanation)
+        self._print(definition.structured_question)
+        for index, option in enumerate(definition.answer_options, start=1):
+            self._print(f"{index}. {option.public_text}")
+        choice = self._read("请选择答案：")
+        index = self._menu_index(choice, len(definition.answer_options))
+        if index is None:
+            self._print("补课答案编号无效，本次未记录。")
+            return
+        option = definition.answer_options[index]
+        request_id = f"cli_{self.teaching_service.plan_service.ensure(player_id).revision + 1}"
+        state, correct = self.teaching_service.plan_service.attempt_remediation(
+            player_id=player_id,
+            remediation_id=remediation_id,
+            option_id=option.option_id,
+            request_id=request_id,
+        )
+        if correct:
+            event = next(
+                item for item in reversed(state.events)
+                if item.event_type == "remediation_completed"
+            )
+            try:
+                self.teaching_service.memory_projector.project_remediation(
+                    player_id=player_id,
+                    remediation_id=remediation_id,
+                    attempt_id=event.attempt_id,
+                    occurred_at=event.occurred_at,
+                    ability_ids=event.target_ability_ids,
+                )
+            except Exception:
+                self._print("补课已提交；结构化记忆尚待协调。")
+            self._print(definition.completion_feedback)
+        else:
+            self._print("这是一次合法教学尝试，但补课尚未完成，能力不会增加。")
 
     def _run_agent_episode(self, current: MultiCaseServiceResult) -> bool:
         case_id = current.case_id or ""

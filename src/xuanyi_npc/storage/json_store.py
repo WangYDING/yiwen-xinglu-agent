@@ -23,6 +23,11 @@ from xuanyi_npc.domain.teaching import (
     TeachingReplayError,
     TeachingSessionState,
 )
+from xuanyi_npc.domain.teaching_plan import (
+    TeachingPlanEventReplayer,
+    TeachingPlanReplayError,
+    TeachingPlanState,
+)
 
 
 class StorageError(RuntimeError):
@@ -97,6 +102,22 @@ class JsonStateStore:
             raise StateCorruptionError("teaching snapshot does not match replay")
         return state
 
+    def save_teaching_plan(self, state: TeachingPlanState) -> Path:
+        replayed = TeachingPlanEventReplayer().replay(state.events)
+        if replayed != state:
+            raise StateCorruptionError("teaching plan snapshot does not match replay")
+        return self._write("teaching_plans", state.player_id, state)
+
+    def load_teaching_plan(self, player_id: str) -> TeachingPlanState:
+        state = self._read("teaching_plans", player_id, TeachingPlanState)
+        try:
+            replayed = TeachingPlanEventReplayer().replay(state.events)
+        except TeachingPlanReplayError as exc:
+            raise StateCorruptionError("teaching plan event stream is invalid") from exc
+        if replayed != state:
+            raise StateCorruptionError("teaching plan snapshot does not match replay")
+        return state
+
     def list_players(self) -> tuple[PlayerState, ...]:
         """Return all validated player snapshots in stable ID order."""
 
@@ -134,6 +155,17 @@ class JsonStateStore:
                 raise StateCorruptionError("teaching event stream is invalid") from exc
             if replayed != value:
                 raise StateCorruptionError("teaching snapshot does not match replay")
+        return values
+
+    def list_teaching_plans(self) -> tuple[TeachingPlanState, ...]:
+        values = self._list("teaching_plans", TeachingPlanState, "player_id")
+        for value in values:
+            try:
+                replayed = TeachingPlanEventReplayer().replay(value.events)
+            except TeachingPlanReplayError as exc:
+                raise StateCorruptionError("teaching plan event stream is invalid") from exc
+            if replayed != value:
+                raise StateCorruptionError("teaching plan snapshot does not match replay")
         return values
 
     def _path(self, namespace: str, identifier: str) -> Path:

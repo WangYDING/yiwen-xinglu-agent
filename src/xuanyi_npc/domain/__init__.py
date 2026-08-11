@@ -115,6 +115,20 @@ from .teaching import (
     TeachingSessionCompleted,
     TeachingSessionState,
 )
+from .teaching_plan import (
+    CoreLessonCompleted,
+    RemediationAssigned,
+    RemediationAttempted,
+    RemediationCompleted,
+    RecommendationDeviationRecorded,
+    TeachingPlanEvent,
+    TeachingPlanEventReplayer,
+    TeachingPlanInitialized,
+    TeachingPlanState,
+    TeachingRecommendation,
+    TeachingRecommendationUpdated,
+)
+from .structured_memory import RetrievedStructuredMemory
 
 __all__ = [
     "APPRENTICESHIP_SCHEMA_VERSION",
@@ -215,4 +229,16 @@ __all__ = [
     "TeachingPhase",
     "TeachingSessionCompleted",
     "TeachingSessionState",
+    "CoreLessonCompleted",
+    "RemediationAssigned",
+    "RemediationAttempted",
+    "RemediationCompleted",
+    "RecommendationDeviationRecorded",
+    "RetrievedStructuredMemory",
+    "TeachingPlanEvent",
+    "TeachingPlanEventReplayer",
+    "TeachingPlanInitialized",
+    "TeachingPlanState",
+    "TeachingRecommendation",
+    "TeachingRecommendationUpdated",
 ]

@@ -21,6 +21,10 @@ from xuanyi_npc.domain.events import (
     TreatmentExecutedEvent,
 )
 from xuanyi_npc.domain.memory import MemoryType
+from xuanyi_npc.domain.curriculum import (
+    StructuredMemorySourceType,
+    StructuredTeachingMemoryType,
+)
 from xuanyi_npc.domain.player import PlayerState
 
 from .canonical import sha256_hex, stable_memory_id, stable_source_event_id
@@ -32,6 +36,7 @@ from .contracts import (
     MemoryWriteReason,
     PublicClueFact,
     StrictMemoryModel,
+    StructuredTeachingPublicPayload,
     TreatmentPublicPayload,
     UtcDateTime,
     VerifiedMemorySource,
@@ -350,6 +355,53 @@ class DeterministicMemoryProjector:
         )
         return source, self.memory_from_verified_source(source)
 
+    def project_structured_teaching_fact(
+        self,
+        *,
+        player_id: str,
+        source_session_id: str,
+        source_sequence: int,
+        source_revision: int,
+        occurred_at,
+        structured_memory_type: StructuredTeachingMemoryType,
+        source_type: StructuredMemorySourceType,
+        source_reference_id: str,
+        public_summary: str,
+        reason_code: str,
+        source_case_id: str | None = None,
+        lesson_id: str | None = None,
+        ability_ids: tuple[str, ...] = (),
+    ) -> tuple[VerifiedMemorySource, AuthoritativeMemoryRecord]:
+        payload = StructuredTeachingPublicPayload(
+            structured_memory_type=structured_memory_type,
+            source_type=source_type,
+            source_reference_id=source_reference_id,
+            public_summary=public_summary,
+            reason_code=reason_code,
+            source_case_id=source_case_id,
+            lesson_id=lesson_id,
+            ability_ids=tuple(sorted(set(ability_ids))),
+        )
+        source_event_id = stable_source_event_id(
+            MemorySourceEventType.STRUCTURED_TEACHING_FACT.value,
+            source_session_id,
+            source_sequence,
+        )
+        source = VerifiedMemorySource(
+            source_event_id=source_event_id,
+            player_id=player_id,
+            source_session_id=source_session_id,
+            source_event_type=MemorySourceEventType.STRUCTURED_TEACHING_FACT,
+            source_sequence=source_sequence,
+            source_revision=source_revision,
+            projection_version=self.projection_version,
+            projection_ordinal=self.projection_ordinal,
+            occurred_at=occurred_at,
+            public_payload=payload,
+            public_payload_hash=sha256_hex(payload),
+        )
+        return source, self.memory_from_verified_source(source)
+
     def memory_from_verified_source(
         self,
         source: VerifiedMemorySource,
@@ -397,14 +449,39 @@ class DeterministicMemoryProjector:
             action_id = payload.treatment_id
             public_clues = ()
             related_case_id = payload.case_id
+        elif isinstance(payload, StructuredTeachingPublicPayload):
+            memory_type = (
+                MemoryType.EPISODIC
+                if payload.structured_memory_type is StructuredTeachingMemoryType.CASE_EXPERIENCE
+                else MemoryType.LEARNING
+            )
+            importance = 4 if payload.structured_memory_type in {
+                StructuredTeachingMemoryType.LEARNING_PATTERN,
+                StructuredTeachingMemoryType.MENTOR_FEEDBACK,
+            } else 3
+            write_reason = MemoryWriteReason.VERIFIED_STRUCTURED_TEACHING_FACT
+            content = payload.public_summary
+            action_id = payload.source_reference_id
+            public_clues = ()
+            related_case_id = payload.source_case_id
         else:
             raise UnsupportedMemorySourceError(
                 "trusted correction sources are not automatic projections"
             )
 
-        related_entities = frozenset(
-            {action_id, *(item.clue_id for item in public_clues)}
-        )
+        related_entities = {action_id, *(item.clue_id for item in public_clues)}
+        if isinstance(payload, StructuredTeachingPublicPayload):
+            related_entities.update(
+                {
+                    payload.structured_memory_type.value,
+                    payload.source_type.value,
+                    payload.reason_code,
+                    *payload.ability_ids,
+                }
+            )
+            if payload.lesson_id is not None:
+                related_entities.add(payload.lesson_id)
+        related_entities = frozenset(related_entities)
         content_hash = sha256_hex(
             authoritative_content_payload(
                 memory_type=memory_type,

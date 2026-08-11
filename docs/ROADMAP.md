@@ -61,7 +61,7 @@ Word 设计总结、`xuanyi-npc-handoff` 和 `docs/algorithm-experiment-plan-v0.
 | M6-P3：两类岗位求职材料 | 已暂停 | 等待产品总纲审计和新增产品主线形成真实证据后再决定是否恢复 |
 | M6-P4：最终发布检查 | 已暂停 | 远程、推送、Tag、Release 和发布全部暂停；即使恢复也需要用户再次明确授权 |
 | 产品主题与总体架构冻结 | 已完成 | 《问道医途》总纲、产品系统架构、M5 产品差距审计和总体主题回归 ADR 成为后续依据 |
-| Product Completion Plan v1：R1～R6 | R1、R2 已完成；R3～R6 未开始 | 已建立确定性长期成长权威状态与旧纸伞最小导师教学闭环；下一阶段才扩展三病例教学与结构化记忆 |
+| Product Completion Plan v1：R1～R6 | R1、R2、R3 已完成；R4～R6 未开始 | 已建立确定性成长、三病例教学、固定补课、长期教学计划与结构化记忆；下一阶段才实现考试权限与传承 |
 
 ## M0～M6 历史结论与 Product Completion Plan v1
 
@@ -73,14 +73,14 @@ M0～M6 的代码、提交、验证记录和正负实验全部保留，不因本
 |---|---|---|---|
 | R1 | 长期状态与确定性成长底座 | **已完成** | 唯一 `ApprenticeshipState`；六项能力、三维关系、来源证据、长期事件、存储/回放/恢复/协调；三病例完成后确定性成长；不含导师 Agent |
 | R2 | 导师教学闭环 | **已完成** | 玄医先生可信配置、旧纸伞固定课程、玩家手动行动、一次反思、两次 HintCard、确定性师评、R1 变化解释、恢复/重放与隔离；导师无权威写权限 |
-| R3 | 三病例教学与结构化记忆 | 未开始 | 三病例教学标签、弱点识别、补课推荐、结构化长期记忆、跨病例历史反应和下一课程选择 |
+| R3 | 三病例教学与结构化记忆 | **已完成** | 三核心课、三固定补课、确定性弱点优先级、可回放教学计划、同一 SQLite 结构化记忆、跨病例历史引用和下一课程选择；不使用 BGE/Embedding/LLM 选课 |
 | R4 | 考试、权限与传承 | 未开始 | 教学阶段、正式考试、重考补课、权限层级及一条完整传承链 |
 | R5 | 六病例和医馆入口 | 未开始 | 改造现有三案、新增三案、医馆主循环和普通用户入口，展示成长、关系、课程、师评、考试与传承 |
 | R6 | 产品验收 | 未开始 | 自动验收、真实模型受控验证、真人试玩和发布准备；远程发布仍需用户单独授权 |
 
 R1 的详细范围与门禁见 [`PRODUCT_COMPLETION_PLAN_V1.md`](PRODUCT_COMPLETION_PLAN_V1.md)、[`PROJECT_MASTER_BLUEPRINT.md`](PROJECT_MASTER_BLUEPRINT.md) 和 [`M5_PRODUCT_GAP_AUDIT.md`](M5_PRODUCT_GAP_AUDIT.md)。M0～M6 的历史结论不变；语义记忆继续默认关闭，不得把 M4.5 的合成指标、M5 自动解题案例或 R1 状态底座描述为导师教学效果或玩家收益。
 
-R2 的实现、公开/隐藏边界、故障语义和 CLI 入口见 [`R2_MENTOR_TEACHING_LOOP.md`](R2_MENTOR_TEACHING_LOOP.md)。真实导师模型、自适应选课、考试、权限与传承均未开始。
+R2 的实现、公开/隐藏边界、故障语义和 CLI 入口见 [`R2_MENTOR_TEACHING_LOOP.md`](R2_MENTOR_TEACHING_LOOP.md)。R3 的三课、补课、教学计划和结构化记忆边界见 [`R3_ADAPTIVE_THREE_CASE_TEACHING.md`](R3_ADAPTIVE_THREE_CASE_TEACHING.md)。真实导师模型、考试、权限与传承均未开始。
 
 ## 双岗位作品集主线
 

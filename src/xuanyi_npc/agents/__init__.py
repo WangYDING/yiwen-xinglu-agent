@@ -66,6 +66,8 @@ from .mentor import (
     MentorAgentInterface,
     MentorDecision,
     RelationshipPublicView,
+    RelationshipExpressionTier,
+    RelationshipExpressionView,
 )
 from .mentor_contract import (
     MentorActionContractError,
@@ -128,6 +130,8 @@ __all__ = [
     "MentorAgentInterface",
     "MentorDecision",
     "RelationshipPublicView",
+    "RelationshipExpressionTier",
+    "RelationshipExpressionView",
     "MentorActionContractError",
     "PHASE_ACTIONS",
     "validate_mentor_action",

@@ -587,3 +587,13 @@ M5-P1 已完成，M5-P2 尚未开始。P2 前没有新的架构级用户决策�
 - **历史回归**：M5 32-worker 离线验收通过，三案均 `8 events / resolved / 100`，Campaign 1–3、隔离、重放和 semantic shadow 保持一致；MCP 22 项、V0 DoctorAgent/Fake/事件重放 34 项通过；无 LLM Demo 为 `resolved / 100`。P4b/P4d 原始 SHA、M4/M4.5 和 M5 退出结论未修改。
 - **外部边界**：没有调用 DeepSeek、BGE、Embedding API 或外部网络，费用为 0 CNY；没有安装依赖、修改 Git 身份/配置、改写历史、推送、Tag 或 Release。`pip check`、`git diff --check`、敏感信息与运行文件跟踪检查通过。
 - **外部边界**：未调用 DeepSeek `/models`、Chat、Embedding 或其他外部 API，未加载或下载 BGE/模型，网络请求与费用均为 0。R2 导师教学尚未开始。
+
+## 2026-08-11：R3 三病例自适应教学与结构化记忆
+
+- **启动门禁**：起始 HEAD `a260367dbca364dcb05508124b6c79ca05f2e038`（`main`），工作树干净，R1/R2 联合专项在抑制本机 Pydantic 命名警告后 31/31 通过；最新 ADR-056 与五份权威规划一致指向 R3。
+- **冻结契约**：提交 `b8cb66b8c06d6a920e3e2ceda4593cad8ff63ca2` 独立冻结三核心课、三补课、选课优先级、结构化记忆类型/来源/排序、验收输入预期和严格 Schema；冻结测试 15/15 通过。
+- **自动回归**：R3 专项 24/24、全量 547/547、MCP/记忆协调 29/29、DoctorAgent V0/Fake/M5/M4 生命周期联合专项 58/58 通过；`pip check`、`git diff --check`、编译、作品集链接/素材/隐私与发布跟踪检查通过。
+- **R3 路线**：优秀、错误诊断、危险处置、证据引用不足和双玩家差异路线通过。优秀玩家按旧纸伞→灰灶→月井完成三课，灰灶和月井均引用结构化前史，最终为 `foundation_complete`；三条补课由规则评分且不增加 R1 熟练度。
+- **记忆与恢复**：空结果、无 Embedding、当前 Episode、跨玩家、inactive、硬删除防复活和注入样式数据均通过。三个独立进程依次完成旧纸伞、灰灶和月井，计划、事件和同一 SQLite 记忆恢复一致。
+- **故障协调**：教学计划保存失败返回 `teaching_plan_pending`，记忆写入失败返回 `memory_projection_pending`；上游病例、Campaign、R1、Assessment 和 TeachingSession 不回滚，重试不重复课程、能力、关系或记忆。
+- **外部边界**：R3 实现与已运行测试没有调用 DeepSeek `/models`、Chat、Embedding API 或网络，没有加载 BGE，费用为 0 CNY。R4 尚未开始。

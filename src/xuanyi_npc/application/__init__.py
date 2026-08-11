@@ -99,6 +99,11 @@ from .views import (
     ViewContextError,
 )
 from .assessment import AssessmentBuilder, AssessmentSourceError
+from .curriculum import CurriculumCatalog, CurriculumSelector, TeachingPlanService
+from .structured_memory import (
+    StructuredMentorMemorySelector,
+    StructuredTeachingMemoryProjector,
+)
 from .teaching import (
     CreateTeachingSessionInput,
     MentorTeachingService,
@@ -199,6 +204,11 @@ __all__ = [
     "ViewContextError",
     "AssessmentBuilder",
     "AssessmentSourceError",
+    "CurriculumCatalog",
+    "CurriculumSelector",
+    "TeachingPlanService",
+    "StructuredMentorMemorySelector",
+    "StructuredTeachingMemoryProjector",
     "CreateTeachingSessionInput",
     "MentorTeachingService",
     "SubmitReflectionInput",
