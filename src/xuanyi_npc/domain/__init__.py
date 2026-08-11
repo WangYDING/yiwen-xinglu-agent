@@ -77,6 +77,32 @@ from .memory import (
 from .player import PlayerState, TeachingStage
 from .relationship import RelationshipState
 from .skills import SkillState
+from .assessment import AssessmentReport, PublicAbilityChange, PublicRelationshipChange
+from .mentor import (
+    HintCard,
+    LearningObjective,
+    LessonDefinition,
+    MentorAction,
+    MentorActionType,
+    MentorInteractionPhase,
+    MentorProfile,
+    MentorPublicProfile,
+)
+from .teaching import (
+    AssessmentAttached,
+    CaseCompletionObserved,
+    HintDelivered,
+    LessonAssigned,
+    MentorBriefingIssued,
+    MentorReviewIssued,
+    PlayerReflectionSubmitted,
+    ReflectionRequested,
+    TeachingEvent,
+    TeachingEventReplayer,
+    TeachingPhase,
+    TeachingSessionCompleted,
+    TeachingSessionState,
+)
 
 __all__ = [
     "APPRENTICESHIP_SCHEMA_VERSION",
@@ -143,4 +169,28 @@ __all__ = [
     "TreatmentOutcome",
     "RecommendedCaseRule",
     "TargetCaseContext",
+    "AssessmentReport",
+    "PublicAbilityChange",
+    "PublicRelationshipChange",
+    "HintCard",
+    "LearningObjective",
+    "LessonDefinition",
+    "MentorAction",
+    "MentorActionType",
+    "MentorInteractionPhase",
+    "MentorProfile",
+    "MentorPublicProfile",
+    "AssessmentAttached",
+    "CaseCompletionObserved",
+    "HintDelivered",
+    "LessonAssigned",
+    "MentorBriefingIssued",
+    "MentorReviewIssued",
+    "PlayerReflectionSubmitted",
+    "ReflectionRequested",
+    "TeachingEvent",
+    "TeachingEventReplayer",
+    "TeachingPhase",
+    "TeachingSessionCompleted",
+    "TeachingSessionState",
 ]

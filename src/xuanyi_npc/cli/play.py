@@ -30,6 +30,10 @@ from xuanyi_npc.application import (
     ResumeEpisodeInput,
     StartEpisodeInput,
     SubmitActionInput,
+    CreateTeachingSessionInput,
+    MentorTeachingService,
+    SubmitReflectionInput,
+    TeachingRequest,
 )
 from xuanyi_npc.application.gameplay_modes import (
     GameplayMode,
@@ -48,6 +52,7 @@ from xuanyi_npc.agents import (
     DoctorAgentInterface,
     build_authorized_deepseek_v0_agent,
     build_reference_fake_agent,
+    DeterministicFakeMentor,
 )
 from xuanyi_npc.domain import (
     AgentAction,
@@ -74,6 +79,7 @@ class PlayConfig:
     campaign_rules_path: Path | None = None
     gameplay_mode: GameplayMode = GameplayMode.MANUAL
     semantic_shadow_mode: SemanticShadowMode = SemanticShadowMode.OFF
+    mentor_mode: str = "off"
 
     @classmethod
     def load(
@@ -84,6 +90,7 @@ class PlayConfig:
         campaign_rules_path: Path | str | None = None,
         gameplay_mode: GameplayMode = GameplayMode.MANUAL,
         semantic_shadow_mode: SemanticShadowMode = SemanticShadowMode.OFF,
+        mentor_mode: str = "off",
     ) -> "PlayConfig":
         try:
             resolved_cases = Path(case_dir).resolve(strict=True)
@@ -112,6 +119,7 @@ class PlayConfig:
             campaign_rules_path=resolved_rules,
             gameplay_mode=gameplay_mode,
             semantic_shadow_mode=semantic_shadow_mode,
+            mentor_mode=mentor_mode,
         )
 
 
@@ -152,6 +160,7 @@ class PlayCLI:
         doctor_agent: DoctorAgentInterface | None = None,
         shadow_observer: RecordingSemanticShadowObserver | None = None,
         paid_confirmed: bool = False,
+        teaching_service: MentorTeachingService | None = None,
     ) -> None:
         self.service = service
         self.input_fn = input_fn
@@ -164,9 +173,11 @@ class PlayCLI:
         self.doctor_agent = doctor_agent
         self.shadow_observer = shadow_observer
         self.paid_confirmed = paid_confirmed
+        self.teaching_service = teaching_service
         self.current_player_id: str | None = None
         self.current_case_id: str | None = None
         self.current_session_id: str | None = None
+        self.current_teaching_session_id: str | None = None
 
     def run(self) -> int:
         self._print("玄医问道 · 病例修习")
@@ -182,6 +193,8 @@ class PlayCLI:
         )
         self._print(f"行动模式：{mode_label}")
         self._print(f"语义 shadow：{shadow_label}")
+        if self.teaching_service is not None:
+            self._print("导师教学：fake（玄医先生，固定课程）")
         if self.config.gameplay_mode is GameplayMode.DEEPSEEK_V0:
             self._print(f"付费确认：{'已确认' if self.paid_confirmed else '未确认'}")
         else:
@@ -289,7 +302,11 @@ class PlayCLI:
             self._print(result.message)
             return False
         self._print("\n病例目录")
-        for index, case in enumerate(result.cases, start=1):
+        visible_cases = tuple(
+            case for case in result.cases
+            if self.teaching_service is None or case.case_id == "old_paper_umbrella"
+        )
+        for index, case in enumerate(visible_cases, start=1):
             status = {
                 CasePlayStatus.AVAILABLE: "可开始",
                 CasePlayStatus.ACTIVE: "可继续",
@@ -304,12 +321,12 @@ class PlayCLI:
                 self._print(f"   相关知识：{knowledge.public_description}")
         self._print("0. 返回")
         choice = self._read("请选择病例：")
-        index = self._menu_index(choice, len(result.cases))
+        index = self._menu_index(choice, len(visible_cases))
         if index is None:
             if choice != "0":
                 self._print("病例编号无效。")
             return False
-        case = result.cases[index]
+        case = visible_cases[index]
         episode = self._open_case(player_id, case)
         if episode is None:
             return False
@@ -318,6 +335,14 @@ class PlayCLI:
             and episode.episode_result.status.value == "completed"
         ):
             self._print_episode_result(episode)
+            if self.teaching_service is not None:
+                teaching = self.teaching_service.observe_case_completion(
+                    TeachingRequest(
+                        player_id=episode.player_id or "",
+                        teaching_session_id=self.current_teaching_session_id or "",
+                    )
+                )
+                self._print_teaching_review(teaching)
             return False
         if self.config.gameplay_mode is not GameplayMode.MANUAL:
             return self._run_agent_episode(episode)
@@ -354,12 +379,32 @@ class PlayCLI:
         self.current_case_id = result.case_id
         self.current_session_id = result.session_id
         self._print_case_history_context(result)
+        if self.teaching_service is not None:
+            teaching = self.teaching_service.create(
+                CreateTeachingSessionInput(
+                    player_id=player_id,
+                    case_session_id=result.session_id or "",
+                )
+            )
+            if not teaching.ok or teaching.state is None:
+                self._print(teaching.message)
+                return None
+            self.current_teaching_session_id = teaching.state.teaching_session_id
+            self._print("\n导师课程：证据齐备再定证")
+            self._print(self.teaching_service.lesson.public_description)
+            self._print("课程目标：")
+            for objective in self.teaching_service.lesson.learning_objectives:
+                self._print(f"- {objective.description}")
+            remaining = self.teaching_service.lesson.maximum_hints - len(teaching.state.used_hint_ids)
+            self._print(f"可用提示次数：{remaining}")
+            if teaching.mentor_action is not None:
+                self._print(f"玄医先生：{teaching.mentor_action.message}")
         return result
 
     def _case_loop(self, current: MultiCaseServiceResult) -> bool:
         while True:
             self._print_observation(current)
-            menu: list[tuple[str, AgentAction]] = []
+            menu: list[tuple[str, AgentAction | None]] = []
             options = current.action_options
             if options is None or current.observation is None:
                 self._print("公开病例状态暂时不可用。")
@@ -406,6 +451,9 @@ class PlayCLI:
                     )
                 )
 
+            if self.teaching_service is not None:
+                menu.append(("主动请求导师提示", None))
+
             self._print("\n可执行行动")
             for index, (label, _) in enumerate(menu, start=1):
                 self._print(f"{index}. {label}")
@@ -426,6 +474,20 @@ class PlayCLI:
                 continue
 
             action = menu[index][1]
+            if action is None:
+                hint = self.teaching_service.request_hint(
+                    TeachingRequest(
+                        player_id=current.player_id or "",
+                        teaching_session_id=self.current_teaching_session_id or "",
+                    )
+                )
+                self._print(hint.message)
+                if hint.mentor_action is not None:
+                    self._print(f"玄医先生：{hint.mentor_action.message}")
+                if hint.state is not None:
+                    remaining = self.teaching_service.lesson.maximum_hints - len(hint.state.used_hint_ids)
+                    self._print(f"可用提示次数：{remaining}")
+                continue
             receipt = self.service.submit_action_with_receipt(
                 SubmitActionInput(
                     player_id=current.player_id or "",
@@ -440,6 +502,27 @@ class PlayCLI:
             self._print(result.message)
             self._print_new_knowledge(result)
             current = result
+            if self.teaching_service is not None and result.ok:
+                reflection = self.teaching_service.request_reflection(
+                    TeachingRequest(
+                        player_id=result.player_id or "",
+                        teaching_session_id=self.current_teaching_session_id or "",
+                    )
+                )
+                if reflection.ok and reflection.mentor_action is not None:
+                    self._print(f"玄医先生：{reflection.mentor_action.message}")
+                    answer = self._read("你的反思：")
+                    try:
+                        submitted = self.teaching_service.submit_reflection(
+                            SubmitReflectionInput(
+                                player_id=result.player_id or "",
+                                teaching_session_id=self.current_teaching_session_id or "",
+                                reflection_text=answer,
+                            )
+                        )
+                        self._print(submitted.message)
+                    except ValidationError:
+                        self._print("反思不能为空；本次尚未保存，可稍后继续回答。")
             if (
                 result.episode_result is not None
                 and result.episode_result.status.value == "completed"
@@ -461,7 +544,42 @@ class PlayCLI:
                 )
                 self._print_episode_result(display_result)
                 self._print_growth(display_result)
+                if self.teaching_service is not None:
+                    teaching = self.teaching_service.observe_case_completion(
+                        TeachingRequest(
+                            player_id=result.player_id or "",
+                            teaching_session_id=self.current_teaching_session_id or "",
+                        )
+                    )
+                    self._print_teaching_review(teaching)
                 return False
+
+    def _print_teaching_review(self, result) -> None:
+        self._print(f"\n{result.message}")
+        if result.state is None or result.state.assessment is None:
+            return
+        report = result.state.assessment
+        self._print("结构化师评")
+        self._print(f"结局：{report.outcome.value}｜得分：{report.final_score}")
+        self._print(f"使用提示：{len(report.hints_used)} 次")
+        if report.completed_objectives:
+            self._print("完成目标：" + "、".join(report.completed_objectives))
+        if report.missed_objectives:
+            self._print("待改进目标：" + "、".join(report.missed_objectives))
+        self._print("R1 能力变化：")
+        for change in report.ability_changes:
+            self._print(f"- {change.ability_id.value}：{change.proficiency_before} → {change.proficiency_after}")
+        self._print("R1 关系变化：")
+        for change in report.relationship_changes:
+            self._print(f"- {change.dimension.value}：{change.value_before} → {change.value_after}")
+        if result.state.mentor_review is not None:
+            self._print(f"玄医先生：{result.state.mentor_review.message}")
+        review_event = next(
+            (event for event in result.state.events if event.event_type == "mentor_review_issued"),
+            None,
+        )
+        if review_event is not None:
+            self._print(f"下一步：{review_event.fixed_next_step_action.message}")
 
     def _run_agent_episode(self, current: MultiCaseServiceResult) -> bool:
         case_id = current.case_id or ""
@@ -670,6 +788,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="行动模式；默认 manual，不调用模型。",
     )
     parser.add_argument(
+        "--mentor-mode",
+        choices=("off", "fake"),
+        default="off",
+        help="导师教学模式；默认 off，fake 仅用于玩家手动完成旧纸伞。",
+    )
+    parser.add_argument(
         "--semantic-shadow",
         choices=("off", "record-only"),
         default="off",
@@ -711,6 +835,9 @@ def _run_with_arguments(
         "record-only": SemanticShadowMode.RECORD_ONLY,
     }[args.semantic_shadow]
     deepseek_adapter: DeepSeekChatAdapter | None = None
+    if args.mentor_mode == "fake" and gameplay_mode is not GameplayMode.MANUAL:
+        print("启动失败：导师教学模式要求玩家使用 manual 亲自行动。", file=sys.stderr)
+        return 2
     if gameplay_mode is not GameplayMode.DEEPSEEK_V0 and (
         args.confirm_paid_agent
         or args.max_cost_cny is not None
@@ -725,6 +852,7 @@ def _run_with_arguments(
             campaign_rules_path=args.campaign_rules or default_campaign_rules,
             gameplay_mode=gameplay_mode,
             semantic_shadow_mode=shadow_mode,
+            mentor_mode=args.mentor_mode,
         )
         service = create_play_service(config)
         shadow_observer = (
@@ -736,6 +864,14 @@ def _run_with_arguments(
             else None
         )
         doctor_agent: DoctorAgentInterface | None = None
+        teaching_service = (
+            MentorTeachingService(
+                case_service=service,
+                mentor_agent=DeterministicFakeMentor(),
+            )
+            if args.mentor_mode == "fake"
+            else None
+        )
         if gameplay_mode is GameplayMode.DEEPSEEK_V0:
             if (
                 not args.confirm_paid_agent
@@ -770,6 +906,7 @@ def _run_with_arguments(
         doctor_agent=doctor_agent,
         shadow_observer=shadow_observer,
         paid_confirmed=args.confirm_paid_agent,
+        teaching_service=teaching_service,
     )
     try:
         return cli.run()

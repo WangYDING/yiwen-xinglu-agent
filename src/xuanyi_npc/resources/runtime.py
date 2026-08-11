@@ -22,6 +22,8 @@ CAMPAIGN_RESOURCE_NAME = "cross_episode_rules_v1.json"
 M5_HISTORY_RESOURCE_NAME = "m5_history_evidence_v1.json"
 DEEPSEEK_POLICY_RESOURCE_NAME = "deepseek_v4_flash_pilot_policy_2026-08-07.json"
 PROGRESSION_RESOURCE_NAME = "apprenticeship_progression_v1.json"
+MENTOR_PROFILE_RESOURCE_NAME = "mentor_profile_v1.json"
+R2_LESSON_RESOURCE_NAME = "evidence_before_diagnosis_v1.json"
 ALLOWED_RUNTIME_RESOURCES = frozenset(
     {
         *(f"cases/{name}" for name in CASE_RESOURCE_NAMES),
@@ -29,6 +31,8 @@ ALLOWED_RUNTIME_RESOURCES = frozenset(
         f"release/{M5_HISTORY_RESOURCE_NAME}",
         f"pilot/{DEEPSEEK_POLICY_RESOURCE_NAME}",
         f"progression/{PROGRESSION_RESOURCE_NAME}",
+        f"mentor/{MENTOR_PROFILE_RESOURCE_NAME}",
+        f"curriculum/{R2_LESSON_RESOURCE_NAME}",
     }
 )
 

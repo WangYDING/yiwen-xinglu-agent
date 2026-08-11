@@ -75,6 +75,8 @@ include-package-data = false
     "cases/*.json",
     "pilot/*.json",
     "progression/*.json",
+    "mentor/*.json",
+    "curriculum/*.json",
     "release/*.json",
 ]
 

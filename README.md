@@ -2,7 +2,7 @@
 
 ## Xuanyi: An Auditable Agentic Mentor NPC
 
-一个包含三个志怪病例、确定性跨案连续性、结构化 Agent 工具、安全恢复、持久化重放和本地 CLI 的可审计游戏 AI 纵向切片。
+一个包含三个志怪病例、确定性成长，以及“旧纸伞”最小导师教学闭环的可审计游戏 AI 产品切片。
 
 Xuanyi is a playable three-case game-AI vertical slice built around an auditable mentor NPC.
 Language models may propose structured actions, but deterministic rules own permissions and state changes.
@@ -15,6 +15,7 @@ Semantic memory remains disabled after failing its quality gate; current reprodu
 ## 为什么值得看
 
 - **可玩产品，不是聊天壳**：同一玩家可完成 [3 个完整病例](docs/M5_CASE_DESIGN.md)，获得两项公开知识与两处跨案反应；每案支持调查、诊断和 `resolved / suppressed / worsened` 三类处置结果。
+- **玩家行动、导师教学**：[R2 教学闭环](docs/R2_MENTOR_TEACHING_LOOP.md)让玩家亲自完成旧纸伞；玄医先生只布置固定课程、一次反思、最多两次可信提示和病例后师评，并解释 R1 的能力与关系变化。
 - **模型不能直接改状态**：严格 `AgentAction`、公开行动契约、确定性规则和事件写入共同构成安全边界；[9 个 MCP 工具](docs/M3_EXIT_AUDIT.md)复用同一应用服务。
 - **保留真实失败**：[P4b 未闭环](docs/M5_P4B_DEEPSEEK_CAMPAIGN_PILOT_20260811.md)与 [P4d 单次 5/5 行动修复](docs/M5_P4D_DEEPSEEK_RECOVERY_VALIDATION_20260811.md)并列；Dense 语义记忆未过质量门禁后默认关闭，而不是包装成成功。
 
@@ -34,6 +35,13 @@ New-Item -ItemType Directory -Force .\runtime_data\play | Out-Null
 ```powershell
 .\.venv\Scripts\xuanyi-play.exe --state-dir .\runtime_data\play `
   --mode fake --semantic-shadow off
+```
+
+旧纸伞的离线导师教学模式使用：
+
+```powershell
+.\.venv\Scripts\xuanyi-play.exe --state-dir .\runtime_data\play `
+  --mode manual --mentor-mode fake
 ```
 
 病例与 Campaign 规则已作为包资源安装，普通用户无需寻找 `site-packages`、编辑 JSON 或配置 `.env`。完整安装、构建与仓库外验证见 [M6-P1 分发记录](docs/M6_P1_DISTRIBUTION_VERIFICATION.md)。
@@ -83,6 +91,7 @@ New-Item -ItemType Directory -Force .\runtime_data\play | Out-Null
 | CampaignEvent 连续 1–3、两项知识、两处历史反应 | [M5 退出审计](docs/M5_EXIT_AUDIT.md) |
 | M6-P1 基线 488 项离线测试 | [M6-P1 验证记录](docs/M6_P1_DISTRIBUTION_VERIFICATION.md) |
 | M6-P2 当前 492 项离线测试 | [M6-P2 验证记录](docs/M6_P2_PORTFOLIO_VERIFICATION.md) |
+| R2 当前 523 项离线测试、15 项导师教学专项 | [R2 教学闭环](docs/R2_MENTOR_TEACHING_LOOP.md) |
 | P4d 单次 5/5 行动契约修复，费用 `0.02345744 CNY` | [P4d 脱敏报告](docs/M5_P4D_DEEPSEEK_RECOVERY_VALIDATION_20260811.md) |
 | M4.5 排名 `Recall@3=1.00`，但返回门禁 `micro F1=0.6667`、更正 FN=1 | [M4.5 终止审计](docs/M45_TERMINATION_AUDIT.md) |
 

@@ -98,6 +98,16 @@ from .views import (
     TreatmentOptionView,
     ViewContextError,
 )
+from .assessment import AssessmentBuilder, AssessmentSourceError
+from .teaching import (
+    CreateTeachingSessionInput,
+    MentorTeachingService,
+    SubmitReflectionInput,
+    TeachingRequest,
+    TeachingServiceResult,
+    TeachingSessionIdFactory,
+    UUIDTeachingSessionIdFactory,
+)
 
 __all__ = [
     "ApprenticeshipPlayerInput",
@@ -187,4 +197,13 @@ __all__ = [
     "PlayerView",
     "TreatmentOptionView",
     "ViewContextError",
+    "AssessmentBuilder",
+    "AssessmentSourceError",
+    "CreateTeachingSessionInput",
+    "MentorTeachingService",
+    "SubmitReflectionInput",
+    "TeachingRequest",
+    "TeachingServiceResult",
+    "TeachingSessionIdFactory",
+    "UUIDTeachingSessionIdFactory",
 ]

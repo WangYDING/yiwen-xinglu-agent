@@ -579,4 +579,11 @@ M5-P1 已完成，M5-P2 尚未开始。P2 前没有新的架构级用户决策�
 - **离线入口**：无 LLM Demo 保持 8 个连续事件、`resolved / 100`；`m5_acceptance_v1` 独立临时目录验收通过，三病例均为 8 个连续事件、`resolved / 100`，Campaign 事件 1～3、恢复、隔离、拒绝零写入和 record-only shadow 均通过。
 - **状态证据**：六项能力初始均为 20；旧纸伞正确轨迹后察形 21、问因 22、验物 22、辨证 22、施治 22、守则 21，亲近保持 10、信任 11、认可 12。成长事件可完整重放，重复完成和协调保持文件逐字节不变。
 - **工程卫生**：`pip check` 与 `git diff --check` 通过；没有跟踪 `.env`、`runtime_data`、`results` 或 `runtime_models` 文件，变更文件未发现凭据样式内容。
+
+## 2026-08-11：R2 最小导师教学闭环
+
+- **启动门禁**：起始 HEAD `b13c164279e3d7d8ddac55c15cb651564af450f0`（`main`）且工作树干净；R1 是独立本地提交，五份权威文档与 ADR-055 一致指向 R2；R1 专项 16 项通过，确认唯一 `ApprenticeshipState`、六项能力、三维关系、投影、回放与恢复。
+- **R2 专项**：15 项通过；R1+R2 联合 31 项通过；全量 523 项通过。覆盖固定课程、反思、0/2 次提示、错误诊断、`suppressed`、`worsened`、结构化师评、R1 变化引用、非法 MentorAction 一次修复与降级、退出恢复、两个独立 Python 子进程继续同一教学会话、跨玩家拒绝零写入和完整 Fake Mentor CLI。
+- **历史回归**：M5 32-worker 离线验收通过，三案均 `8 events / resolved / 100`，Campaign 1–3、隔离、重放和 semantic shadow 保持一致；MCP 22 项、V0 DoctorAgent/Fake/事件重放 34 项通过；无 LLM Demo 为 `resolved / 100`。P4b/P4d 原始 SHA、M4/M4.5 和 M5 退出结论未修改。
+- **外部边界**：没有调用 DeepSeek、BGE、Embedding API 或外部网络，费用为 0 CNY；没有安装依赖、修改 Git 身份/配置、改写历史、推送、Tag 或 Release。`pip check`、`git diff --check`、敏感信息与运行文件跟踪检查通过。
 - **外部边界**：未调用 DeepSeek `/models`、Chat、Embedding 或其他外部 API，未加载或下载 BGE/模型，网络请求与费用均为 0。R2 导师教学尚未开始。

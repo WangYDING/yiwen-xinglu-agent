@@ -8,6 +8,7 @@
 - [`PRODUCT_SYSTEM_ARCHITECTURE.md`](PRODUCT_SYSTEM_ARCHITECTURE.md)：病例、导师、教学、成长、关系、记忆、权限与传承的权威边界和数据流。
 - [`PRODUCT_COMPLETION_PLAN_V1.md`](PRODUCT_COMPLETION_PLAN_V1.md)：M0～M6 之后的 R1～R6 产品完成顺序。
 - [`R1_APPRENTICESHIP_GROWTH.md`](R1_APPRENTICESHIP_GROWTH.md)：R1 长期状态、成长规则、事件、协调与公开边界。
+- [`R2_MENTOR_TEACHING_LOOP.md`](R2_MENTOR_TEACHING_LOOP.md)：R2 导师角色、固定课程、提示、师评、恢复与 CLI 边界。
 - [`M5_PRODUCT_GAP_AUDIT.md`](M5_PRODUCT_GAP_AUDIT.md)：按 L0～L5 重新审计 M5 的产品成熟度、缺口和下一验收条件。
 - [`ROADMAP.md`](ROADMAP.md)：区分 M0～M6 历史与 Product Completion Plan v1 的 R1～R6 主线。
 

@@ -59,6 +59,19 @@ from .v1_doctor import (
     V1DoctorAgentInterface,
     V1PromptContext,
 )
+from .mentor import (
+    DeterministicFakeMentor,
+    MentorAgent,
+    MentorAgentInput,
+    MentorAgentInterface,
+    MentorDecision,
+    RelationshipPublicView,
+)
+from .mentor_contract import (
+    MentorActionContractError,
+    PHASE_ACTIONS,
+    validate_mentor_action,
+)
 
 __all__ = [
     "ActionContractResolution",
@@ -109,4 +122,13 @@ __all__ = [
     "V1DoctorAgentInput",
     "V1DoctorAgentInterface",
     "V1PromptContext",
+    "DeterministicFakeMentor",
+    "MentorAgent",
+    "MentorAgentInput",
+    "MentorAgentInterface",
+    "MentorDecision",
+    "RelationshipPublicView",
+    "MentorActionContractError",
+    "PHASE_ACTIONS",
+    "validate_mentor_action",
 ]

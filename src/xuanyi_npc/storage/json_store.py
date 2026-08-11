@@ -18,6 +18,11 @@ from xuanyi_npc.domain.apprenticeship import (
 from xuanyi_npc.domain.campaign import CampaignState
 from xuanyi_npc.domain.cases import CaseSessionState
 from xuanyi_npc.domain.player import PlayerState
+from xuanyi_npc.domain.teaching import (
+    TeachingEventReplayer,
+    TeachingReplayError,
+    TeachingSessionState,
+)
 
 
 class StorageError(RuntimeError):
@@ -76,6 +81,22 @@ class JsonStateStore:
             raise StateCorruptionError("apprenticeship snapshot does not match replay")
         return state
 
+    def save_teaching_session(self, state: TeachingSessionState) -> Path:
+        replayed = TeachingEventReplayer().replay(state.events)
+        if replayed != state:
+            raise StateCorruptionError("teaching snapshot does not match replay")
+        return self._write("teaching_sessions", state.teaching_session_id, state)
+
+    def load_teaching_session(self, teaching_session_id: str) -> TeachingSessionState:
+        state = self._read("teaching_sessions", teaching_session_id, TeachingSessionState)
+        try:
+            replayed = TeachingEventReplayer().replay(state.events)
+        except TeachingReplayError as exc:
+            raise StateCorruptionError("teaching event stream is invalid") from exc
+        if replayed != state:
+            raise StateCorruptionError("teaching snapshot does not match replay")
+        return state
+
     def list_players(self) -> tuple[PlayerState, ...]:
         """Return all validated player snapshots in stable ID order."""
 
@@ -100,6 +121,19 @@ class JsonStateStore:
                 raise StateCorruptionError("apprenticeship event stream is invalid") from exc
             if replayed != value:
                 raise StateCorruptionError("apprenticeship snapshot does not match replay")
+        return values
+
+    def list_teaching_sessions(self) -> tuple[TeachingSessionState, ...]:
+        values = self._list(
+            "teaching_sessions", TeachingSessionState, "teaching_session_id"
+        )
+        for value in values:
+            try:
+                replayed = TeachingEventReplayer().replay(value.events)
+            except TeachingReplayError as exc:
+                raise StateCorruptionError("teaching event stream is invalid") from exc
+            if replayed != value:
+                raise StateCorruptionError("teaching snapshot does not match replay")
         return values
 
     def _path(self, namespace: str, identifier: str) -> Path:
