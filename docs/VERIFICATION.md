@@ -540,3 +540,14 @@ M5-P1 已完成，M5-P2 尚未开始。P2 前没有新的架构级用户决策�
 - **原始身份**：Git 忽略结果 `results/m5_p4d_recovery_20260811.json`，83,606 bytes，SHA-256 `24B4105E1607F84FA0E1D15810BAF9051FBAADCEF3D90470411EB7A0543BADD8`。仓库只保存脱敏报告。
 - **离线收口**：运行后全量 `476 passed`；`pip check`、`git diff --check`、敏感信息与运行文件跟踪检查通过。提交范围只有脱敏报告和当前状态文档，没有产品代码或测试改动。
 - **结论边界**：P4c 通用接口在一次真实运行中被触发并成功纠正 5/5 行动，完整旧纸伞→灰灶→月井 Campaign 得到单次验证；P4b/P4d 各一个案例，不是统计因果、正式成功率或玩家收益。M5-P4 已关闭，不再重跑或调 Prompt；M5-P5 尚未开始。
+
+## 2026-08-11：M5-P5 纵向切片最终验收
+
+- **自动验收**：新增严格 `m5_acceptance_v1` 与 `xuanyi-m5-acceptance`。主玩家按旧纸伞→灰灶→月井完成三案，每案由 8 个独立 Python worker 逐行动从磁盘恢复后提交，事件均为 1–8，终态均为 `completed / resolved / 100`；Case 事件从空初态重放后等于磁盘。CampaignEvent 为 1–3，解锁 `contract_provenance_check` 与 `handoff_sequence_check`，两处后续开场出现公开历史反应，Campaign 重放一致。
+- **第二玩家与拒绝**：第二玩家无前史直接进入月井，得到中性开场并完成 `resolved / 100`，知识保持空；会话、推荐、知识和历史反应与主玩家隔离。错误参数、过早诊断、重复调查和跨玩家恢复各一次，均为零事件、零修订且 Session 文件逐字节不变。
+- **shadow 与无 Key**：Fake shadow off/record-only 的 Agent 请求字节、行动、Episode 事件/终态和 Campaign 完全相同，记录固定声明未注入 Prompt、未影响行动和状态。manual 子进程在删除 API Key 的环境中正常启动退出；32 个跨进程 Case worker 均未加载 Torch 或 Sentence Transformers。
+- **普通用户 CLI**：离线刷新 editable 安装后，`xuanyi-play.exe` 与 `xuanyi-m5-acceptance.exe --help` 均成功。实际用两个不同 PID 运行 README 的 manual/off 命令：首进程创建玩家、列出三案、开始灰灶、提交一个调查并退出；第二进程恢复同一 Session。前后 Session 数均为 1、revision 均为 1、ActionRecord 数为 1，两个退出码均为 0、stderr 均为空。
+- **结果身份**：最终代码对应的 Git 忽略结果 `results/m5_acceptance_final_20260811.json`，5,359 bytes，SHA-256 `4D7A16D6F570FC2854D2D4A3C94B9F7B5FF562210ECE4FCC147F452771536315`。P4b/P4d 原始 SHA 分别保持 `EFDC6B37692CAA117B352DD199B52AAFF20D765945E5C8FB585994453B712C2B` 与 `24B4105E1607F84FA0E1D15810BAF9051FBAADCEF3D90470411EB7A0543BADD8`，没有运行或覆盖历史实验。
+- **测试结果**：全量 `482 passed`；M5-P2～P5 专项 `91 passed`，其中 P5 `6 passed`；MCP P0/P1 `22 passed`；V0 Agent、dev 和事件重放组合 `34 passed`。P0 Fake dev 的 3 场景/6 轨迹全部符合冻结预期，无 LLM Demo 仍为事件 1–8、`resolved / 100`；`pip check`、`git diff --check`、敏感信息及运行文件跟踪检查通过。
+- **文档与退出**：`docs/M5_DEMO_GUIDE.md` 固化 3 分钟与 8～10 分钟演示、镜头和离线备用方案；`docs/M5_PORTFOLIO_EVIDENCE.md` 分开 Agent 应用岗与游戏 AI 产品岗证据；`docs/M5_EXIT_AUDIT.md` 的 13 项最低条件全部通过。M5 工程纵向切片完成，下一阶段尚未开始。
+- **外部边界**：本轮 DeepSeek `/models` 0、Chat 0、本地 BGE 加载 0、Embedding API 0、网络请求 0、费用 0 CNY。结论不代表生产级游戏、真实模型正式成功率、语义记忆已投入玩法、真实玩家留存/教学收益、网页、远程部署或并发生产能力。

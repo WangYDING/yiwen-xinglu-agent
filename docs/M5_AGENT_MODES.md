@@ -57,4 +57,4 @@ P4d 在精确提交 `60f54a5d20f684f5e922c617c7c795a1d622613d` 上使用 `deepse
 
 本次 `/models` 1 次、Chat 21 次，费用 `0.02345744 CNY`；语义记忆标记命中 0，BGE 和 Embedding 请求 0。它证明 P4c 接口在一次真实运行中被触发并成功纠正行动，也验证了一次完整三病例产品链路；但修复前后各只有一个案例，不能声明统计因果、正式成功率或稳定玩家收益。详细证据见 `docs/M5_P4D_DEEPSEEK_RECOVERY_VALIDATION_20260811.md`。
 
-M5-P4 已按真实正负结果关闭，不再授权新的 P4 重跑或 Prompt 调优。M5-P5 尚未开始。
+M5-P4 已按真实正负结果关闭，不再授权新的 P4 重跑或 Prompt 调优。M5-P5 随后只以离线 manual/Fake/Mock shadow 完成自动验收、真实 CLI 恢复和文档收口，没有重跑 DeepSeek 或加载 BGE。M5 最终退出结论见 `docs/M5_EXIT_AUDIT.md`。

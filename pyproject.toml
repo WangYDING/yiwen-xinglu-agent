@@ -25,6 +25,7 @@ xuanyi-mcp-stdio = "xuanyi_npc.mcp_server.stdio:main"
 xuanyi-memory-eval = "xuanyi_npc.evaluation.memory_runner:main"
 xuanyi-semantic-memory-eval = "xuanyi_npc.evaluation.semantic_memory_runner:main"
 xuanyi-play = "xuanyi_npc.cli.play:main"
+xuanyi-m5-acceptance = "xuanyi_npc.evaluation.m5_acceptance:main"
 
 [project.optional-dependencies]
 dev = [

@@ -6,7 +6,7 @@
 
 ## 当前状态
 
-**M2、M3 与 M4 工程里程碑已经完成；M4.5 已以 `closed_with_known_dense_retrieval_limitations` 终止，M5-P0～P4 已完成，M5-P5 尚未开始。** M5-P1 提供可注入的多病例 Episode 服务与 `xuanyi-play`，P2 提供三个完整病例，P3 增加可重放的确定性 Campaign、两项可见知识成长和两处跨案历史反应，P4a 冻结 manual/Fake/DeepSeek V0 与 record-only semantic shadow 的装配边界。P4b 保留灰灶未闭环、月井未运行的真实负结果；P4c 离线增加通用公开行动契约、结构化拒绝反馈和一次有界行动修复；P4d 最终单次验证触发 5 次真实契约修复并全部成功，灰灶与月井均达到 `resolved / 100`。这些是单次工程案例，不是正式成功率。三个病例始终可独立开始；推荐顺序只提供公开建议，不构成锁关。
+**M2、M3、M4 与 M5 工程里程碑已经完成；M4.5 已以 `closed_with_known_dense_retrieval_limitations` 终止。** M5 现在提供包含三个病例、确定性跨案连续性、两项可见知识成长、结构化 Agent 工具、安全恢复、持久化重放和普通用户 CLI 的本地游戏 AI 纵向切片。P4b 的灰灶未闭环、月井未运行真实负结果继续保留；P4d 的 5/5 行动契约修复及三案闭环只是一例真实工程案例，不是正式成功率。三个病例始终可独立开始；推荐顺序只提供公开建议，不构成锁关。语义向量记忆继续默认关闭且不进入正式 Agent Prompt。
 
 已经包含：
 
@@ -67,8 +67,10 @@
 - 三病例 Fake 演示仍经安全 Agent 输入、严格 `AgentAction`、应用服务、规则引擎、原子保存和 Campaign 协调完成；
 - record-only shadow 使用离线 Mock 写脱敏旁路记录，明确不注入 Prompt、不影响行动和状态；DeepSeek V0 保持原 Prompt、模型发现、错误分类与预算门禁。
 - 结构有效的 Agent 提案还会在状态服务之前通过当前公开行动契约；首次上下文错误使用一次独立记录的 `action_contract_repair`，第二次仍错误则安全降级且不产生第三次模型调用。
+- `xuanyi-m5-acceptance` 离线验收入口：用独立子进程逐行动恢复三病例，验证 Campaign、双玩家隔离、拒绝零写入、事件重放和 semantic shadow 隔离，并输出脱敏 JSON 与摘要。
+- 可直接录屏的 3 分钟与 8～10 分钟演示指南，以及分别面向 Agent 应用岗和游戏 AI 产品岗的证据清单。
 
-**当前停止在尚未开始的 M5-P5 之前**：P4b 的[历史负结果](docs/M5_P4B_DEEPSEEK_CAMPAIGN_PILOT_20260811.md)保持不变；P4c 的[离线行动契约审计](docs/M5_P4C_AGENT_CONTRACT_AUDIT.md)没有回写该结果；P4d 的[最终单次恢复验证](docs/M5_P4D_DEEPSEEK_RECOVERY_VALIDATION_20260811.md)以 21 次 Chat、`0.02345744 CNY` 完成灰灶和月井，并验证 5/5 行动契约修复。M5-P4 此后停止付费重跑和 Prompt 调优。M4.5 的旧 15 条与新 36 条负结果均按历史保留；语义记忆继续默认关闭且不进入正式 Agent Prompt。
+**当前已完成 M5 并停止在下一阶段开始之前**：P4b 的[历史负结果](docs/M5_P4B_DEEPSEEK_CAMPAIGN_PILOT_20260811.md)保持不变；P4c 的[离线行动契约审计](docs/M5_P4C_AGENT_CONTRACT_AUDIT.md)没有回写该结果；P4d 的[最终单次恢复验证](docs/M5_P4D_DEEPSEEK_RECOVERY_VALIDATION_20260811.md)以 21 次 Chat、`0.02345744 CNY` 完成灰灶和月井，并验证 5/5 行动契约修复。P5 只做离线验收，没有重跑付费实验。完整退出证据见 [`docs/M5_EXIT_AUDIT.md`](docs/M5_EXIT_AUDIT.md)，演示流程见 [`docs/M5_DEMO_GUIDE.md`](docs/M5_DEMO_GUIDE.md)，双岗位证据见 [`docs/M5_PORTFOLIO_EVIDENCE.md`](docs/M5_PORTFOLIO_EVIDENCE.md)。
 
 最终 M2 退出依据包括：标准探针在 8 步内完成正确诊断和处置，终态 `resolved / 100`；`SAFETY_ONLY` 的错误诱导探针抵抗了 `evil_spirit_attack` 暗示并提交正确诊断，但因一次解释性 `respond` 未能处置；过早行动探针的 1 次未知调查和 4 次过早诊断均被规则拒绝，没有状态污染。最新三探针共 24 次 Chat，24/24 首次结构化成功，格式修复、降级和非法状态写入均为 0，事件均连续且可重放。三探针共用一个病例且各运行一次，不是正式成功率样本。
 
@@ -148,6 +150,24 @@ xuanyi-play --case-dir .\data\cases --state-dir .\runtime_data\play `
 两个目录必须已经存在。病例与跨案规则在进入菜单前完成严格校验；存档目录保存玩家、病例会话和独立的 `campaigns/{player_id}.json`，并由 Git 忽略。菜单支持创建或选择玩家、查看玩家历程和推荐下一案、开始/继续病例、调查、诊断、处置、返回或保存退出。每个成功行动会立即原子保存，因此 EOF、Ctrl+C 或正常退出后可用同一命令恢复。
 
 当前目录自动列出三个可玩病例。推荐顺序为旧纸伞→灰灶→月井，但三案始终可独立开始；无前史时显示中性内容，不影响 `resolved / 100`。按公开结果与处置规则可解锁“契物归属核验”和“交接顺序核验”，后续病例只显示安全历史反应与可选调查建议，不自动执行、不发现线索、不改变答案或评分。CLI 不显示正确答案，也不固定调查顺序。游玩不读取 `.env`，不需要 API Key，不调用 DeepSeek、BGE 或外部 Embedding。
+
+### M5 离线纵向切片验收
+
+安装后可使用一个新的空状态目录运行完整验收；原始结果写入 Git 忽略的 `results/`：
+
+```powershell
+New-Item -ItemType Directory .\runtime_data\m5_acceptance | Out-Null
+xuanyi-m5-acceptance `
+  --run-id m5_acceptance_local `
+  --case-dir .\data\cases `
+  --state-dir .\runtime_data\m5_acceptance `
+  --campaign-rules .\data\campaign\cross_episode_rules_v1.json `
+  --output .\results\m5_acceptance_local.json `
+  --p4b-result .\results\m5_p4b_campaign_20260811.json `
+  --p4d-result .\results\m5_p4d_recovery_20260811.json
+```
+
+该入口要求本机保留两份 Git 忽略的 P4 原始结果，以便逐字节核对冻结 SHA。新克隆没有这些私有原始结果时，不影响普通游玩或自动测试，但不能声称已完成该项历史文件核验。模块入口为 `python -m xuanyi_npc.evaluation.m5_acceptance`。验收不需要 API Key，不调用 DeepSeek、BGE 或网络服务。
 
 安装完成后，可以运行一次固定的正确病例路线：
 
@@ -274,4 +294,4 @@ M2 真实 Pilot 已结束，不再运行模型发现、标准探针、安全探�
 - 本地 BGE-M3 Adapter 已完成离线烟雾、旧开发集和新 holdout 的正式双运行；工程、安全、重复性和主要排名门槛通过，但保守返回门禁的 micro F1 与更正切片未通过，因此不能声称真实语义召回已满足产品要求。外部 Embedding API 仍未授权，DeepSeek Chat 的历史授权不会自动延伸到其他供应商。
 - 当前 V0 的固定课程只按步骤编号推进，不基于玩家表现动态改变。
 - 当前真实样本仍只有一个病例上的单次探针运行，不足以形成正式成功率、跨病例比较或模型可靠性指标。
-- M2 付费运行已经停止；M3 与 M4 已完成工程退出；M4.5 以 `closed_with_known_dense_retrieval_limitations` 关闭，P3 取消本轮执行。M5-P0～P4 已完成；P4b 负结果、P4c 通用接口修复和 P4d 单次真实恢复结果全部保留，P4 不再重跑或调优；P5 尚未开始。
+- M2 付费运行已经停止；M3 与 M4 已完成工程退出；M4.5 以 `closed_with_known_dense_retrieval_limitations` 关闭，P3 取消本轮执行。M5-P0～P5 已完成；P4b 负结果、P4c 通用接口修复和 P4d 单次真实恢复结果全部保留，P4 不再重跑或调优；下一阶段尚未开始。
