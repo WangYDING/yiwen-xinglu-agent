@@ -10,7 +10,14 @@ from xuanyi_npc.domain import (
 )
 
 
-CASE_PATH = Path(__file__).parents[1] / "data" / "cases" / "old_paper_umbrella.json"
+CASE_PATH = (
+    Path(__file__).parents[1]
+    / "src"
+    / "xuanyi_npc"
+    / "resources"
+    / "cases"
+    / "old_paper_umbrella.json"
+)
 
 
 @pytest.fixture()

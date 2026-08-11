@@ -8,13 +8,10 @@ from typing import Annotated, Literal
 from pydantic import ConfigDict, Field, StrictInt, model_validator
 
 from xuanyi_npc.domain.base import DomainModel, Identifier, NonEmptyText
+from xuanyi_npc.resources.runtime import read_runtime_text
 
-REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
-DEFAULT_DEEPSEEK_PRICING_PATH = (
-    REPOSITORY_ROOT
-    / "data"
-    / "pilot"
-    / "deepseek_v4_flash_pilot_policy_2026-08-07.json"
+DEFAULT_DEEPSEEK_PRICING_RESOURCE = (
+    "pilot/deepseek_v4_flash_pilot_policy_2026-08-07.json"
 )
 
 
@@ -69,10 +66,15 @@ class DeepSeekPilotPricing(DomainModel):
 
 
 def load_deepseek_pilot_pricing(
-    path: Path | str = DEFAULT_DEEPSEEK_PRICING_PATH,
+    path: Path | str | None = None,
 ) -> DeepSeekPilotPricing:
+    payload = (
+        read_runtime_text(DEFAULT_DEEPSEEK_PRICING_RESOURCE)
+        if path is None
+        else Path(path).read_text(encoding="utf-8")
+    )
     return DeepSeekPilotPricing.model_validate_json(
-        Path(path).read_text(encoding="utf-8")
+        payload
     )
 
 

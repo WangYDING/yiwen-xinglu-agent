@@ -51,6 +51,12 @@ from xuanyi_npc.domain import (
 from xuanyi_npc.domain.base import DomainModel, Identifier, NonEmptyText
 from xuanyi_npc.domain.campaign import CampaignEventReplayer
 from xuanyi_npc.engine import CaseEventReplayer
+from xuanyi_npc.resources.runtime import (
+    M5_HISTORY_RESOURCE_NAME,
+    PackageResourceError,
+    materialized_runtime_resources,
+    read_runtime_text,
+)
 from xuanyi_npc.storage import JsonStateStore
 
 
@@ -111,6 +117,9 @@ class ExternalUse(AcceptanceModel):
 
 
 class HistoricalEvidence(AcceptanceModel):
+    verification_mode: Literal["public_manifest", "raw_sha256_verified"] = (
+        "public_manifest"
+    )
     p4b_raw_sha256: Literal[P4B_RAW_SHA256]
     p4d_raw_sha256: Literal[P4D_RAW_SHA256]
     p4b_conclusion: Literal[
@@ -119,6 +128,18 @@ class HistoricalEvidence(AcceptanceModel):
     p4d_conclusion: Literal[
         "engineering_safe_three_case_campaign_completed"
     ] = "engineering_safe_three_case_campaign_completed"
+
+
+class PublicHistoryEvidenceManifest(AcceptanceModel):
+    schema_version: Literal["m5_public_history_evidence_v1"]
+    p4b_raw_sha256: Literal[P4B_RAW_SHA256]
+    p4d_raw_sha256: Literal[P4D_RAW_SHA256]
+    p4b_conclusion: Literal[
+        "engineering_safe_gray_incomplete_moon_not_run"
+    ]
+    p4d_conclusion: Literal[
+        "engineering_safe_three_case_campaign_completed"
+    ]
 
 
 class M5AcceptanceResult(AcceptanceModel):
@@ -560,12 +581,32 @@ def _manual_probe(case_dir: Path, state_dir: Path) -> bool:
     )
 
 
-def _verify_history(p4b_result: Path, p4d_result: Path) -> HistoricalEvidence:
+def _public_history_evidence() -> HistoricalEvidence:
+    manifest = PublicHistoryEvidenceManifest.model_validate_json(
+        read_runtime_text(f"release/{M5_HISTORY_RESOURCE_NAME}")
+    )
+    return HistoricalEvidence.model_validate(
+        {
+            "verification_mode": "public_manifest",
+            **manifest.model_dump(exclude={"schema_version"}),
+        }
+    )
+
+
+def _verify_history(
+    p4b_result: Path | None,
+    p4d_result: Path | None,
+) -> HistoricalEvidence:
+    if p4b_result is None and p4d_result is None:
+        return _public_history_evidence()
+    if p4b_result is None or p4d_result is None:
+        raise AcceptanceError("both raw history files must be provided together")
     if _sha256(p4b_result) != P4B_RAW_SHA256:
         raise AcceptanceError("P4b raw history SHA changed")
     if _sha256(p4d_result) != P4D_RAW_SHA256:
         raise AcceptanceError("P4d raw history SHA changed")
     return HistoricalEvidence(
+        verification_mode="raw_sha256_verified",
         p4b_raw_sha256=P4B_RAW_SHA256,
         p4d_raw_sha256=P4D_RAW_SHA256,
     )
@@ -577,8 +618,8 @@ def run_acceptance(
     case_dir: Path,
     state_dir: Path,
     campaign_rules: Path,
-    p4b_result: Path,
-    p4d_result: Path,
+    p4b_result: Path | None = None,
+    p4d_result: Path | None = None,
 ) -> M5AcceptanceResult:
     if any(state_dir.iterdir()):
         raise AcceptanceError("acceptance state directory must be empty")
@@ -764,12 +805,32 @@ def build_parser() -> argparse.ArgumentParser:
         description="离线验收三病例、跨案连续性、恢复、重放和安全隔离。",
     )
     parser.add_argument("--run-id", required=True)
-    parser.add_argument("--case-dir", type=Path, required=True)
+    parser.add_argument(
+        "--case-dir",
+        type=Path,
+        default=None,
+        help="可选的病例目录；默认使用安装包内置病例。",
+    )
     parser.add_argument("--state-dir", type=Path, required=True)
-    parser.add_argument("--campaign-rules", type=Path, required=True)
+    parser.add_argument(
+        "--campaign-rules",
+        type=Path,
+        default=None,
+        help="可选的 Campaign 规则；默认与内置病例一同加载。",
+    )
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--p4b-result", type=Path, required=True)
-    parser.add_argument("--p4d-result", type=Path, required=True)
+    parser.add_argument(
+        "--p4b-result",
+        type=Path,
+        default=None,
+        help="可选 P4b 原始结果；必须与 P4d 文件同时提供。",
+    )
+    parser.add_argument(
+        "--p4d-result",
+        type=Path,
+        default=None,
+        help="可选 P4d 原始结果；必须与 P4b 文件同时提供。",
+    )
     return parser
 
 
@@ -782,25 +843,36 @@ def _write_result(path: Path, result: M5AcceptanceResult) -> None:
     os.replace(temp, path)
 
 
-def main(argv: Sequence[str] | None = None) -> int:
-    raw = tuple(sys.argv[1:] if argv is None else argv)
-    if raw and raw[0] == "--worker-step":
-        return _worker_main(raw)
-    args = build_parser().parse_args(raw)
+def _run_with_paths(
+    args: argparse.Namespace,
+    *,
+    case_dir: Path,
+    campaign_rules: Path,
+) -> int:
     try:
-        for directory in (args.case_dir, args.state_dir):
+        for directory in (case_dir, args.state_dir):
             if not directory.is_dir():
                 raise AcceptanceError("configured directory is unavailable")
-        for path in (args.campaign_rules, args.p4b_result, args.p4d_result):
+        if not campaign_rules.is_file():
+            raise AcceptanceError("configured evidence file is unavailable")
+        if (args.p4b_result is None) != (args.p4d_result is None):
+            raise AcceptanceError("both raw history files must be provided together")
+        for path in (args.p4b_result, args.p4d_result):
+            if path is None:
+                continue
             if not path.is_file():
                 raise AcceptanceError("configured evidence file is unavailable")
         result = run_acceptance(
             run_id=args.run_id,
-            case_dir=args.case_dir.resolve(),
+            case_dir=case_dir.resolve(),
             state_dir=args.state_dir.resolve(),
-            campaign_rules=args.campaign_rules.resolve(),
-            p4b_result=args.p4b_result.resolve(),
-            p4d_result=args.p4d_result.resolve(),
+            campaign_rules=campaign_rules.resolve(),
+            p4b_result=(
+                args.p4b_result.resolve() if args.p4b_result is not None else None
+            ),
+            p4d_result=(
+                args.p4d_result.resolve() if args.p4d_result is not None else None
+            ),
         )
         _write_result(args.output, result)
     except AcceptanceError as exc:
@@ -813,6 +885,32 @@ def main(argv: Sequence[str] | None = None) -> int:
     print("- semantic shadow：record-only 不影响请求、行动或状态")
     print("- 外部调用：0；费用：0 CNY")
     return 0
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    raw = tuple(sys.argv[1:] if argv is None else argv)
+    if raw and raw[0] == "--worker-step":
+        return _worker_main(raw)
+    args = build_parser().parse_args(raw)
+    if args.case_dir is not None and args.campaign_rules is None:
+        print("验收失败：自定义病例目录必须同时提供 Campaign 规则。", file=sys.stderr)
+        return 2
+    if args.case_dir is not None:
+        return _run_with_paths(
+            args,
+            case_dir=args.case_dir,
+            campaign_rules=args.campaign_rules,
+        )
+    try:
+        with materialized_runtime_resources() as resources:
+            return _run_with_paths(
+                args,
+                case_dir=resources.case_dir,
+                campaign_rules=args.campaign_rules or resources.campaign_rules,
+            )
+    except PackageResourceError:
+        print("验收失败：安装包运行数据不可用。", file=sys.stderr)
+        return 2
 
 
 if __name__ == "__main__":

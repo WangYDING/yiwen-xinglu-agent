@@ -12,6 +12,7 @@ import sys
 import tempfile
 import time
 from datetime import datetime, timedelta, timezone
+from importlib.resources import files
 from pathlib import Path
 from typing import Any
 
@@ -131,8 +132,12 @@ DEFAULT_MEMORY_GOLD_EXPECTATION_PATH = (
 DEFAULT_MEMORY_GOLD_MANIFEST_PATH = (
     REPOSITORY_ROOT / "data" / "evaluation" / "memory_gold_manifest.json"
 )
-DEFAULT_MEMORY_CASE_PATH = (
-    REPOSITORY_ROOT / "data" / "cases" / "old_paper_umbrella.json"
+DEFAULT_MEMORY_CASE_PATH = Path(
+    str(
+        files("xuanyi_npc.resources")
+        .joinpath("cases")
+        .joinpath("old_paper_umbrella.json")
+    )
 )
 FIXED_CLOCK = datetime(2026, 8, 8, 8, 0, tzinfo=timezone.utc)
 V0_PROMPT_SHA256 = "04a9013bd3a4d41a705b7d2f36b85946093d77ea2227fb809904d3213b97fae0"

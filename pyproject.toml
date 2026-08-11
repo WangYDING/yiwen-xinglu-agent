@@ -5,9 +5,31 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "xuanyi-npc"
 version = "0.1.0"
-description = "Deterministic domain core for a Daoist-fantasy mentor NPC"
+description = "玄医问道：可审计的师承型智能 NPC / Xuanyi: An Auditable Agentic Mentor NPC"
 readme = "README.md"
 requires-python = ">=3.11"
+authors = [
+    {name = "WangYDING", email = "w17630630069@163.com"},
+]
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE", "CONTENT_RIGHTS.md", "THIRD_PARTY_NOTICES.md"]
+keywords = [
+    "agent",
+    "game-ai",
+    "mcp",
+    "npc",
+    "event-sourcing",
+    "deterministic-rules",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Games/Entertainment :: Role-Playing",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+]
 dependencies = [
     "httpx>=0.27,<1",
     "mcp==2.0.0",
@@ -29,7 +51,9 @@ xuanyi-m5-acceptance = "xuanyi_npc.evaluation.m5_acceptance:main"
 
 [project.optional-dependencies]
 dev = [
+    "build>=1.2,<2",
     "pytest>=7.4,<9",
+    "wheel>=0.45,<1",
 ]
 local-embedding = [
     "numpy==2.4.6",
@@ -41,6 +65,17 @@ local-embedding = [
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools]
+include-package-data = false
+
+[tool.setuptools.package-data]
+"xuanyi_npc.resources" = [
+    "campaign/*.json",
+    "cases/*.json",
+    "pilot/*.json",
+    "release/*.json",
+]
 
 [tool.pytest.ini_options]
 addopts = "-q"

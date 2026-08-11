@@ -46,8 +46,9 @@ from xuanyi_npc.storage import JsonStateStore
 
 
 ROOT = Path(__file__).parents[1]
-CASE_DIR = ROOT / "data" / "cases"
-CAMPAIGN_RULES = ROOT / "data" / "campaign" / "cross_episode_rules_v1.json"
+RESOURCE_ROOT = ROOT / "src" / "xuanyi_npc" / "resources"
+CASE_DIR = RESOURCE_ROOT / "cases"
+CAMPAIGN_RULES = RESOURCE_ROOT / "campaign" / "cross_episode_rules_v1.json"
 CASE_IDS = ("gray_hearth_inn", "moon_well_echo", "old_paper_umbrella")
 
 

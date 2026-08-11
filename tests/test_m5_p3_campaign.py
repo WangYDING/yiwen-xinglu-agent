@@ -40,8 +40,9 @@ from xuanyi_npc.storage import JsonStateStore, StorageError
 
 
 ROOT = Path(__file__).parents[1]
-CASE_DIR = ROOT / "data" / "cases"
-RULES_PATH = ROOT / "data" / "campaign" / "cross_episode_rules_v1.json"
+RESOURCE_ROOT = ROOT / "src" / "xuanyi_npc" / "resources"
+CASE_DIR = RESOURCE_ROOT / "cases"
+RULES_PATH = RESOURCE_ROOT / "campaign" / "cross_episode_rules_v1.json"
 
 CASE_TRACES = {
     "old_paper_umbrella": {
@@ -635,8 +636,9 @@ from xuanyi_npc.application import CampaignRuleSet, CaseCatalog, MultiCaseEpisod
 from xuanyi_npc.domain import AgentAction, AgentActionType, CaseActionType, ToolCallRequest, ToolName
 from xuanyi_npc.storage import JsonStateStore
 root = Path(sys.argv[1]); state = Path(sys.argv[2]); player = sys.argv[3]; case_id = sys.argv[4]; session_id = sys.argv[5]
-catalog = CaseCatalog(root / "data" / "cases")
-service = MultiCaseEpisodeService(state_store=JsonStateStore(state), case_catalog=catalog, campaign_rules=CampaignRuleSet.load(root / "data" / "campaign" / "cross_episode_rules_v1.json", catalog))
+resources = root / "src" / "xuanyi_npc" / "resources"
+catalog = CaseCatalog(resources / "cases")
+service = MultiCaseEpisodeService(state_store=JsonStateStore(state), case_catalog=catalog, campaign_rules=CampaignRuleSet.load(resources / "campaign" / "cross_episode_rules_v1.json", catalog))
 case = catalog.get(case_id)
 assert case is not None
 started = service.start_episode(StartEpisodeInput(player_id=player, case_id=case_id))

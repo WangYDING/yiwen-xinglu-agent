@@ -20,7 +20,14 @@ from xuanyi_npc.storage import JsonStateStore
 
 REPO_ROOT = Path(__file__).parents[1]
 SOURCE_ROOT = REPO_ROOT / "src"
-SOURCE_CASE = REPO_ROOT / "data" / "cases" / "old_paper_umbrella.json"
+SOURCE_CASE = (
+    REPO_ROOT
+    / "src"
+    / "xuanyi_npc"
+    / "resources"
+    / "cases"
+    / "old_paper_umbrella.json"
+)
 PROCESS_TIMEOUT_SECONDS = 20
 
 

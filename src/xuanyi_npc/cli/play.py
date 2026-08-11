@@ -57,6 +57,10 @@ from xuanyi_npc.domain import (
     ToolName,
 )
 from xuanyi_npc.storage import JsonStateStore
+from xuanyi_npc.resources.runtime import (
+    PackageResourceError,
+    materialized_runtime_resources,
+)
 
 
 class PlayConfigurationError(ValueError):
@@ -611,8 +615,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--case-dir",
         type=Path,
-        required=True,
-        help="包含已校验病例 JSON 的目录。",
+        default=None,
+        help="可选的病例 JSON 目录；默认使用安装包内置的三个病例。",
     )
     parser.add_argument(
         "--state-dir",
@@ -624,7 +628,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--campaign-rules",
         type=Path,
         default=None,
-        help="可选的严格跨案规则 JSON；默认自动查找 data/campaign。",
+        help="可选的严格跨案规则 JSON；使用内置病例时默认加载内置规则。",
     )
     parser.add_argument(
         "--mode",
@@ -658,8 +662,12 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: Sequence[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
+def _run_with_arguments(
+    args: argparse.Namespace,
+    *,
+    default_case_dir: Path | None = None,
+    default_campaign_rules: Path | None = None,
+) -> int:
     gameplay_mode = {
         "manual": GameplayMode.MANUAL,
         "fake": GameplayMode.FAKE,
@@ -679,9 +687,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 2
     try:
         config = PlayConfig.load(
-            case_dir=args.case_dir,
+            case_dir=args.case_dir or default_case_dir,
             state_dir=args.state_dir,
-            campaign_rules_path=args.campaign_rules,
+            campaign_rules_path=args.campaign_rules or default_campaign_rules,
             gameplay_mode=gameplay_mode,
             semantic_shadow_mode=shadow_mode,
         )
@@ -743,6 +751,22 @@ def main(argv: Sequence[str] | None = None) -> int:
     finally:
         if deepseek_adapter is not None:
             deepseek_adapter.close()
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+    if args.case_dir is not None:
+        return _run_with_arguments(args)
+    try:
+        with materialized_runtime_resources() as resources:
+            return _run_with_arguments(
+                args,
+                default_case_dir=resources.case_dir,
+                default_campaign_rules=resources.campaign_rules,
+            )
+    except PackageResourceError:
+        print("启动失败：安装包运行数据不可用。", file=sys.stderr)
+        return 2
 
 
 if __name__ == "__main__":

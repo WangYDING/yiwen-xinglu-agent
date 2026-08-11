@@ -1,8 +1,6 @@
 """Human-readable deterministic replay of the M1 technical case."""
 
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
-
 from xuanyi_npc.domain import (
     CaseDefinition,
     CaseSessionState,
@@ -14,14 +12,10 @@ from xuanyi_npc.domain import (
     SubmitDiagnosisCommand,
 )
 from xuanyi_npc.engine import CaseEngine
+from xuanyi_npc.resources.runtime import read_runtime_text
 
 
-CASE_PATH = (
-    Path(__file__).resolve().parents[2]
-    / "data"
-    / "cases"
-    / "old_paper_umbrella.json"
-)
+CASE_RESOURCE = "cases/old_paper_umbrella.json"
 
 
 def build_demo_player() -> PlayerState:
@@ -53,7 +47,7 @@ def build_demo_player() -> PlayerState:
 
 
 def main() -> int:
-    case = CaseDefinition.model_validate_json(CASE_PATH.read_text(encoding="utf-8"))
+    case = CaseDefinition.model_validate_json(read_runtime_text(CASE_RESOURCE))
     player = build_demo_player()
     session = CaseSessionState(
         session_id="session_demo_umbrella",

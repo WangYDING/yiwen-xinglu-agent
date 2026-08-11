@@ -1,0 +1,54 @@
+name: offline-release-ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-python-312:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      DEEPSEEK_API_KEY: ""
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
+      PYTHON_DOTENV_DISABLED: "1"
+      PYTHONIOENCODING: "utf-8"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install core and development dependencies
+        run: python -m pip install -c requirements/core-win-py312.txt -e ".[dev]"
+      - name: Verify dependencies and tracked files
+        run: |
+          python -m pip check
+          python scripts/check_release_tracking.py
+          python scripts/audit_git_history.py
+      - name: Run complete offline suite
+        run: python -m pytest
+      - name: Build and audit wheel and sdist
+        run: |
+          python -m build
+          python scripts/audit_distribution.py --dist-dir dist
+      - name: Verify clean wheel installation outside the repository
+        shell: pwsh
+        run: |
+          $verifyRoot = Join-Path $env:RUNNER_TEMP "xuanyi-wheel-verify"
+          python -m venv $verifyRoot
+          $wheel = (Resolve-Path "dist\*.whl").Path
+          & "$verifyRoot\Scripts\python.exe" -m pip install `
+            -c requirements\core-win-py312.txt $wheel
+          Push-Location $env:RUNNER_TEMP
+          try {
+            & "$verifyRoot\Scripts\python.exe" "$env:GITHUB_WORKSPACE\scripts\verify_installed_distribution.py"
+          } finally {
+            Pop-Location
+          }
+      - name: Check patch formatting
+        run: git diff --check

@@ -1,0 +1,13 @@
+include LICENSE
+include NOTICE
+include CONTENT_RIGHTS.md
+include THIRD_PARTY_NOTICES.md
+include README.md
+include requirements/core-win-py312.txt
+recursive-include src/xuanyi_npc/resources *.json
+prune data
+prune docs
+prune results
+prune runtime_data
+prune runtime_models
+global-exclude .env .env.* *.sqlite *.sqlite3 *.db *.safetensors *.onnx *.pt *.pth *.pkl *.pickle

@@ -32,7 +32,14 @@ from xuanyi_npc.storage import JsonStateStore, StorageError
 
 
 REPO_ROOT = Path(__file__).parents[1]
-SOURCE_CASE = REPO_ROOT / "data" / "cases" / "old_paper_umbrella.json"
+SOURCE_CASE = (
+    REPO_ROOT
+    / "src"
+    / "xuanyi_npc"
+    / "resources"
+    / "cases"
+    / "old_paper_umbrella.json"
+)
 
 
 class SequencePlayerIds:

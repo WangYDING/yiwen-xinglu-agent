@@ -551,3 +551,15 @@ M5-P1 已完成，M5-P2 尚未开始。P2 前没有新的架构级用户决策�
 - **测试结果**：全量 `482 passed`；M5-P2～P5 专项 `91 passed`，其中 P5 `6 passed`；MCP P0/P1 `22 passed`；V0 Agent、dev 和事件重放组合 `34 passed`。P0 Fake dev 的 3 场景/6 轨迹全部符合冻结预期，无 LLM Demo 仍为事件 1–8、`resolved / 100`；`pip check`、`git diff --check`、敏感信息及运行文件跟踪检查通过。
 - **文档与退出**：`docs/M5_DEMO_GUIDE.md` 固化 3 分钟与 8～10 分钟演示、镜头和离线备用方案；`docs/M5_PORTFOLIO_EVIDENCE.md` 分开 Agent 应用岗与游戏 AI 产品岗证据；`docs/M5_EXIT_AUDIT.md` 的 13 项最低条件全部通过。M5 工程纵向切片完成，下一阶段尚未开始。
 - **外部边界**：本轮 DeepSeek `/models` 0、Chat 0、本地 BGE 加载 0、Embedding API 0、网络请求 0、费用 0 CNY。结论不代表生产级游戏、真实模型正式成功率、语义记忆已投入玩法、真实玩家留存/教学收益、网页、远程部署或并发生产能力。
+
+## 2026-08-11：M6-P1 可分发安装与 CI 准备
+
+- **身份与历史**：基线 `8780068e38432a3ace976e2dc1e820d9c8dc3fbb`；仓库本地作者切换为 `WangYDING <w17630630069@163.com>`，53 个既有 `wyd@localhost` 提交未改写。
+- **全量回归**：离线测试 488 项通过；`pip check`、`git diff --check`、禁止跟踪文件检查通过。
+- **包资源**：病例、Campaign、价格策略和 M5 公共历史证据迁至唯一 `xuanyi_npc.resources` 包资源；源码与 wheel 使用相同字节，根 `data/` 不再保存第二份病例真值。
+- **产物身份**：wheel SHA-256 `568F95E365834FBDDB476AD0C83D91C69BE3FE93A665880A6A305B72EC2F4764`，259,404 bytes；sdist SHA-256 `278BE2EAA5BC6384C0C7231D99D42EE1AFFA8E1625A8FD37765AC88F0B71E6DE`，325,102 bytes。
+- **包内容**：审计确认 6 个运行 JSON 与 4 个授权文件，且没有 `.env`、结果、状态、模型、向量、数据库、实验 Gold、虚拟环境、Git 数据或本机绝对路径；sdist→wheel 的关键资源与源码一致。
+- **干净安装**：仓库外全新 Windows CPython 3.12 环境从最终 wheel 安装后，三个命令入口 `--help`、manual/off 启动、三病例发现、32 进程 M5 验收和官方 MCP stdio 9 工具发现/关闭均通过；核心环境不含 Torch/BGE。
+- **历史扫描**：提交前复核 53 commits、590 个唯一 blob、最大 blob 158,576 bytes；真实秘密、`.env`、供应商原始请求、模型、数据库、状态和大型权重命中为 0。新增提交后再次复核。
+- **CI 边界**：新增 Windows Python 3.12 公共 CI 配置，但尚未在远程运行；Linux、macOS 和 Python 3.11/3.13 保持未验证。
+- **外部边界**：本轮 DeepSeek `/models`、Chat、Embedding API 和 BGE 调用均为 0，费用为 `0 CNY`；仅访问获准的包/许可证元数据。没有远程、推送、Tag、Release 或发布。详细证据见 `docs/M6_P1_DISTRIBUTION_VERIFICATION.md`。

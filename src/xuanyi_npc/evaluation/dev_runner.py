@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from importlib.resources import files
 from pathlib import Path
 
 from xuanyi_npc.agents import DoctorAgent, ScriptedFakeLLM
@@ -22,7 +23,13 @@ from .dev_evaluator import DevEpisodeEvaluator
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_DEV_SUITE_PATH = REPOSITORY_ROOT / "data" / "evaluation" / "dev_scenarios.json"
-DEFAULT_CASE_PATH = REPOSITORY_ROOT / "data" / "cases" / "old_paper_umbrella.json"
+DEFAULT_CASE_PATH = Path(
+    str(
+        files("xuanyi_npc.resources")
+        .joinpath("cases")
+        .joinpath("old_paper_umbrella.json")
+    )
+)
 
 
 class DeterministicDevClock:

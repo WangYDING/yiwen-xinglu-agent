@@ -1,0 +1,15 @@
+Xuanyi: An Auditable Agentic Mentor NPC
+玄医问道：可审计的师承型智能 NPC
+
+Copyright 2026 WangYDING
+
+The Apache License, Version 2.0 applies only to the program code, tests,
+engineering scripts, build configuration, and CI configuration that are
+explicitly identified as software portions of this project.
+
+The case definitions, fictional setting, narrative text, Campaign content,
+documentation, and demonstration copy are not licensed under Apache-2.0.
+They are © 2026 WangYDING. All rights reserved. See CONTENT_RIGHTS.md.
+
+Third-party software, services, and model artifacts retain their own terms.
+See THIRD_PARTY_NOTICES.md. No model weights are distributed in this package.

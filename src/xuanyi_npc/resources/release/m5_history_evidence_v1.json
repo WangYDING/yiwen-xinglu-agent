@@ -1,0 +1,7 @@
+{
+  "schema_version": "m5_public_history_evidence_v1",
+  "p4b_raw_sha256": "EFDC6B37692CAA117B352DD199B52AAFF20D765945E5C8FB585994453B712C2B",
+  "p4d_raw_sha256": "24B4105E1607F84FA0E1D15810BAF9051FBAADCEF3D90470411EB7A0543BADD8",
+  "p4b_conclusion": "engineering_safe_gray_incomplete_moon_not_run",
+  "p4d_conclusion": "engineering_safe_three_case_campaign_completed"
+}

@@ -19,7 +19,14 @@ from xuanyi_npc.mcp_server import FROZEN_MCP_TOOL_NAMES, create_mcp_server
 from xuanyi_npc.storage import JsonStateStore, StorageError
 
 
-CASE_PATH = Path(__file__).parents[1] / "data" / "cases" / "old_paper_umbrella.json"
+CASE_PATH = (
+    Path(__file__).parents[1]
+    / "src"
+    / "xuanyi_npc"
+    / "resources"
+    / "cases"
+    / "old_paper_umbrella.json"
+)
 BASE_ARGUMENTS = {
     "player_id": "player_demo_apprentice",
     "session_id": "session_mcp_umbrella",

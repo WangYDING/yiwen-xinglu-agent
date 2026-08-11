@@ -21,8 +21,9 @@ from xuanyi_npc.storage import JsonStateStore
 
 
 ROOT = Path(__file__).parents[1]
-CASE_DIR = ROOT / "data" / "cases"
-CAMPAIGN_RULES = ROOT / "data" / "campaign" / "cross_episode_rules_v1.json"
+RESOURCE_ROOT = ROOT / "src" / "xuanyi_npc" / "resources"
+CASE_DIR = RESOURCE_ROOT / "cases"
+CAMPAIGN_RULES = RESOURCE_ROOT / "campaign" / "cross_episode_rules_v1.json"
 
 
 def historical_evidence() -> HistoricalEvidence:
@@ -188,6 +189,14 @@ def test_history_sha_constants_match_ignored_raw_results_when_available() -> Non
     if not p4b.is_file() or not p4d.is_file():
         pytest.skip("ignored paid-run evidence is intentionally not required in fresh clones")
     evidence = m5_acceptance._verify_history(p4b, p4d)
+    assert evidence.verification_mode == "raw_sha256_verified"
+    assert evidence.p4b_raw_sha256 == P4B_RAW_SHA256
+    assert evidence.p4d_raw_sha256 == P4D_RAW_SHA256
+
+
+def test_fresh_install_can_verify_history_from_public_package_manifest() -> None:
+    evidence = m5_acceptance._verify_history(None, None)
+    assert evidence.verification_mode == "public_manifest"
     assert evidence.p4b_raw_sha256 == P4B_RAW_SHA256
     assert evidence.p4d_raw_sha256 == P4D_RAW_SHA256
 

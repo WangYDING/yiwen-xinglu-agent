@@ -13,6 +13,10 @@ from mcp.server import MCPServer
 from xuanyi_npc.application import MCPApplicationService
 from xuanyi_npc.domain import CaseDefinition
 from xuanyi_npc.storage import JsonStateStore
+from xuanyi_npc.resources.runtime import (
+    PackageResourceError,
+    materialized_runtime_resources,
+)
 
 from .server import create_mcp_server
 
@@ -74,8 +78,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--case-dir",
         type=Path,
-        required=True,
-        help="Directory containing validated case definition JSON files.",
+        default=None,
+        help="Optional case directory; defaults to the packaged case catalog.",
     )
     parser.add_argument(
         "--state-dir",
@@ -86,11 +90,10 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: Sequence[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
+def _run_with_case_dir(args: argparse.Namespace, case_dir: Path) -> int:
     try:
         config = StdioServerConfig.load(
-            case_dir=args.case_dir,
+            case_dir=case_dir,
             state_dir=args.state_dir,
         )
         server = create_configured_stdio_server(config)
@@ -109,6 +112,18 @@ def main(argv: Sequence[str] | None = None) -> int:
         print("MCP stdio server stopped after an internal error.", file=sys.stderr)
         return 1
     return 0
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+    if args.case_dir is not None:
+        return _run_with_case_dir(args, args.case_dir)
+    try:
+        with materialized_runtime_resources() as resources:
+            return _run_with_case_dir(args, resources.case_dir)
+    except PackageResourceError:
+        print("MCP stdio packaged case data is unavailable.", file=sys.stderr)
+        return 2
 
 
 if __name__ == "__main__":

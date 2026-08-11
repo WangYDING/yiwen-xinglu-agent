@@ -1,12 +1,27 @@
-# 玄医师承型智能 NPC
+# 玄医问道：可审计的师承型智能 NPC
+
+**Xuanyi: An Auditable Agentic Mentor NPC**
+
+Xuanyi is a local, replayable game-AI vertical slice in a fictional Daoist
+world. Language models may propose structured actions, while deterministic
+rules own truth, permissions, scoring, persistence, and every state change.
+The repository demonstrates three playable cases, MCP tools, bounded recovery,
+cross-Episode continuity, and honest positive and negative model evidence.
 
 这是一个道家志怪背景的师承型智能 NPC 工程。项目目标是让道医 NPC 能够记忆玩家行为、判断能力与师徒关系、自适应安排教学和考核，并在确定性条件满足后开放传承。
 
 项目中的病例、医术、异常现象和处置方式均为架空设定，不提供现实诊断、处方或剂量。
 
+> **授权边界**：程序代码、测试和工程脚本按 [Apache-2.0](LICENSE)
+> 授权；病例、世界观、Campaign 内容、文档和演示文案为
+> © 2026 WangYDING，保留所有权。招聘评估可浏览、克隆并运行项目，但
+> 不获得复制、改编或再分发这些内容的权利。详见 [NOTICE](NOTICE) 与
+> [CONTENT_RIGHTS.md](CONTENT_RIGHTS.md)。第三方归属见
+> [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+
 ## 当前状态
 
-**M2、M3、M4 与 M5 工程里程碑已经完成；M4.5 已以 `closed_with_known_dense_retrieval_limitations` 终止。** M5 现在提供包含三个病例、确定性跨案连续性、两项可见知识成长、结构化 Agent 工具、安全恢复、持久化重放和普通用户 CLI 的本地游戏 AI 纵向切片。P4b 的灰灶未闭环、月井未运行真实负结果继续保留；P4d 的 5/5 行动契约修复及三案闭环只是一例真实工程案例，不是正式成功率。三个病例始终可独立开始；推荐顺序只提供公开建议，不构成锁关。语义向量记忆继续默认关闭且不进入正式 Agent Prompt。M6-P0 已完成本地离线发布准备审计；当前没有远程仓库，公开身份、许可证和可分发包仍待决定或验证，尚未开始 M6-P1，也没有发布任何内容。
+**M2、M3、M4 与 M5 工程里程碑已经完成；M4.5 已以 `closed_with_known_dense_retrieval_limitations` 终止。** M5 现在提供包含三个病例、确定性跨案连续性、两项可见知识成长、结构化 Agent 工具、安全恢复、持久化重放和普通用户 CLI 的本地游戏 AI 纵向切片。P4b 的灰灶未闭环、月井未运行真实负结果继续保留；P4d 的 5/5 行动契约修复及三案闭环只是一例真实工程案例，不是正式成功率。三个病例始终可独立开始；推荐顺序只提供公开建议，不构成锁关。语义向量记忆继续默认关闭且不进入正式 Agent Prompt。M6-P1 已完成本地发布工程：双重授权、包内运行资源、wheel/sdist、仓库外干净安装和 Windows Python 3.12 CI 配置均已验证；远程 CI 尚未运行，M6-P2 尚未开始，当前仍没有远程仓库或任何发布。
 
 已经包含：
 
@@ -70,7 +85,7 @@
 - `xuanyi-m5-acceptance` 离线验收入口：用独立子进程逐行动恢复三病例，验证 Campaign、双玩家隔离、拒绝零写入、事件重放和 semantic shadow 隔离，并输出脱敏 JSON 与摘要。
 - 可直接录屏的 3 分钟与 8～10 分钟演示指南，以及分别面向 Agent 应用岗和游戏 AI 产品岗的证据清单。
 
-**当前已完成 M5，并完成 M6-P0 发布准备审计**：P4b 的[历史负结果](docs/M5_P4B_DEEPSEEK_CAMPAIGN_PILOT_20260811.md)保持不变；P4c 的[离线行动契约审计](docs/M5_P4C_AGENT_CONTRACT_AUDIT.md)没有回写该结果；P4d 的[最终单次恢复验证](docs/M5_P4D_DEEPSEEK_RECOVERY_VALIDATION_20260811.md)以 21 次 Chat、`0.02345744 CNY` 完成灰灶和月井，并验证 5/5 行动契约修复。P5 只做离线验收，没有重跑付费实验。完整退出证据见 [`docs/M5_EXIT_AUDIT.md`](docs/M5_EXIT_AUDIT.md)，演示流程见 [`docs/M5_DEMO_GUIDE.md`](docs/M5_DEMO_GUIDE.md)，双岗位证据见 [`docs/M5_PORTFOLIO_EVIDENCE.md`](docs/M5_PORTFOLIO_EVIDENCE.md)。发布阻塞、身份/版权边界和后续计划见 [`docs/M6_RELEASE_READINESS_AUDIT.md`](docs/M6_RELEASE_READINESS_AUDIT.md) 与 [`docs/M6_PORTFOLIO_RELEASE_PLAN.md`](docs/M6_PORTFOLIO_RELEASE_PLAN.md)。
+**当前已完成 M5，并完成 M6-P1 本地发布工程**：P4b 的[历史负结果](docs/M5_P4B_DEEPSEEK_CAMPAIGN_PILOT_20260811.md)保持不变；P4c 的[离线行动契约审计](docs/M5_P4C_AGENT_CONTRACT_AUDIT.md)没有回写该结果；P4d 的[最终单次恢复验证](docs/M5_P4D_DEEPSEEK_RECOVERY_VALIDATION_20260811.md)以 21 次 Chat、`0.02345744 CNY` 完成灰灶和月井，并验证 5/5 行动契约修复。P5 只做离线验收，没有重跑付费实验。完整退出证据见 [`docs/M5_EXIT_AUDIT.md`](docs/M5_EXIT_AUDIT.md)，发布验证见 [`docs/M6_P1_DISTRIBUTION_VERIFICATION.md`](docs/M6_P1_DISTRIBUTION_VERIFICATION.md)，全部文档按主题汇总在 [`docs/INDEX.md`](docs/INDEX.md)。
 
 最终 M2 退出依据包括：标准探针在 8 步内完成正确诊断和处置，终态 `resolved / 100`；`SAFETY_ONLY` 的错误诱导探针抵抗了 `evil_spirit_attack` 暗示并提交正确诊断，但因一次解释性 `respond` 未能处置；过早行动探针的 1 次未知调查和 4 次过早诊断均被规则拒绝，没有状态污染。最新三探针共 24 次 Chat，24/24 首次结构化成功，格式修复、降级和非法状态写入均为 0，事件均连续且可重放。三探针共用一个病例且各运行一次，不是正式成功率样本。
 
@@ -99,10 +114,9 @@ src/xuanyi_npc/evaluation/ 统一 Episode 结果与确定性 dev 评测器
 src/xuanyi_npc/mcp_server/ 官方 MCP v2 的进程内工具契约与 Server factory
 src/xuanyi_npc/memory/   M4 公开来源、投影、生命周期与 Embedding 契约
 src/xuanyi_npc/storage/  JSON 状态与 SQLite 权威记忆存储
-data/cases/              结构化病例定义
-data/campaign/           确定性跨案顺序、知识和公开反应规则
+src/xuanyi_npc/resources/ wheel/source 共用的病例、Campaign 与最小运行数据
 data/evaluation/         P0 dev、真实行为探针、脱敏轨迹与 M4 合成记忆 Gold
-data/pilot/              带日期和来源的 Pilot 价格与安全策略快照
+data/pilot/              不进入核心 wheel 的历史 Pilot 配置快照
 docs/                    架构决策记录
 tests/                   自动化测试
 ```
@@ -119,6 +133,20 @@ python -m pip install -e ".[dev]"
 python -m pytest
 ```
 
+发布工程的必需验证平台是 **Windows + CPython 3.12**。`requires-python`
+保留 `>=3.11`，但 Linux、macOS、Python 3.11/3.13 仍等待远程 CI 或单独
+实测，不能据此宣称已经兼容。Windows 3.12 的核心依赖解析快照见
+`requirements/core-win-py312.txt`；它不包含可选的 Torch/CUDA/BGE。
+
+从本地构建产物安装时，无需定位源码仓库中的 `data/`：三个病例、Campaign
+规则和最小运行配置均由 wheel 的版本化包资源提供。
+
+```powershell
+python -m build
+python -m pip install .\dist\xuanyi_npc-0.1.0-py3-none-any.whl
+xuanyi-play --state-dir .\runtime_data\play
+```
+
 在未安装项目包时，也可以直接在仓库根目录运行 `python -m pytest`；pytest 配置会加载 `src` 目录。
 
 ### 普通用户交互式游玩
@@ -127,21 +155,20 @@ python -m pytest
 
 ```powershell
 New-Item -ItemType Directory -Force .\runtime_data\play | Out-Null
-xuanyi-play --case-dir .\data\cases --state-dir .\runtime_data\play
+xuanyi-play --state-dir .\runtime_data\play
 ```
 
 未刷新命令入口时，也可以从仓库根目录使用模块入口：
 
 ```powershell
 .\.venv\Scripts\python.exe -m xuanyi_npc.cli.play `
-  --case-dir .\data\cases `
   --state-dir .\runtime_data\play
 ```
 
 默认等价于 `--mode manual --semantic-shadow off`。离线录屏演示可让 Fake Agent 通过同一规则与存档路径自动完成所选病例：
 
 ```powershell
-xuanyi-play --case-dir .\data\cases --state-dir .\runtime_data\play `
+xuanyi-play --state-dir .\runtime_data\play `
   --mode fake --semantic-shadow off
 ```
 
@@ -159,15 +186,11 @@ xuanyi-play --case-dir .\data\cases --state-dir .\runtime_data\play `
 New-Item -ItemType Directory .\runtime_data\m5_acceptance | Out-Null
 xuanyi-m5-acceptance `
   --run-id m5_acceptance_local `
-  --case-dir .\data\cases `
   --state-dir .\runtime_data\m5_acceptance `
-  --campaign-rules .\data\campaign\cross_episode_rules_v1.json `
-  --output .\results\m5_acceptance_local.json `
-  --p4b-result .\results\m5_p4b_campaign_20260811.json `
-  --p4d-result .\results\m5_p4d_recovery_20260811.json
+  --output .\results\m5_acceptance_local.json
 ```
 
-该入口要求本机保留两份 Git 忽略的 P4 原始结果，以便逐字节核对冻结 SHA。新克隆没有这些私有原始结果时，不影响普通游玩或自动测试，但不能声称已完成该项历史文件核验。模块入口为 `python -m xuanyi_npc.evaluation.m5_acceptance`。验收不需要 API Key，不调用 DeepSeek、BGE 或网络服务。
+默认验收使用包内脱敏历史证据清单；它能核对公开 SHA 和冻结结论，但不声称重新读取了私有原始结果。若本机保留两份 Git 忽略的 P4 原始结果，可额外同时传入 `--p4b-result` 与 `--p4d-result` 做逐字节 SHA 核验。模块入口为 `python -m xuanyi_npc.evaluation.m5_acceptance`。验收不需要 API Key，不调用 DeepSeek、BGE 或网络服务。
 
 安装完成后，可以运行一次固定的正确病例路线：
 
@@ -229,16 +252,16 @@ python -m pytest tests/test_mcp_p0.py
 
 该检查通过官方 `Client(server)` 发现并调用以下冻结工具：`get_player_view`、`get_case_observation`、`observe_patient`、`question_patient`、`inspect_object`、`observe_qi`、`investigate_location`、`submit_diagnosis`、`execute_treatment`。它不会读取 `.env`、调用 DeepSeek、监听端口或启动 stdio/HTTP 服务。
 
-M3-P1 提供显式配置的 stdio 启动入口。病例目录和状态目录必须已经存在，病例 JSON 会在占用协议通道前完成校验：
+M3-P1 提供 stdio 启动入口。状态目录必须已经存在；默认病例来自安装包资源，并在占用协议通道前完成校验：
 
 ```bash
-xuanyi-mcp-stdio --case-dir data/cases --state-dir <existing-state-directory>
+xuanyi-mcp-stdio --state-dir <existing-state-directory>
 ```
 
 未安装项目时可在仓库根目录运行：
 
 ```bash
-python -m xuanyi_npc.mcp_server.stdio --case-dir data/cases --state-dir <existing-state-directory>
+python -m xuanyi_npc.mcp_server.stdio --state-dir <existing-state-directory>
 ```
 
 该进程的 stdout 只承载 MCP 协议帧；启动错误和诊断只写 stderr。缺少参数、目录无效或病例加载失败会在服务器启动前以非零状态退出。M3-P1 专项测试使用临时病例和状态目录，不修改仓库内真实会话。

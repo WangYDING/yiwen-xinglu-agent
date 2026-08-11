@@ -10,6 +10,7 @@ import sys
 import tempfile
 from decimal import Decimal
 from enum import Enum
+from importlib.resources import files
 from pathlib import Path
 from typing import Annotated, Literal, Sequence
 
@@ -55,9 +56,14 @@ from xuanyi_npc.storage import JsonStateStore
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
-DEFAULT_CASE_DIR = REPOSITORY_ROOT / "data" / "cases"
-DEFAULT_CAMPAIGN_RULES = (
-    REPOSITORY_ROOT / "data" / "campaign" / "cross_episode_rules_v1.json"
+_PACKAGED_RESOURCES = files("xuanyi_npc.resources")
+DEFAULT_CASE_DIR = Path(str(_PACKAGED_RESOURCES.joinpath("cases")))
+DEFAULT_CAMPAIGN_RULES = Path(
+    str(
+        _PACKAGED_RESOURCES
+        .joinpath("campaign")
+        .joinpath("cross_episode_rules_v1.json")
+    )
 )
 P4A_BASELINE_COMMIT = "bb06270878c8dd10cbd98cdb72fa42cbcaa0f53d"
 P4B_BUDGET_CNY = Decimal("0.05")

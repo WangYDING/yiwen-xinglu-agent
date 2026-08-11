@@ -45,7 +45,7 @@ from xuanyi_npc.storage import JsonStateStore
 
 
 REPO_ROOT = Path(__file__).parents[1]
-CASE_DIR = REPO_ROOT / "data" / "cases"
+CASE_DIR = REPO_ROOT / "src" / "xuanyi_npc" / "resources" / "cases"
 NEW_CASE_IDS = ("gray_hearth_inn", "moon_well_echo")
 ALL_CASE_IDS = (*NEW_CASE_IDS, "old_paper_umbrella")
 PROCESS_TIMEOUT_SECONDS = 30
