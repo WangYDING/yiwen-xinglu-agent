@@ -99,8 +99,13 @@ class LessonDefinition(MentorModel):
         ids = [item.hint_id for item in self.public_hint_cards]
         if len(ids) != len(set(ids)) or len(ids) != self.maximum_hints:
             raise ValueError("lesson hint cards must be unique and match maximum_hints")
-        if self.assigned_case_id != "old_paper_umbrella":
-            raise ValueError("R2 lesson is restricted to old_paper_umbrella")
+        expected_cases = {
+            "evidence_before_diagnosis_v1": "old_paper_umbrella",
+            "provenance_before_intent_v1": "gray_hearth_inn",
+            "corroborate_before_handoff_v1": "moon_well_echo",
+        }
+        if expected_cases.get(self.lesson_id) != self.assigned_case_id:
+            raise ValueError("lesson_id must use its frozen R3 case binding")
         return self
 
 

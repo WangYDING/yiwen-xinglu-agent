@@ -1,0 +1,16 @@
+{
+  "remediation_id": "remediate_diagnostic_reasoning_v1",
+  "version": "v1",
+  "title": "辨证与诱饵排除补课",
+  "target_ability_ids": ["reason_diagnosis"],
+  "public_explanation": "比较多个合法假设，以已发现证据排除高字面诱饵和先入判断。",
+  "structured_question": "当两个诊断都能解释表面异常时，下一步应怎样选择？",
+  "answer_options": [
+    {"option_id": "diagnostic_reasoning_a", "public_text": "选择名称最贴近异常描述的诊断。"},
+    {"option_id": "diagnostic_reasoning_b", "public_text": "逐项比较已发现证据能支持或反驳哪些假设，并保留尚未证实的部分。"},
+    {"option_id": "diagnostic_reasoning_c", "public_text": "沿用上一病例的诊断，因为两案都有异常现象。"}
+  ],
+  "correct_option_id": "diagnostic_reasoning_b",
+  "completion_feedback": "你用证据比较假设，而不是被字面相似或先入判断牵引。",
+  "next_step": "回到长期教学计划，重新选择尚未完成的核心课程。"
+}

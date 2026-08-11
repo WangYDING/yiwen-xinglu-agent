@@ -1,0 +1,18 @@
+{
+  "policy_id": "curriculum_selection_v1",
+  "version": "v1",
+  "improvement_priority": [
+    {"priority": 1, "ability_ids": ["ethical_practice"], "remediation_id": "remediate_treatment_alignment_v1", "reason_code": "unresolved_ethics_risk"},
+    {"priority": 2, "ability_ids": ["apply_treatment"], "remediation_id": "remediate_treatment_alignment_v1", "reason_code": "unresolved_treatment_alignment"},
+    {"priority": 3, "ability_ids": ["reason_diagnosis"], "remediation_id": "remediate_diagnostic_reasoning_v1", "reason_code": "unresolved_diagnostic_reasoning"},
+    {"priority": 4, "ability_ids": ["ask_cause", "inspect_evidence", "observe_form"], "remediation_id": "remediate_evidence_completeness_v1", "reason_code": "unresolved_evidence_completeness"}
+  ],
+  "core_lesson_order": [
+    "evidence_before_diagnosis_v1",
+    "provenance_before_intent_v1",
+    "corroborate_before_handoff_v1"
+  ],
+  "stable_tie_breaker": "ability_id_asc",
+  "foundation_complete_message": "基础三课完成，等待后续考核规划。",
+  "recommendations_do_not_lock_cases": true
+}
