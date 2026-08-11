@@ -113,6 +113,8 @@ class MentorInteractionPhase(str, Enum):
     LESSON_START = "lesson_start"
     INVESTIGATION = "investigation"
     CASE_COMPLETE = "case_complete"
+    EXAM = "exam"
+    INHERITANCE = "inheritance"
 
 
 class MentorActionType(str, Enum):
@@ -121,6 +123,11 @@ class MentorActionType(str, Enum):
     GIVE_HINT = "give_hint"
     REVIEW_PERFORMANCE = "review_performance"
     RECOMMEND_FIXED_NEXT_STEP = "recommend_fixed_next_step"
+    START_EXAM = "start_exam"
+    REVIEW_EXAM = "review_exam"
+    EXPLAIN_PERMISSION_GATE = "explain_permission_gate"
+    OFFER_INHERITANCE = "offer_inheritance"
+    REFUSE_INHERITANCE = "refuse_inheritance"
 
 
 class MentorAction(MentorModel):

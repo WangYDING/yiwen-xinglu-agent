@@ -83,6 +83,9 @@ class StructuredTeachingMemoryType(str, Enum):
     LEARNING_PATTERN = "learning_pattern"
     MENTOR_FEEDBACK = "mentor_feedback"
     REMEDIATION_HISTORY = "remediation_history"
+    EXAM_EVENT = "exam_event"
+    PERMISSION_EVENT = "permission_event"
+    INHERITANCE_EVENT = "inheritance_event"
 
 
 class StructuredMemorySourceType(str, Enum):
@@ -91,6 +94,9 @@ class StructuredMemorySourceType(str, Enum):
     ASSESSMENT = "assessment"
     REMEDIATION_RESULT = "remediation_result"
     CORE_LESSON_COMPLETION = "core_lesson_completion"
+    EXAM_EVENT = "exam_event"
+    PERMISSION_EVENT = "permission_event"
+    INHERITANCE_EVENT = "inheritance_event"
 
 
 class StructuredMemorySelectionPolicy(CurriculumModel):
@@ -98,9 +104,9 @@ class StructuredMemorySelectionPolicy(CurriculumModel):
         "structured_mentor_memory_selection_v1"
     )
     version: Literal["v1"] = "v1"
-    allowed_memory_types: tuple[StructuredTeachingMemoryType, ...] = Field(min_length=5)
-    allowed_source_types: tuple[StructuredMemorySourceType, ...] = Field(min_length=5)
-    category_priority: tuple[Identifier, ...] = Field(min_length=5, max_length=5)
+    allowed_memory_types: tuple[StructuredTeachingMemoryType, ...] = Field(min_length=8)
+    allowed_source_types: tuple[StructuredMemorySourceType, ...] = Field(min_length=8)
+    category_priority: tuple[Identifier, ...] = Field(min_length=8, max_length=8)
     ordering: tuple[Literal["priority_desc", "occurred_at_desc", "memory_id_asc"], ...]
     default_limit: Literal[3] = 3
     player_filter_first: Literal[True] = True

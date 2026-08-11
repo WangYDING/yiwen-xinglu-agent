@@ -586,8 +586,17 @@ M5-P1 已完成，M5-P2 尚未开始。P2 前没有新的架构级用户决策�
 - **R2 专项**：15 项通过；R1+R2 联合 31 项通过；全量 523 项通过。覆盖固定课程、反思、0/2 次提示、错误诊断、`suppressed`、`worsened`、结构化师评、R1 变化引用、非法 MentorAction 一次修复与降级、退出恢复、两个独立 Python 子进程继续同一教学会话、跨玩家拒绝零写入和完整 Fake Mentor CLI。
 - **历史回归**：M5 32-worker 离线验收通过，三案均 `8 events / resolved / 100`，Campaign 1–3、隔离、重放和 semantic shadow 保持一致；MCP 22 项、V0 DoctorAgent/Fake/事件重放 34 项通过；无 LLM Demo 为 `resolved / 100`。P4b/P4d 原始 SHA、M4/M4.5 和 M5 退出结论未修改。
 - **外部边界**：没有调用 DeepSeek、BGE、Embedding API 或外部网络，费用为 0 CNY；没有安装依赖、修改 Git 身份/配置、改写历史、推送、Tag 或 Release。`pip check`、`git diff --check`、敏感信息与运行文件跟踪检查通过。
-- **外部边界**：未调用 DeepSeek `/models`、Chat、Embedding 或其他外部 API，未加载或下载 BGE/模型，网络请求与费用均为 0。R2 导师教学尚未开始。
 
+## 2026-08-11：R4 正式考试、权限与第一条传承链
+
+- **启动门禁**：开始 HEAD 为 `bf5e7e61fa1aa53a7ac915bca4885557f262664d`（`main`），工作树干净；R1～R3 联合专项 55/55 通过；ADR-057 与 Product Completion Plan v1 明确 R4 为下一阶段。
+- **冻结与可达性**：冻结提交前通过正式三病例服务计算：优秀路线辨证/施治/守则 `26/26/23`、信任/认可 `13/16`，考试认可 +2 后为 18；一次错误辨证路线为 `25/26/23`、`12/15`，一次危险处置路线为 `26/24/22`、`11/13`。门槛据此冻结，优秀路线不刷病例可达，两条问题路线不可绕过。
+- **正式考试**：六题三部分、总分 100、80 分通过、每部分不得为零、关键安全题错误直接失败、提示 0。逐题答案、提交、评分、通过/失败与重考解锁均为独立可重放事件；失败之后的指定补课正确尝试才允许新 attempt。
+- **权限与传承**：`PermissionState` 是阶段、资格、权限、考试认可和传承的唯一 R4 长期聚合；`MENTOR_SECRET` 永不授予。`trace_vow_restore_v1` 同时检查课程、补课、考试、阶段、两项知识、三项能力、信任、认可和严重守则问题；拒绝只返回公开类别且零写入，授予与重复申请幂等。
+- **恢复与安全**：两个独立服务实例完成部分答题恢复、提交考试与传承；考试快照失败可从最后答案重试，考试已提交但权限投影失败返回 `exam_progression_pending` 并可协调，权限/传承原子保存失败无部分授予，导师解释失败返回 `mentor_explanation_pending` 且不回滚规则结果。跨玩家、猜测内容 ID、导师秘密、答案修改和非法 Schema 均拒绝。
+- **专项回归**：R4 23/23；R1～R3 55/55；M4 记忆生命周期 60/60；M5 分组 85/85；MCP 22/22；DoctorAgent/Fake/三病例导师 30/30；无 LLM Demo 为 `resolved / 100`。
+- **全量与工程卫生**：最终收集 570 项；`pip check`、`compileall`、`git diff --check`、禁止跟踪 `.env`/`runtime_data`/`results`/`runtime_models` 和变更凭据样式扫描均通过。
+- **外部边界**：BGE 加载 0、Embedding 生成 0、DeepSeek `/models` 0、Chat 0、外部网络请求 0、费用 0 CNY；未安装依赖、未改 Git 身份或历史、未推送、未创建 Tag/Release。R5 尚未开始。
 ## 2026-08-11：R3 三病例自适应教学与结构化记忆
 
 - **启动门禁**：起始 HEAD `a260367dbca364dcb05508124b6c79ca05f2e038`（`main`），工作树干净，R1/R2 联合专项在抑制本机 Pydantic 命名警告后 31/31 通过；最新 ADR-056 与五份权威规划一致指向 R3。

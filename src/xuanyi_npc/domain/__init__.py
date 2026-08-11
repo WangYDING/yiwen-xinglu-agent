@@ -129,6 +129,9 @@ from .teaching_plan import (
     TeachingRecommendationUpdated,
 )
 from .structured_memory import RetrievedStructuredMemory
+from .exams import ExamDefinition, ExamEventReplayer, ExamResult, ExamSessionState, ExamSessionStatus
+from .permissions import PermissionEventReplayer, PermissionLevel, PermissionPolicy, PermissionState, R4TeachingStage
+from .inheritance import InheritanceDecision, InheritanceDefinition, R4AcceptanceContract
 
 __all__ = [
     "APPRENTICESHIP_SCHEMA_VERSION",
@@ -241,4 +244,17 @@ __all__ = [
     "TeachingPlanState",
     "TeachingRecommendation",
     "TeachingRecommendationUpdated",
+    "ExamDefinition",
+    "ExamEventReplayer",
+    "ExamResult",
+    "ExamSessionState",
+    "ExamSessionStatus",
+    "PermissionEventReplayer",
+    "PermissionLevel",
+    "PermissionPolicy",
+    "PermissionState",
+    "R4TeachingStage",
+    "InheritanceDecision",
+    "InheritanceDefinition",
+    "R4AcceptanceContract",
 ]

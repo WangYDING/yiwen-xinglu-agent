@@ -28,6 +28,14 @@ from xuanyi_npc.domain.teaching_plan import (
     TeachingPlanReplayError,
     TeachingPlanState,
 )
+from xuanyi_npc.domain.exams import ExamEventReplayer, ExamReplayError, ExamSessionState
+from xuanyi_npc.domain.permissions import (
+    PermissionEventReplayer,
+    PermissionPolicy,
+    PermissionReplayError,
+    PermissionState,
+)
+from xuanyi_npc.resources.runtime import read_runtime_text
 
 
 class StorageError(RuntimeError):
@@ -118,6 +126,45 @@ class JsonStateStore:
             raise StateCorruptionError("teaching plan snapshot does not match replay")
         return state
 
+    def save_exam_session(self, state: ExamSessionState) -> Path:
+        replayed = ExamEventReplayer().replay(state.events)
+        if replayed != state:
+            raise StateCorruptionError("exam snapshot does not match replay")
+        return self._write("exam_sessions", state.exam_session_id, state)
+
+    def load_exam_session(self, exam_session_id: str) -> ExamSessionState:
+        state = self._read("exam_sessions", exam_session_id, ExamSessionState)
+        try:
+            replayed = ExamEventReplayer().replay(state.events)
+        except ExamReplayError as exc:
+            raise StateCorruptionError("exam event stream is invalid") from exc
+        if replayed != state:
+            raise StateCorruptionError("exam snapshot does not match replay")
+        return state
+
+    @staticmethod
+    def _permission_replayer() -> PermissionEventReplayer:
+        policy = PermissionPolicy.model_validate_json(
+            read_runtime_text("permissions/permission_policy_v1.json")
+        )
+        return PermissionEventReplayer(policy)
+
+    def save_permission_state(self, state: PermissionState) -> Path:
+        replayed = self._permission_replayer().replay(state.events)
+        if replayed != state:
+            raise StateCorruptionError("permission snapshot does not match replay")
+        return self._write("permissions", state.player_id, state)
+
+    def load_permission_state(self, player_id: str) -> PermissionState:
+        state = self._read("permissions", player_id, PermissionState)
+        try:
+            replayed = self._permission_replayer().replay(state.events)
+        except PermissionReplayError as exc:
+            raise StateCorruptionError("permission event stream is invalid") from exc
+        if replayed != state:
+            raise StateCorruptionError("permission snapshot does not match replay")
+        return state
+
     def list_players(self) -> tuple[PlayerState, ...]:
         """Return all validated player snapshots in stable ID order."""
 
@@ -166,6 +213,20 @@ class JsonStateStore:
                 raise StateCorruptionError("teaching plan event stream is invalid") from exc
             if replayed != value:
                 raise StateCorruptionError("teaching plan snapshot does not match replay")
+        return values
+
+    def list_exam_sessions(self) -> tuple[ExamSessionState, ...]:
+        values = self._list("exam_sessions", ExamSessionState, "exam_session_id")
+        for value in values:
+            if ExamEventReplayer().replay(value.events) != value:
+                raise StateCorruptionError("exam snapshot does not match replay")
+        return values
+
+    def list_permission_states(self) -> tuple[PermissionState, ...]:
+        values = self._list("permissions", PermissionState, "player_id")
+        for value in values:
+            if self._permission_replayer().replay(value.events) != value:
+                raise StateCorruptionError("permission snapshot does not match replay")
         return values
 
     def _path(self, namespace: str, identifier: str) -> Path:

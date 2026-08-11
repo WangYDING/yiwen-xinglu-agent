@@ -11,6 +11,12 @@ PHASE_ACTIONS = {
     MentorInteractionPhase.CASE_COMPLETE: frozenset(
         {MentorActionType.REVIEW_PERFORMANCE, MentorActionType.RECOMMEND_FIXED_NEXT_STEP}
     ),
+    MentorInteractionPhase.EXAM: frozenset(
+        {MentorActionType.START_EXAM, MentorActionType.REVIEW_EXAM, MentorActionType.EXPLAIN_PERMISSION_GATE}
+    ),
+    MentorInteractionPhase.INHERITANCE: frozenset(
+        {MentorActionType.OFFER_INHERITANCE, MentorActionType.REFUSE_INHERITANCE, MentorActionType.EXPLAIN_PERMISSION_GATE}
+    ),
 }
 
 

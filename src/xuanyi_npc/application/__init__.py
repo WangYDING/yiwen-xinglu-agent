@@ -113,6 +113,9 @@ from .teaching import (
     TeachingSessionIdFactory,
     UUIDTeachingSessionIdFactory,
 )
+from .exams import ExamService, ExamServiceError, ExamServiceResult, PublicExamQuestion, PublicExamResult
+from .permissions import PermissionAccessError, PermissionCoordinator, PermissionPublicView, RestrictedKnowledgeView
+from .inheritance import InheritanceApplicationResult, InheritanceDecisionPolicy, InheritanceService, InheritanceServiceError
 
 __all__ = [
     "ApprenticeshipPlayerInput",
@@ -216,4 +219,17 @@ __all__ = [
     "TeachingServiceResult",
     "TeachingSessionIdFactory",
     "UUIDTeachingSessionIdFactory",
+    "ExamService",
+    "ExamServiceError",
+    "ExamServiceResult",
+    "PublicExamQuestion",
+    "PublicExamResult",
+    "PermissionAccessError",
+    "PermissionCoordinator",
+    "PermissionPublicView",
+    "RestrictedKnowledgeView",
+    "InheritanceApplicationResult",
+    "InheritanceDecisionPolicy",
+    "InheritanceService",
+    "InheritanceServiceError",
 ]

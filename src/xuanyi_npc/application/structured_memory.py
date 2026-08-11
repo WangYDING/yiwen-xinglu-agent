@@ -108,6 +108,33 @@ class StructuredTeachingMemoryProjector:
         )
         return self.repository.write_projection(source, memory).memory_id
 
+    def project_r4_event(
+        self, *, player_id: str, source_session_id: str, source_sequence: int,
+        source_revision: int, occurred_at, event_kind: str,
+        source_reference_id: str, public_summary: str, reason_code: str,
+    ) -> str:
+        """Project only a caller-supplied public summary from an already committed R4 event."""
+        mapping = {
+            "exam": (StructuredTeachingMemoryType.EXAM_EVENT, StructuredMemorySourceType.EXAM_EVENT),
+            "permission": (StructuredTeachingMemoryType.PERMISSION_EVENT, StructuredMemorySourceType.PERMISSION_EVENT),
+            "inheritance": (StructuredTeachingMemoryType.INHERITANCE_EVENT, StructuredMemorySourceType.INHERITANCE_EVENT),
+        }
+        if event_kind not in mapping:
+            raise ValueError("unsupported R4 structured memory event")
+        memory_type, source_type = mapping[event_kind]
+        projector = DeterministicMemoryProjector(
+            projection_version=STRUCTURED_PROJECTION_VERSION,
+            projection_ordinal=0,
+        )
+        source, memory = projector.project_structured_teaching_fact(
+            player_id=player_id, source_session_id=source_session_id,
+            source_sequence=source_sequence, source_revision=source_revision,
+            occurred_at=occurred_at, structured_memory_type=memory_type,
+            source_type=source_type, source_reference_id=source_reference_id,
+            public_summary=public_summary, reason_code=reason_code,
+        )
+        return self.repository.write_projection(source, memory).memory_id
+
 
 class StructuredMentorMemorySelector:
     """Select trusted records without embeddings, similarity, BGE, or model judgment."""
@@ -171,6 +198,12 @@ class StructuredMentorMemorySelector:
                 priority, reason_code = 200, "related_ability_strength"
             elif payload.structured_memory_type is StructuredTeachingMemoryType.REMEDIATION_HISTORY:
                 priority, reason_code = 100, "recent_remediation"
+            elif payload.structured_memory_type is StructuredTeachingMemoryType.EXAM_EVENT:
+                priority, reason_code = 150, "recent_exam_event"
+            elif payload.structured_memory_type is StructuredTeachingMemoryType.PERMISSION_EVENT:
+                priority, reason_code = 140, "recent_permission_event"
+            elif payload.structured_memory_type is StructuredTeachingMemoryType.INHERITANCE_EVENT:
+                priority, reason_code = 130, "recent_inheritance_event"
             if priority:
                 candidates.append(
                     (

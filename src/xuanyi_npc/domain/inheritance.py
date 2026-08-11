@@ -2,7 +2,7 @@
 
 from typing import Annotated, Literal
 
-from pydantic import ConfigDict, Field, StrictInt, model_validator
+from pydantic import ConfigDict, Field, StrictBool, StrictInt, model_validator
 
 from .apprenticeship import AbilityId, RelationshipDimension
 from .base import DomainModel, Identifier, NonEmptyText
@@ -78,3 +78,18 @@ class R4AcceptanceContract(InheritanceModel):
     version: Literal["v1"]
     scenarios: tuple[R4AcceptanceScenario, ...] = Field(min_length=8)
 
+
+class InheritanceDecision(InheritanceModel):
+    eligible: StrictBool
+    public_reason_codes: tuple[Identifier, ...]
+    missing_requirement_categories: tuple[Identifier, ...]
+    inheritance_id: Literal["trace_vow_restore_v1"]
+    decision_revision: Identifier
+
+    @model_validator(mode="after")
+    def validate_decision(self) -> "InheritanceDecision":
+        if self.eligible and (self.public_reason_codes or self.missing_requirement_categories):
+            raise ValueError("eligible inheritance cannot have missing requirements")
+        if not self.eligible and not self.public_reason_codes:
+            raise ValueError("refusal requires public reasons")
+        return self

@@ -34,6 +34,11 @@ from xuanyi_npc.application import (
     MentorTeachingService,
     SubmitReflectionInput,
     TeachingRequest,
+    ExamService,
+    ExamServiceError,
+    InheritanceService,
+    PermissionAccessError,
+    PermissionCoordinator,
 )
 from xuanyi_npc.application.gameplay_modes import (
     GameplayMode,
@@ -162,6 +167,9 @@ class PlayCLI:
         shadow_observer: RecordingSemanticShadowObserver | None = None,
         paid_confirmed: bool = False,
         teaching_service: MentorTeachingService | None = None,
+        permission_coordinator: PermissionCoordinator | None = None,
+        exam_service: ExamService | None = None,
+        inheritance_service: InheritanceService | None = None,
     ) -> None:
         self.service = service
         self.input_fn = input_fn
@@ -175,6 +183,15 @@ class PlayCLI:
         self.shadow_observer = shadow_observer
         self.paid_confirmed = paid_confirmed
         self.teaching_service = teaching_service
+        self.permission_coordinator = permission_coordinator or PermissionCoordinator(
+            service.state_store, service.clock
+        )
+        self.exam_service = exam_service or ExamService(
+            service.state_store, self.permission_coordinator, service.clock
+        )
+        self.inheritance_service = inheritance_service or InheritanceService(
+            service.state_store, self.permission_coordinator, service.clock
+        )
         self.current_player_id: str | None = None
         self.current_case_id: str | None = None
         self.current_session_id: str | None = None
@@ -280,6 +297,9 @@ class PlayCLI:
             self._print("\n玩家菜单")
             self._print("1. 查看病例目录")
             self._print("2. 查看玩家历程")
+            self._print("3. 查看教学阶段与权限")
+            self._print("4. 正式考试")
+            self._print("5. 申请或查看传承")
             self._print("0. 返回主菜单")
             self._print("99. 保存并退出")
             choice = self._read("请选择：")
@@ -288,6 +308,12 @@ class PlayCLI:
                     return True
             elif choice == "2":
                 self._show_campaign(player_id)
+            elif choice == "3":
+                self._show_r4_status(player_id)
+            elif choice == "4":
+                self._run_exam_menu(player_id)
+            elif choice == "5":
+                self._run_inheritance_menu(player_id)
             elif choice == "0":
                 self.current_player_id = None
                 return False
@@ -296,6 +322,68 @@ class PlayCLI:
                 return True
             else:
                 self._print("请输入菜单中的编号。")
+
+    def _show_r4_status(self, player_id: str) -> None:
+        view = self.permission_coordinator.public_view(player_id)
+        self._print("\n师门进度")
+        self._print(f"教学阶段：{view.teaching_stage.value}")
+        self._print(f"考试资格：{'已获得' if view.exam_eligible else '尚未获得'}")
+        self._print("当前权限：" + "、".join(item.value for item in view.permissions))
+        self._print(f"当前认可（含考试认可）：{view.effective_recognition}")
+        if view.granted_inheritance_ids:
+            self._print("已授予传承：" + "、".join(view.granted_inheritance_ids))
+        else:
+            self._print("已授予传承：暂无")
+
+    def _run_exam_menu(self, player_id: str) -> None:
+        try:
+            state = self.exam_service.start(
+                player_id, request_id=f"cli_exam_{len(self.service.state_store.list_exam_sessions()) + 1}"
+            )
+            questions = self.exam_service.public_questions(player_id)
+            for question in questions:
+                if question.question_id in state.submitted_answers:
+                    continue
+                self._print(f"\n{question.public_scenario}")
+                for index, option in enumerate(question.options, start=1):
+                    self._print(f"{index}. {option['public_text']}")
+                choice = self._read("请选择答案（0 保存并退出考试）：")
+                if choice == "0":
+                    self._print("考试进度已保存，可稍后继续。")
+                    return
+                index = self._menu_index(choice, len(question.options))
+                if index is None:
+                    self._print("答案编号无效；考试进度已保存。")
+                    return
+                state = self.exam_service.record_answer(
+                    player_id=player_id, exam_session_id=state.exam_session_id,
+                    question_id=question.question_id,
+                    selected_option_ids=(question.options[index]["option_id"],),
+                )
+            result = self.exam_service.submit(
+                player_id=player_id, exam_session_id=state.exam_session_id
+            )
+            public = self.exam_service.public_result(player_id, state.exam_session_id)
+            self._print(result.message)
+            self._print(f"考试得分：{public.total_score}｜结果：{'通过' if public.passed else '未通过'}")
+            if public.required_remediation_ids:
+                self._print("重考前补课：" + "、".join(public.required_remediation_ids))
+        except ExamServiceError as exc:
+            self._print(str(exc))
+
+    def _run_inheritance_menu(self, player_id: str) -> None:
+        result = self.inheritance_service.request(player_id)
+        self._print(result.message)
+        if not result.granted:
+            self._print("公开原因类别：" + "、".join(result.decision.missing_requirement_categories))
+            return
+        try:
+            content = self.inheritance_service.read_content(
+                player_id, "trace_vow_restore_teaching_v1"
+            )
+            self._print(f"{content.title}：{content.description}")
+        except PermissionAccessError:
+            self._print("传承已提交；内容权限尚待协调。")
 
     def _case_catalog_menu(self, player_id: str) -> bool:
         result = self.service.list_cases(ListCasesInput(player_id=player_id))

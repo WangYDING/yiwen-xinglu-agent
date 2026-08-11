@@ -35,6 +35,12 @@ R3_CURRICULUM_RESOURCE_NAMES = (
     "structured_mentor_memory_selection_v1.json",
     "r3_acceptance_v1.json",
 )
+R4_RUNTIME_RESOURCES = (
+    "exams/foundational_xuanyi_exam_v1.json",
+    "permissions/permission_policy_v1.json",
+    "inheritance/trace_vow_restore_v1.json",
+    "inheritance/r4_acceptance_v1.json",
+)
 ALLOWED_RUNTIME_RESOURCES = frozenset(
     {
         *(f"cases/{name}" for name in CASE_RESOURCE_NAMES),
@@ -44,6 +50,7 @@ ALLOWED_RUNTIME_RESOURCES = frozenset(
         f"progression/{PROGRESSION_RESOURCE_NAME}",
         f"mentor/{MENTOR_PROFILE_RESOURCE_NAME}",
         *(f"curriculum/{name}" for name in R3_CURRICULUM_RESOURCE_NAMES),
+        *R4_RUNTIME_RESOURCES,
     }
 )
 
