@@ -563,3 +563,12 @@ M5-P1 已完成，M5-P2 尚未开始。P2 前没有新的架构级用户决策�
 - **历史扫描**：提交前复核 53 commits、590 个唯一 blob、最大 blob 158,576 bytes；真实秘密、`.env`、供应商原始请求、模型、数据库、状态和大型权重命中为 0。新增提交后再次复核。
 - **CI 边界**：新增 Windows Python 3.12 公共 CI 配置，但尚未在远程运行；Linux、macOS 和 Python 3.11/3.13 保持未验证。
 - **外部边界**：本轮 DeepSeek `/models`、Chat、Embedding API 和 BGE 调用均为 0，费用为 `0 CNY`；仅访问获准的包/许可证元数据。没有远程、推送、Tag、Release 或发布。详细证据见 `docs/M6_P1_DISTRIBUTION_VERIFICATION.md`。
+
+## 2026-08-11：M6-P2 项目首页与演示素材收口
+
+- **招聘首页**：README 现按中英文定位、三项亮点、60 秒无 Key 启动、安全架构、Campaign、真实演示、双岗位入口、数字证据、限制和授权组织；M6-P2 前的详细 README 完整保存在 `docs/TECHNICAL_OVERVIEW.md`。
+- **真实素材**：manual 三病例目录、Fake 旧案知识/灰灶历史反应和 M5 验收摘要均来自实际离线 stdout。仓库保存 3 份脱敏文本、3 张确定性终端 SVG、来源 SHA 和生成脚本；原始运行结果保持 Git 忽略。6 个素材哈希、5 个 SVG XML、本地链接和隐私哨兵全部通过。
+- **演示脚本**：`docs/M5_DEMO_GUIDE.md` 固化 30 秒介绍、3 分钟通用演示、8 分钟 Agent 应用岗演示和 8 分钟游戏 AI 产品岗演示；每项均包含操作、解说、预期输出、证据、时间和离线备用。
+- **全量与验收**：离线测试 `492 passed`，其中 P2 文档/素材专项 `4 passed`。M5 验收再次通过，Git 忽略结果 SHA-256 为 `FC6DDFBCC7249DA5C22845E1ADB5DE877E31497F4840EEC5A67EEE348E1A005A`。
+- **分发回归**：wheel SHA-256 `A60B13CEB50D3B8B15C6DD4E1A06833311C9039AC44070FDB8B4D51DBFCA8243`（252,271 bytes），sdist SHA-256 `A1FD3EFC9BA7780DFD75B4EBDE8EADD860C35960D7B5936018EAE20FF2D5CD93`（310,912 bytes）。包内容审计、仓库外三入口/三病例/M5 验收、`pip check`、`git diff --check` 和禁止跟踪检查通过。
+- **外部边界**：DeepSeek `/models` 0、Chat 0、本地 BGE 加载 0、Embedding API 0、其他网络模型请求 0、费用 `0 CNY`。没有远程、推送、Tag、Release、媒体上传或远程 CI；M6-P3 尚未开始。详细证据见 `docs/M6_P2_PORTFOLIO_VERIFICATION.md`。

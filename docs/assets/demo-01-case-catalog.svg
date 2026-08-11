@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1160" height="553" viewBox="0 0 1160 553" role="img" aria-labelledby="title desc">
+  <title id="title">01 · 三病例目录 / no-key</title>
+  <desc id="desc">由项目真实离线终端输出的脱敏文本确定性生成。</desc>
+  <metadata>source_sha256=81AFD803C94298FBDB02E89722BD8C3C597CF068EF49CC2E7E12E9FAB5DD36FC; copyright=2026 WangYDING</metadata>
+  <rect width="100%" height="100%" rx="18" fill="#111827"/>
+  <rect x="18" y="18" width="1124" height="48" rx="10" fill="#1f2937"/>
+  <circle cx="43" cy="42" r="7" fill="#fb7185"/>
+  <circle cx="67" cy="42" r="7" fill="#fbbf24"/>
+  <circle cx="91" cy="42" r="7" fill="#34d399"/>
+  <text x="116" y="49" class="title">01 · 三病例目录 / no-key</text>
+  <style>
+    .title { fill: #e5e7eb; font: 600 18px ui-monospace, Consolas, monospace; }
+    .terminal { fill: #d1fae5; font: 17px ui-monospace, Consolas, monospace; }
+  </style>
+  <text x="38" y="104" class="terminal">玄医问道 · 病例修习</text><text x="38" y="131" class="terminal">行动模式：manual（玩家操作，无 LLM）</text><text x="38" y="158" class="terminal">语义 shadow：关闭</text><text x="38" y="185" class="terminal">本模式无需 API Key。</text><text x="38" y="212" class="terminal"></text><text x="38" y="239" class="terminal">病例目录</text><text x="38" y="266" class="terminal">1. 灰灶客栈与无火炊烟［可开始］</text><text x="38" y="293" class="terminal">   山路客栈的灶火时明时灭，无火时仍有冷烟逆行，掌勺人也开始听见灶膛里的叩响。</text><text x="38" y="320" class="terminal">2. 月井回声与错投木简［可开始］</text><text x="38" y="347" class="terminal">   送信人在月井旁听见尚未出口的话被提前复述，一枚木简也在两户收信人之间反复送错。</text><text x="38" y="374" class="terminal">3. 旧纸伞与失约书生［可开始｜推荐下一案］</text><text x="38" y="401" class="terminal">   一名书生连续梦见窗外有人呼名，影子渐淡，并开始遗忘亲人的面容。</text><text x="38" y="428" class="terminal">   推荐理由：建议先从旧纸伞案熟悉人物问询、物证和契约线索。</text><text x="38" y="455" class="terminal"></text><text x="38" y="482" class="terminal">进度已保存，可以安全退出。</text>
+</svg>

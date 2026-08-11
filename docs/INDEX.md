@@ -7,7 +7,10 @@
 - [`../README.md`](../README.md)：项目概览、安装、游玩与限制。
 - [`M5_DEMO_GUIDE.md`](M5_DEMO_GUIDE.md)：3 分钟及 8～10 分钟演示脚本。
 - [`M5_PORTFOLIO_EVIDENCE.md`](M5_PORTFOLIO_EVIDENCE.md)：Agent 应用岗与游戏 AI 产品岗证据分层。
+- [`assets/README.md`](assets/README.md)：三张真实离线终端素材的来源、SHA 与隐私记录。
+- [`TECHNICAL_OVERVIEW.md`](TECHNICAL_OVERVIEW.md)：M6-P2 首页重构前的详细 README 历史内容。
 - [`M6_P1_DISTRIBUTION_VERIFICATION.md`](M6_P1_DISTRIBUTION_VERIFICATION.md)：wheel/sdist、干净安装和 CI 准备证据。
+- [`M6_P2_PORTFOLIO_VERIFICATION.md`](M6_P2_PORTFOLIO_VERIFICATION.md)：招聘首页、演示素材、链接与分发回归证据。
 - [`M6_PORTFOLIO_RELEASE_PLAN.md`](M6_PORTFOLIO_RELEASE_PLAN.md)：P0～P4 发布路径；P4 前不创建远程或发布。
 
 ## 架构与安全
@@ -57,6 +60,7 @@
 - [`M45_TERMINATION_AUDIT.md`](M45_TERMINATION_AUDIT.md)
 - [`M5_EXIT_AUDIT.md`](M5_EXIT_AUDIT.md)
 - [`M6_RELEASE_READINESS_AUDIT.md`](M6_RELEASE_READINESS_AUDIT.md)：P0 当时检查点及 P1 后续处理说明。
+- [`M6_P2_PORTFOLIO_VERIFICATION.md`](M6_P2_PORTFOLIO_VERIFICATION.md)：P2 本地首页和素材收口；没有远程或发布。
 
 ## 历史检查点
 

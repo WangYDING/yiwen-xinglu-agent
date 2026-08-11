@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="520" viewBox="0 0 1280 520" role="img" aria-labelledby="title desc">
+  <title id="title">玄医问道安全 Agent 架构</title>
+  <desc id="desc">玩家、Fake 或 DeepSeek 经安全公开视图、结构化行动、公开契约、应用服务和确定性规则产生事件；MCP 复用应用服务；semantic shadow 与行动路径隔离。</desc>
+  <metadata>copyright=2026 WangYDING</metadata>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#0f766e"/></marker>
+    <style>
+      .box { fill:#f0fdfa; stroke:#0f766e; stroke-width:2; rx:12; }
+      .event { fill:#fff7ed; stroke:#c2410c; stroke-width:2; rx:12; }
+      .side { fill:#f5f3ff; stroke:#7c3aed; stroke-width:2; rx:12; }
+      .muted { fill:#f8fafc; stroke:#64748b; stroke-width:2; stroke-dasharray:7 6; rx:12; }
+      .label { font:600 17px system-ui, sans-serif; fill:#0f172a; text-anchor:middle; }
+      .small { font:14px system-ui, sans-serif; fill:#334155; text-anchor:middle; }
+      .arrow { stroke:#0f766e; stroke-width:2.5; marker-end:url(#arrow); fill:none; }
+    </style>
+  </defs>
+  <rect width="1280" height="520" fill="#ffffff"/>
+  <text x="640" y="38" class="label" style="font-size:24px">模型只提议，规则才落盘</text>
+  <rect class="box" x="30" y="90" width="150" height="82"/><text class="label" x="105" y="121">玩家 / CLI</text><text class="small" x="105" y="148">Fake / DeepSeek</text>
+  <rect class="box" x="220" y="90" width="155" height="82"/><text class="label" x="297" y="121">安全公开视图</text><text class="small" x="297" y="148">无隐藏真值</text>
+  <rect class="box" x="415" y="90" width="150" height="82"/><text class="label" x="490" y="121">AgentAction</text><text class="small" x="490" y="148">严格 Schema</text>
+  <rect class="box" x="605" y="76" width="180" height="110"/><text class="label" x="695" y="111">公开行动契约</text><text class="small" x="695" y="138">一次有界修复</text><text class="small" x="695" y="161">拒绝零写入</text>
+  <rect class="box" x="825" y="90" width="155" height="82"/><text class="label" x="902" y="121">应用服务</text><text class="small" x="902" y="148">统一 Facade</text>
+  <rect class="box" x="1020" y="90" width="190" height="82"/><text class="label" x="1115" y="121">确定性规则引擎</text><text class="small" x="1115" y="148">权限 / 合法性 / 评分</text>
+  <path class="arrow" d="M180 131 H220"/><path class="arrow" d="M375 131 H415"/><path class="arrow" d="M565 131 H605"/><path class="arrow" d="M785 131 H825"/><path class="arrow" d="M980 131 H1020"/>
+  <rect class="event" x="825" y="250" width="385" height="94"/><text class="label" x="1017" y="285">CaseEvent / CampaignEvent</text><text class="small" x="1017" y="312">原子存档 · 连续序号 · 从空初态重放</text>
+  <path class="arrow" d="M1115 172 V250"/>
+  <rect class="side" x="605" y="250" width="180" height="94"/><text class="label" x="695" y="285">MCP（9 工具）</text><text class="small" x="695" y="312">复用同一应用服务</text>
+  <path class="arrow" d="M785 297 H825"/><path class="arrow" d="M695 250 V215 H902 V172"/>
+  <rect class="muted" x="220" y="400" width="565" height="82"/><text class="label" x="502" y="431">semantic shadow · record-only</text><text class="small" x="502" y="458">不进入 Prompt · 不影响行动 · 不修改状态</text>
+  <path d="M297 172 V400" stroke="#64748b" stroke-width="2" stroke-dasharray="7 6" fill="none"/>
+  <text x="1018" y="414" class="label" style="fill:#b91c1c">模型无状态写入口</text>
+  <text x="1018" y="445" class="small">所有关键变化必须由领域事件产生</text>
+</svg>

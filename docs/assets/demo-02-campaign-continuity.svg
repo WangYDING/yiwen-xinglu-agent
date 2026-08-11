@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1160" height="634" viewBox="0 0 1160 634" role="img" aria-labelledby="title desc">
+  <title id="title">02 · 公开知识与跨案反应</title>
+  <desc id="desc">由项目真实离线终端输出的脱敏文本确定性生成。</desc>
+  <metadata>source_sha256=09A6ABE61926E762E0B11667021B361A209E6050D6E17B264D2C5F874F106F59; copyright=2026 WangYDING</metadata>
+  <rect width="100%" height="100%" rx="18" fill="#111827"/>
+  <rect x="18" y="18" width="1124" height="48" rx="10" fill="#1f2937"/>
+  <circle cx="43" cy="42" r="7" fill="#fb7185"/>
+  <circle cx="67" cy="42" r="7" fill="#fbbf24"/>
+  <circle cx="91" cy="42" r="7" fill="#34d399"/>
+  <text x="116" y="49" class="title">02 · 公开知识与跨案反应</text>
+  <style>
+    .title { fill: #e5e7eb; font: 600 18px ui-monospace, Consolas, monospace; }
+    .terminal { fill: #d1fae5; font: 17px ui-monospace, Consolas, monospace; }
+  </style>
+  <text x="38" y="104" class="terminal">行动模式：fake（离线演示 Agent）</text><text x="38" y="131" class="terminal">语义 shadow：关闭</text><text x="38" y="158" class="terminal">本模式无需 API Key。</text><text x="38" y="185" class="terminal"></text><text x="38" y="212" class="terminal">病例公开结果</text><text x="38" y="239" class="terminal">状态：completed</text><text x="38" y="266" class="terminal">结局：resolved</text><text x="38" y="293" class="terminal">得分：100</text><text x="38" y="320" class="terminal"></text><text x="38" y="347" class="terminal">玩家历程</text><text x="38" y="374" class="terminal">已完成病例：</text><text x="38" y="401" class="terminal">- 旧纸伞与失约书生｜结局：resolved｜得分：100</text><text x="38" y="428" class="terminal">已解锁知识：</text><text x="38" y="455" class="terminal">- 你已掌握：遇到契约类异常时，先核对契物归属和承诺来源。</text><text x="38" y="482" class="terminal">推荐下一案：灰灶客栈与无火炊烟</text><text x="38" y="509" class="terminal"></text><text x="38" y="536" class="terminal">历程反应：道医记得你在旧纸伞案中核对过契物来源，提醒你本案也可留意灶契归属。</text><text x="38" y="563" class="terminal">调查建议：可在公开前置满足后优先核对灶契，但不会自动执行或发现线索。</text>
+</svg>
