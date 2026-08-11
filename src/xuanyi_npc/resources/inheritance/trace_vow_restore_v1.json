@@ -1,0 +1,18 @@
+{
+  "inheritance_id":"trace_vow_restore_v1","version":"v1","title":"溯契还因",
+  "public_teaser":"追索契物、承诺与因果交接之间的关系，在不伤及无辜的前提下解除失序之契。",
+  "restricted_description":"以已核验的契物来源和交接次序定位失序环节，依守则完成架空仪式中的归还、见证与解除。",
+  "required_stage":"INNER_DISCIPLE","required_permissions":["INNER_DISCIPLE","CORE_TEACHING"],
+  "required_lessons":["evidence_before_diagnosis_v1","provenance_before_intent_v1","corroborate_before_handoff_v1"],
+  "required_knowledge_ids":["contract_provenance_check","handoff_sequence_check"],"required_exam":"foundational_xuanyi_exam_v1",
+  "required_abilities":[{"ability_id":"reason_diagnosis","minimum_proficiency":26},{"ability_id":"apply_treatment","minimum_proficiency":26},{"ability_id":"ethical_practice","minimum_proficiency":23}],
+  "required_relationship":[{"dimension":"trust","minimum_value":13},{"dimension":"recognition","minimum_value":18}],
+  "blocking_improvement_areas":["apply_treatment","ethical_practice"],
+  "granted_content":{"content_id":"trace_vow_restore_teaching_v1","public_title":"溯契还因","public_description":"你已获准研习这项架空传承。","restricted_text":"先验契物之源，再核交接之序；守无辜之界，方可归还失序之因。"},
+  "public_reason_messages":{"exam_required":"尚未通过正式考核。","trust_insufficient":"信任尚不足。","recognition_insufficient":"认可尚不足。","ability_evidence_insufficient":"能力证据仍需补足。","ethics_unresolved":"处置与守则仍需证明。","remediation_incomplete":"仍有补课未完成。","knowledge_incomplete":"传承前置知识尚未完整掌握。"},
+  "reachability_audit":[
+    {"route_id":"excellent_three_case","ability_values":{"observe_form":23,"ask_cause":25,"inspect_evidence":26,"reason_diagnosis":26,"apply_treatment":26,"ethical_practice":23},"relationship_values":{"affinity":10,"trust":13,"recognition":18},"expected_inheritance_eligible_after_exam":true},
+    {"route_id":"one_wrong_diagnosis","ability_values":{"observe_form":23,"ask_cause":25,"inspect_evidence":26,"reason_diagnosis":25,"apply_treatment":26,"ethical_practice":23},"relationship_values":{"affinity":10,"trust":12,"recognition":17},"expected_inheritance_eligible_after_exam":false},
+    {"route_id":"one_dangerous_treatment","ability_values":{"observe_form":23,"ask_cause":25,"inspect_evidence":26,"reason_diagnosis":26,"apply_treatment":24,"ethical_practice":22},"relationship_values":{"affinity":10,"trust":11,"recognition":15},"expected_inheritance_eligible_after_exam":false}
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "policy_id":"permission_policy_v1","version":"v1","default_permissions":["PUBLIC"],
+  "rules":[
+    {"permission":"PUBLIC","public_description":"公开世界观和基础说明。","grant_condition_code":"default_public"},
+    {"permission":"APPRENTICE","public_description":"基础课程与普通病例教学。","grant_condition_code":"teaching_started"},
+    {"permission":"INNER_DISCIPLE","public_description":"正式考核通过后的弟子内容。","grant_condition_code":"exam_passed"},
+    {"permission":"CORE_TEACHING","public_description":"传承前置的核心术理。","grant_condition_code":"inheritance_prerequisites_met"},
+    {"permission":"INHERITANCE","public_description":"已经正式授予的传承内容。","grant_condition_code":"inheritance_granted"},
+    {"permission":"MENTOR_SECRET","public_description":"导师私密内容。","grant_condition_code":"never_in_r4"}
+  ],
+  "allowed_stage_transitions":{"PROBATIONARY":["APPRENTICE"],"APPRENTICE":["EXAM_CANDIDATE"],"EXAM_CANDIDATE":["INNER_DISCIPLE"],"INNER_DISCIPLE":[]},
+  "mentor_secret_grantable":false,"denial_error_code":"knowledge_access_denied"
+}

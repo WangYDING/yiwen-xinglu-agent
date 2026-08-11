@@ -1,0 +1,13 @@
+{
+  "contract_id":"r4_acceptance_v1","version":"v1","scenarios":[
+    {"scenario_id":"probationary","input_facts":["三课未完成"],"expected_stage":"PROBATIONARY","expected_reason_codes":["core_lessons_incomplete"],"expected_permissions":["PUBLIC","APPRENTICE"],"expected_inheritance_granted":false},
+    {"scenario_id":"apprentice_with_remediation","input_facts":["三课完成","补课未完成"],"expected_stage":"APPRENTICE","expected_reason_codes":["remediation_incomplete"],"expected_permissions":["PUBLIC","APPRENTICE"],"expected_inheritance_granted":false},
+    {"scenario_id":"exam_candidate","input_facts":["三课完成","无未完成补课","具备能力证据","无严重守则问题"],"expected_stage":"EXAM_CANDIDATE","expected_reason_codes":[],"expected_permissions":["PUBLIC","APPRENTICE"],"expected_inheritance_granted":false},
+    {"scenario_id":"exam_failed","input_facts":["考试未通过","产生补课要求"],"expected_stage":"EXAM_CANDIDATE","expected_reason_codes":["exam_required","remediation_incomplete"],"expected_permissions":["PUBLIC","APPRENTICE"],"expected_inheritance_granted":false},
+    {"scenario_id":"exam_passed","input_facts":["考试通过"],"expected_stage":"INNER_DISCIPLE","expected_reason_codes":[],"expected_permissions":["PUBLIC","APPRENTICE","INNER_DISCIPLE"],"expected_inheritance_granted":false},
+    {"scenario_id":"exam_missing_for_inheritance","input_facts":["能力足够","考试未通过"],"expected_stage":"EXAM_CANDIDATE","expected_reason_codes":["exam_required"],"expected_permissions":["PUBLIC","APPRENTICE"],"expected_inheritance_granted":false},
+    {"scenario_id":"trust_missing","input_facts":["考试通过","能力足够","信任不足"],"expected_stage":"INNER_DISCIPLE","expected_reason_codes":["trust_insufficient"],"expected_permissions":["PUBLIC","APPRENTICE","INNER_DISCIPLE"],"expected_inheritance_granted":false},
+    {"scenario_id":"ethics_unresolved","input_facts":["考试通过","关系足够","守则问题未解决"],"expected_stage":"INNER_DISCIPLE","expected_reason_codes":["ethics_unresolved"],"expected_permissions":["PUBLIC","APPRENTICE","INNER_DISCIPLE"],"expected_inheritance_granted":false},
+    {"scenario_id":"inheritance_granted","input_facts":["优秀三案","考试通过","全部前置满足"],"expected_stage":"INNER_DISCIPLE","expected_reason_codes":[],"expected_permissions":["PUBLIC","APPRENTICE","INNER_DISCIPLE","CORE_TEACHING","INHERITANCE"],"expected_inheritance_granted":true}
+  ]
+}
