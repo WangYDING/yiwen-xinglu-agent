@@ -6,7 +6,7 @@
 
 ## 当前状态
 
-**M2、M3、M4 与 M5 工程里程碑已经完成；M4.5 已以 `closed_with_known_dense_retrieval_limitations` 终止。** M5 现在提供包含三个病例、确定性跨案连续性、两项可见知识成长、结构化 Agent 工具、安全恢复、持久化重放和普通用户 CLI 的本地游戏 AI 纵向切片。P4b 的灰灶未闭环、月井未运行真实负结果继续保留；P4d 的 5/5 行动契约修复及三案闭环只是一例真实工程案例，不是正式成功率。三个病例始终可独立开始；推荐顺序只提供公开建议，不构成锁关。语义向量记忆继续默认关闭且不进入正式 Agent Prompt。
+**M2、M3、M4 与 M5 工程里程碑已经完成；M4.5 已以 `closed_with_known_dense_retrieval_limitations` 终止。** M5 现在提供包含三个病例、确定性跨案连续性、两项可见知识成长、结构化 Agent 工具、安全恢复、持久化重放和普通用户 CLI 的本地游戏 AI 纵向切片。P4b 的灰灶未闭环、月井未运行真实负结果继续保留；P4d 的 5/5 行动契约修复及三案闭环只是一例真实工程案例，不是正式成功率。三个病例始终可独立开始；推荐顺序只提供公开建议，不构成锁关。语义向量记忆继续默认关闭且不进入正式 Agent Prompt。M6-P0 已完成本地离线发布准备审计；当前没有远程仓库，公开身份、许可证和可分发包仍待决定或验证，尚未开始 M6-P1，也没有发布任何内容。
 
 已经包含：
 
@@ -70,7 +70,7 @@
 - `xuanyi-m5-acceptance` 离线验收入口：用独立子进程逐行动恢复三病例，验证 Campaign、双玩家隔离、拒绝零写入、事件重放和 semantic shadow 隔离，并输出脱敏 JSON 与摘要。
 - 可直接录屏的 3 分钟与 8～10 分钟演示指南，以及分别面向 Agent 应用岗和游戏 AI 产品岗的证据清单。
 
-**当前已完成 M5 并停止在下一阶段开始之前**：P4b 的[历史负结果](docs/M5_P4B_DEEPSEEK_CAMPAIGN_PILOT_20260811.md)保持不变；P4c 的[离线行动契约审计](docs/M5_P4C_AGENT_CONTRACT_AUDIT.md)没有回写该结果；P4d 的[最终单次恢复验证](docs/M5_P4D_DEEPSEEK_RECOVERY_VALIDATION_20260811.md)以 21 次 Chat、`0.02345744 CNY` 完成灰灶和月井，并验证 5/5 行动契约修复。P5 只做离线验收，没有重跑付费实验。完整退出证据见 [`docs/M5_EXIT_AUDIT.md`](docs/M5_EXIT_AUDIT.md)，演示流程见 [`docs/M5_DEMO_GUIDE.md`](docs/M5_DEMO_GUIDE.md)，双岗位证据见 [`docs/M5_PORTFOLIO_EVIDENCE.md`](docs/M5_PORTFOLIO_EVIDENCE.md)。
+**当前已完成 M5，并完成 M6-P0 发布准备审计**：P4b 的[历史负结果](docs/M5_P4B_DEEPSEEK_CAMPAIGN_PILOT_20260811.md)保持不变；P4c 的[离线行动契约审计](docs/M5_P4C_AGENT_CONTRACT_AUDIT.md)没有回写该结果；P4d 的[最终单次恢复验证](docs/M5_P4D_DEEPSEEK_RECOVERY_VALIDATION_20260811.md)以 21 次 Chat、`0.02345744 CNY` 完成灰灶和月井，并验证 5/5 行动契约修复。P5 只做离线验收，没有重跑付费实验。完整退出证据见 [`docs/M5_EXIT_AUDIT.md`](docs/M5_EXIT_AUDIT.md)，演示流程见 [`docs/M5_DEMO_GUIDE.md`](docs/M5_DEMO_GUIDE.md)，双岗位证据见 [`docs/M5_PORTFOLIO_EVIDENCE.md`](docs/M5_PORTFOLIO_EVIDENCE.md)。发布阻塞、身份/版权边界和后续计划见 [`docs/M6_RELEASE_READINESS_AUDIT.md`](docs/M6_RELEASE_READINESS_AUDIT.md) 与 [`docs/M6_PORTFOLIO_RELEASE_PLAN.md`](docs/M6_PORTFOLIO_RELEASE_PLAN.md)。
 
 最终 M2 退出依据包括：标准探针在 8 步内完成正确诊断和处置，终态 `resolved / 100`；`SAFETY_ONLY` 的错误诱导探针抵抗了 `evil_spirit_attack` 暗示并提交正确诊断，但因一次解释性 `respond` 未能处置；过早行动探针的 1 次未知调查和 4 次过早诊断均被规则拒绝，没有状态污染。最新三探针共 24 次 Chat，24/24 首次结构化成功，格式修复、降级和非法状态写入均为 0，事件均连续且可重放。三探针共用一个病例且各运行一次，不是正式成功率样本。
 
@@ -285,7 +285,7 @@ M2 真实 Pilot 已结束，不再运行模型发现、标准探针、安全探�
 - DeepSeek `LLMAdapter` 已通过 MockTransport 离线测试，并有标准探针和安全探针真实数据；单病例各一次不能代表稳定成功率、限流表现或长期成本。
 - M1 只更新病例会话，不更新玩家能力、关系或长期记忆。
 - 评分暂时只计算关键线索、诊断、处置和危险处置惩罚；提示扣分将在教学阶段接入。
-- 已有本地交互式 CLI、三个可独立完成的病例和确定性跨案知识成长；网页界面与 Agent 产品模式装配尚未实现。
+- 已有本地交互式 CLI、三个可独立完成的病例、确定性跨案知识成长，以及 manual/Fake/DeepSeek V0 模式装配；网页界面尚未实现，真实模型结果仍只有单次工程案例。
 - V0 的 M2a Harness、M2b-P0、M2b-P1a 和 M2b-P1b 工程门槛已经收口；V1 当前完成记忆持久化、基础检索、Agent 安全只读上下文和 P4 离线 Gold 评测，V2 仍只有配置与共享契约。
 - 三个正式版本始终启用 `AgentContextFilter`；不安全提示词对照只允许在隔离的 A4 安全消融中运行。
 - V1 只增加基础向量 Top-K 长期记忆并保持固定课程；多因素记忆排序、自适应教学与 Reflection 属于 V2。
@@ -294,4 +294,4 @@ M2 真实 Pilot 已结束，不再运行模型发现、标准探针、安全探�
 - 本地 BGE-M3 Adapter 已完成离线烟雾、旧开发集和新 holdout 的正式双运行；工程、安全、重复性和主要排名门槛通过，但保守返回门禁的 micro F1 与更正切片未通过，因此不能声称真实语义召回已满足产品要求。外部 Embedding API 仍未授权，DeepSeek Chat 的历史授权不会自动延伸到其他供应商。
 - 当前 V0 的固定课程只按步骤编号推进，不基于玩家表现动态改变。
 - 当前真实样本仍只有一个病例上的单次探针运行，不足以形成正式成功率、跨病例比较或模型可靠性指标。
-- M2 付费运行已经停止；M3 与 M4 已完成工程退出；M4.5 以 `closed_with_known_dense_retrieval_limitations` 关闭，P3 取消本轮执行。M5-P0～P5 已完成；P4b 负结果、P4c 通用接口修复和 P4d 单次真实恢复结果全部保留，P4 不再重跑或调优；下一阶段尚未开始。
+- M2 付费运行已经停止；M3 与 M4 已完成工程退出；M4.5 以 `closed_with_known_dense_retrieval_limitations` 关闭，P3 取消本轮执行。M5-P0～P5 已完成；P4b 负结果、P4c 通用接口修复和 P4d 单次真实恢复结果全部保留，P4 不再重跑或调优。M6-P0 已完成离线发布准备审计；M6-P1 等待公开身份、许可证和发布形态决策，当前没有远程仓库或已发布内容。
