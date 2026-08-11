@@ -1,6 +1,13 @@
 # 文档导航
 
-本页保留全部实验、停止记录和负结果，同时把招聘者最常用的路径放在前面。当前里程碑状态只以 [`ROADMAP.md`](ROADMAP.md) 为准；架构决策以 [`DECISIONS.md`](DECISIONS.md) 为准。
+本页保留全部实验、停止记录和负结果，同时把当前产品总纲与常用路径放在前面。产品身份以 [`PROJECT_MASTER_BLUEPRINT.md`](PROJECT_MASTER_BLUEPRINT.md) 为准，系统边界以 [`PRODUCT_SYSTEM_ARCHITECTURE.md`](PRODUCT_SYSTEM_ARCHITECTURE.md) 为准，里程碑状态以 [`ROADMAP.md`](ROADMAP.md) 为准；架构决策以 [`DECISIONS.md`](DECISIONS.md) 为准。
+
+## 当前产品总纲
+
+- [`PROJECT_MASTER_BLUEPRINT.md`](PROJECT_MASTER_BLUEPRINT.md)：《问道医途》固定主题、玩家/导师身份、产品循环和非目标。
+- [`PRODUCT_SYSTEM_ARCHITECTURE.md`](PRODUCT_SYSTEM_ARCHITECTURE.md)：病例、导师、教学、成长、关系、记忆、权限与传承的权威边界和数据流。
+- [`M5_PRODUCT_GAP_AUDIT.md`](M5_PRODUCT_GAP_AUDIT.md)：按 L0～L5 重新审计 M5 的产品成熟度、缺口和下一验收条件。
+- [`ROADMAP.md`](ROADMAP.md)：保留 M0～M6 历史，并冻结发布前的产品主线 A～H。
 
 ## 快速开始与作品集
 
