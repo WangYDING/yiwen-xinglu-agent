@@ -41,6 +41,11 @@ class EpisodeStatus(str, Enum):
     FAILED = "failed"
 
 
+class AgentRepairKind(str, Enum):
+    FORMAT_REPAIR = "format_repair"
+    ACTION_CONTRACT_REPAIR = "action_contract_repair"
+
+
 class ModelUsage(DomainModel):
     """Measured usage only. Omit the object when no model call was measured."""
 
@@ -84,6 +89,7 @@ class EpisodeStep(DomainModel):
     error_code: Identifier | None = None
     llm_attempts: Annotated[StrictInt, Field(ge=1, le=2)] = 1
     used_fallback: StrictBool = False
+    repair_kind: AgentRepairKind | None = None
     provider_usages: tuple[ModelUsage, ...] = Field(default_factory=tuple)
 
     @model_validator(mode="after")
@@ -96,6 +102,8 @@ class EpisodeStep(DomainModel):
             raise ValueError("rejected steps cannot emit domain events")
         if self.used_fallback and self.action.action_type is not AgentActionType.RESPOND:
             raise ValueError("fallback steps must use a non-tool respond action")
+        if self.repair_kind is not None and self.llm_attempts != 2:
+            raise ValueError("a recorded repair requires exactly two LLM attempts")
         if len(set(self.event_sequences)) != len(self.event_sequences):
             raise ValueError("event_sequences cannot contain duplicates")
         if len(self.provider_usages) > self.llm_attempts:

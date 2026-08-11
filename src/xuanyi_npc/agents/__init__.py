@@ -1,8 +1,10 @@
 """Public Agent API for the safe M2-V0 baseline."""
 
+from .action_recovery import ActionContractResolution, BoundedActionContractResolver
 from .doctor import (
     FIXED_V0_LESSONS,
     AgentDecision,
+    AgentRepairKind,
     DoctorAgent,
     DoctorAgentConfig,
     DoctorAgentInput,
@@ -59,8 +61,11 @@ from .v1_doctor import (
 )
 
 __all__ = [
+    "ActionContractResolution",
+    "BoundedActionContractResolver",
     "FIXED_V0_LESSONS",
     "AgentDecision",
+    "AgentRepairKind",
     "ChatMessage",
     "ChatRole",
     "DoctorAgent",

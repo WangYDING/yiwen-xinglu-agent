@@ -9,6 +9,7 @@ from pydantic import ConfigDict, Field, StrictInt
 
 from xuanyi_npc.agents import (
     AgentDecision,
+    BoundedActionContractResolver,
     ChatMessage,
     ChatRole,
     DoctorAgentInput,
@@ -35,16 +36,12 @@ from xuanyi_npc.evaluation import (
 )
 
 from .v0_tools import ToolCallError, V0ToolExecutor
+from .action_contract import build_safe_action_feedback
 from .diagnosis_readiness import (
     DiagnosisReadinessPolicy,
     FixedV0DiagnosisReadinessPolicy,
 )
 from .views import AgentContextFilter, ViewContextError
-
-
-SAFE_REJECTION_FEEDBACK = (
-    "工具请求被确定性规则层拒绝。请只使用当前只读观察列出的选项与已发现证据。"
-)
 
 
 class Clock(Protocol):
@@ -75,6 +72,7 @@ class V0EpisodeRunner:
         clock: Clock | None = None,
         config: V0EpisodeConfig | None = None,
         diagnosis_readiness_policy: DiagnosisReadinessPolicy | None = None,
+        _preserve_historical_trace_semantics: bool = False,
     ) -> None:
         self.doctor_agent = doctor_agent
         if tool_executor is not None and diagnosis_readiness_policy is not None:
@@ -107,6 +105,10 @@ class V0EpisodeRunner:
         self.curriculum = curriculum or FixedV0Curriculum()
         self.clock = clock or SystemClock()
         self.config = config or V0EpisodeConfig()
+        self.action_contract = BoundedActionContractResolver()
+        self._preserve_historical_trace_semantics = (
+            _preserve_historical_trace_semantics
+        )
 
     def run(
         self,
@@ -146,16 +148,26 @@ class V0EpisodeRunner:
 
         for step_index in range(1, self.config.max_steps + 1):
             observation = self.tool_executor.case_observation(case, player, current)
+            agent_input = DoctorAgentInput(
+                step_index=step_index,
+                player_view=player_view,
+                case_observation=observation,
+                recent_messages=tuple(recent_messages),
+                fixed_lesson=self.curriculum.lesson_for_step(step_index),
+            )
             try:
-                decision = self.doctor_agent.decide(
-                    DoctorAgentInput(
-                        step_index=step_index,
-                        player_view=player_view,
-                        case_observation=observation,
-                        recent_messages=tuple(recent_messages),
-                        fixed_lesson=self.curriculum.lesson_for_step(step_index),
+                decision = self.doctor_agent.decide(agent_input)
+                if not self._preserve_historical_trace_semantics:
+                    resolution = self.action_contract.resolve(
+                        self.doctor_agent,
+                        agent_input,
+                        decision,
+                        observation,
                     )
-                )
+                    decision = resolution.decision
+                    contract_error = resolution.error_code
+                else:
+                    contract_error = None
             except LLMAdapterError as exc:
                 if not exc.abort_episode:
                     raise
@@ -188,7 +200,19 @@ class V0EpisodeRunner:
             accepted = True
             error_code: str | None = None
             event_sequences: tuple[int, ...] = ()
-            if decision.action.action_type is AgentActionType.USE_TOOL:
+            if contract_error is not None:
+                accepted = False
+                error_code = contract_error
+                recent_messages.append(
+                    ChatMessage(
+                        role=ChatRole.TOOL,
+                        content=build_safe_action_feedback(
+                            contract_error,
+                            observation,
+                        ).model_dump_json(),
+                    )
+                )
+            elif decision.action.action_type is AgentActionType.USE_TOOL:
                 try:
                     tool_result = self.tool_executor.execute(
                         decision.action,
@@ -203,7 +227,14 @@ class V0EpisodeRunner:
                     recent_messages.append(
                         ChatMessage(
                             role=ChatRole.TOOL,
-                            content=SAFE_REJECTION_FEEDBACK,
+                            content=build_safe_action_feedback(
+                                exc.code,
+                                self.tool_executor.case_observation(
+                                    case,
+                                    player,
+                                    current,
+                                ),
+                            ).model_dump_json(),
                         )
                     )
                 else:
@@ -263,6 +294,7 @@ class V0EpisodeRunner:
             error_code=error_code,
             llm_attempts=decision.llm_attempts,
             used_fallback=decision.used_fallback,
+            repair_kind=decision.repair_kind,
             provider_usages=decision.usages,
         )
 

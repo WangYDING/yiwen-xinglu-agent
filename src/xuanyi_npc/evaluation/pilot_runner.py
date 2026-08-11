@@ -90,6 +90,7 @@ def run_sanitized_pilot_trace_evaluation(
             clock=DeterministicDevClock(),
             config=V0EpisodeConfig(max_steps=probe.max_steps),
             diagnosis_readiness_policy=_HistoricalTraceReadinessPolicy(),
+            _preserve_historical_trace_semantics=True,
         ).run(
             episode_id=f"offline_{trace.trace_id}",
             case=case,

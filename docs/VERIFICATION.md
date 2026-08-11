@@ -516,3 +516,13 @@ M5-P1 已完成，M5-P2 尚未开始。P2 前没有新的架构级用户决策�
 - **安全与重放**：6 个拒绝步骤事件为空，最终病例修订等于 2 个接受事件；病例与 Campaign 重放一致，Campaign 保持 revision 1，没有灰灶投影或非法状态写入。8 个发送前请求审计的语义记忆字段命中均为 0；BGE、Embedding API、其他模型和月井网络调用均为 0。
 - **原始结果**：Git 忽略文件 `results/m5_p4b_campaign_20260811.json`，SHA-256 `EFDC6B37692CAA117B352DD199B52AAFF20D765945E5C8FB585994453B712C2B`。仓库只提交脱敏报告，不包含供应商请求 ID、完整 Prompt、`.env` 或 API Key。
 - **分层结论**：工程与规则安全通过；灰灶行为未完成；月井未运行；跨 Episode 只验证了旧纸伞前史进入灰灶公开开场，未验证灰灶到月井的真实连续体验。这是一次诚实负结果，不是成功率。P4b 等待监督审查，M5-P5 尚未开始。
+
+## 2026-08-11：M5-P4c Agent 工具契约与拒绝恢复离线收口
+
+- **历史完整性**：P4b 脱敏报告未修改；Git 忽略的原始结果 `results/m5_p4b_campaign_20260811.json` 重新计算 SHA-256 仍为 `EFDC6B37692CAA117B352DD199B52AAFF20D765945E5C8FB585994453B712C2B`。P4b 仍判定工程与规则安全通过、灰灶行为未完成、月井未运行，不能由本次离线结果回写为成功。
+- **根因证据**：专项测试直接证明外层 `AgentAction` 仍可解析通用 `arguments={"target_id": ...}`，而新的当前公开行动契约会在状态服务前拒绝该参数。P4b 第 2、3 步属于工具契约校验过晚；第 6～8 步属于拒绝反馈不足与模型策略恢复不足的组合；第 5 步 `respond` 仍归为模型步骤效率问题。
+- **通用契约**：三个病例共用同一 `PublicActionContractValidator` 和 `BoundedActionContractResolver`，没有 case ID 分支。调查只接收唯一 `investigation_id` 并核对工具类型；诊断核对公开候选、已发现证据和 `can_submit_diagnosis`；处置核对当前公开 ID。契约层不执行规则或写状态，规则引擎仍为最终权威。
+- **有界恢复**：首次上下文错误使用既有一次修复额度，`EpisodeStep.repair_kind=action_contract_repair`；修复反馈只含稳定错误码、安全公开说明、诊断就绪状态和刷新后的公开选项。修复后仍错误时仅有两次模型调用、状态服务调用 0、领域事件 0、病例修订 0、CampaignEvent 0，不发生第三次调用。合法行动仍只调用一次模型。
+- **三病例与隔离**：`target_id` 错误在旧纸伞、灰灶和月井均可由一次公开契约修复变成准确调查，且只产生一个事件。三个 Fake 参考脚本仍各以 8 个连续事件得到 `resolved / 100`；Campaign A/B、manual、事件重放、MCP 与 shadow off/on 请求/行动/状态隔离均通过。请求和反馈未出现根因、正确性、评分、未发现线索或语义记忆字段。
+- **专项与全量**：P4c 专项 `10 passed`；P4a/P3/P4b 历史组合 `46 passed`；MCP P0/P1 `22 passed`；全量 `476 passed`（`476 collected`）。无 LLM Demo 继续为事件 1–8、`resolved / 100`；P0 Fake dev 的 3 场景/6 轨迹全部符合冻结预期；`pip check` 与 `git diff --check` 通过。
+- **外部边界**：DeepSeek `/models` 0、Chat 0、本地 BGE 加载 0、Embedding API 0、其他网络请求 0、费用 0 CNY。P4d 尚未授权，M5-P5 尚未开始。

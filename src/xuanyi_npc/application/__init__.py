@@ -1,5 +1,12 @@
 """Application-layer contracts and permission-filtered views."""
 
+from .action_contract import (
+    PublicActionContractError,
+    PublicActionContractValidator,
+    PublicInvestigationCall,
+    SafeActionRecoveryFeedback,
+    build_safe_action_feedback,
+)
 from .diagnosis_readiness import (
     DiagnosisReadinessDecision,
     DiagnosisReadinessPolicy,
@@ -75,6 +82,11 @@ from .views import (
 )
 
 __all__ = [
+    "PublicActionContractError",
+    "PublicActionContractValidator",
+    "PublicInvestigationCall",
+    "SafeActionRecoveryFeedback",
+    "build_safe_action_feedback",
     "CampaignCaseContext",
     "CampaignCoordinator",
     "CampaignError",

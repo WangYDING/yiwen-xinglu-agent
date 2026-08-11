@@ -1,6 +1,7 @@
 """Evaluation data contracts."""
 
 from .episode import (
+    AgentRepairKind,
     EpisodeResult,
     EpisodeStatus,
     EpisodeStep,
@@ -38,6 +39,7 @@ from .memory_contracts import (
 )
 
 __all__ = [
+    "AgentRepairKind",
     "EpisodeResult",
     "EpisodeStatus",
     "EpisodeStep",

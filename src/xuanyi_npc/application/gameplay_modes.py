@@ -15,6 +15,7 @@ from xuanyi_npc.agents.doctor import (
     FixedV0Curriculum,
 )
 from xuanyi_npc.agents.llm import ChatMessage, ChatRole, LLMAdapterError
+from xuanyi_npc.agents.action_recovery import BoundedActionContractResolver
 from xuanyi_npc.config import AgentVariant
 from xuanyi_npc.domain import CaseEvent, CaseSessionStatus
 from xuanyi_npc.domain.base import DomainModel, Identifier, NonEmptyText
@@ -29,7 +30,7 @@ from .multicase import (
     SubmitActionInput,
 )
 from .semantic_shadow import SemanticShadowObserver, ShadowObservationResult
-from .v0_runner import SAFE_REJECTION_FEEDBACK
+from .action_contract import build_safe_action_feedback
 
 
 class GameplayMode(str, Enum):
@@ -117,6 +118,7 @@ class ModeAwareEpisodeRunner:
         self.config = config
         self.curriculum = curriculum or FixedV0Curriculum()
         self.shadow_observer = shadow_observer
+        self.action_contract = BoundedActionContractResolver()
 
     def run(self, request: ModeRunInput) -> ModeRunResult:
         case = self.service.case_catalog.get(request.case_id)
@@ -168,16 +170,23 @@ class ModeAwareEpisodeRunner:
 
         for step_index in range(1, self.config.max_steps + 1):
             assert public.observation is not None
+            agent_input = DoctorAgentInput(
+                step_index=step_index,
+                player_view=player_view,
+                case_observation=public.observation,
+                recent_messages=tuple(recent_messages),
+                fixed_lesson=self.curriculum.lesson_for_step(step_index),
+            )
             try:
-                decision = self.doctor_agent.decide(
-                    DoctorAgentInput(
-                        step_index=step_index,
-                        player_view=player_view,
-                        case_observation=public.observation,
-                        recent_messages=tuple(recent_messages),
-                        fixed_lesson=self.curriculum.lesson_for_step(step_index),
-                    )
+                decision = self.doctor_agent.decide(agent_input)
+                resolution = self.action_contract.resolve(
+                    self.doctor_agent,
+                    agent_input,
+                    decision,
+                    public.observation,
                 )
+                decision = resolution.decision
+                contract_error = resolution.error_code
             except LLMAdapterError as exc:
                 if not exc.abort_episode:
                     raise
@@ -197,40 +206,74 @@ class ModeAwareEpisodeRunner:
             recent_messages.append(
                 ChatMessage(role=ChatRole.ASSISTANT, content=decision.action.dialogue)
             )
-            receipt = self.service.submit_action_with_receipt(
-                SubmitActionInput(
-                    player_id=request.player_id,
-                    case_id=request.case_id,
-                    session_id=request.session_id,
-                    action=decision.action,
+            receipt = None
+            if contract_error is not None:
+                accepted = False
+                feedback = build_safe_action_feedback(
+                    contract_error,
+                    public.observation,
                 )
-            )
-            public = receipt.result
-            accepted = public.ok
-            if accepted:
+                public = public.model_copy(
+                    update={
+                        "ok": False,
+                        "error_code": contract_error,
+                        "message": feedback.public_message,
+                        "event_sequences": (),
+                    }
+                )
                 recent_messages.append(
-                    ChatMessage(role=ChatRole.TOOL, content=public.message)
+                    ChatMessage(
+                        role=ChatRole.TOOL,
+                        content=feedback.model_dump_json(),
+                    )
                 )
             else:
-                recent_messages.append(
-                    ChatMessage(role=ChatRole.TOOL, content=SAFE_REJECTION_FEEDBACK)
+                receipt = self.service.submit_action_with_receipt(
+                    SubmitActionInput(
+                        player_id=request.player_id,
+                        case_id=request.case_id,
+                        session_id=request.session_id,
+                        action=decision.action,
+                    )
                 )
-            events.extend(receipt.events)
-            if receipt.score_breakdown is not None:
-                score_breakdown = receipt.score_breakdown
+                public = receipt.result
+                accepted = public.ok
+                if accepted:
+                    recent_messages.append(
+                        ChatMessage(role=ChatRole.TOOL, content=public.message)
+                    )
+                else:
+                    assert public.observation is not None
+                    recent_messages.append(
+                        ChatMessage(
+                            role=ChatRole.TOOL,
+                            content=build_safe_action_feedback(
+                                public.error_code or "unsupported_action",
+                                public.observation,
+                            ).model_dump_json(),
+                        )
+                    )
+                events.extend(receipt.events)
+                if receipt.score_breakdown is not None:
+                    score_breakdown = receipt.score_breakdown
             steps.append(
                 EpisodeStep(
                     step_index=step_index,
                     action=decision.action,
                     accepted=accepted,
                     event_sequences=public.event_sequences,
-                    error_code=None if accepted else public.error_code,
+                    error_code=(
+                        None
+                        if accepted
+                        else contract_error or public.error_code
+                    ),
                     llm_attempts=decision.llm_attempts,
                     used_fallback=decision.used_fallback,
+                    repair_kind=decision.repair_kind,
                     provider_usages=decision.usages,
                 )
             )
-            if receipt.events and self.shadow_observer is not None:
+            if receipt is not None and receipt.events and self.shadow_observer is not None:
                 shadow_observations.append(
                     self.shadow_observer.observe(public, receipt.events)
                 )

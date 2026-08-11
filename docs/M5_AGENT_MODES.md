@@ -32,3 +32,19 @@ shadow 仅在成功领域事件已经保存后运行。它只接收刷新后的�
 ## P4b 一次真实验证
 
 2026-08-11 的冻结 P4b 窗口使用免费 Fake 路径建立旧纸伞前史，再以 `deepseek-v4-flash`、shadow off 和 `0.05 CNY` 上限运行灰灶。模型发现 1 次，灰灶 Chat 8 次，实际费用 `0.01278356 CNY`；8/8 首次结构化成功，格式修复、降级、超时和语义记忆字段命中均为 0。灰灶只接受 2 个调查事件，随后出现 2 次参数错误、1 次解释性 `respond` 和 3 次 `diagnosis_not_ready`，未形成诊断、处置或 Campaign 解锁。月井因此按门禁保持 0 次调用。工程与规则安全通过，完整行为目标未达到。详见 `docs/M5_P4B_DEEPSEEK_CAMPAIGN_PILOT_20260811.md`；P5 尚未开始。
+
+## P4c 通用行动契约与恢复
+
+P4c 不改 Prompt `v0.2.1`、病例、规则、Campaign 或 8 步上限。它把“结构合法的 `AgentAction`”与“当前公开上下文中可执行的行动”分成两层：
+
+1. DoctorAgent 先产生并通过外层 JSON Schema；
+2. `PublicActionContractValidator` 根据刷新后的 `CaseObservation` 校验准确工具名、唯一参数字段、公开 ID、诊断就绪状态和已发现证据；
+3. 第一次不符合时，使用既有一次修复额度发送严格结构化的公开反馈，并记录 `action_contract_repair`；
+4. 修复后的行动只有再次通过契约才会提交 `MultiCaseEpisodeService`；
+5. 规则引擎仍作最终裁决；第二次仍不合法时确定性降级，不进行第三次模型调用。
+
+修复反馈只含稳定错误码、安全说明、公开诊断就绪状态、刷新后的准确调查工具/ID、公开诊断候选和当前处置候选，并固定提醒“口头描述不等于提交诊断”。反馈不含隐藏真值、评分、未发现线索、语义记忆、原始异常或完整 Prompt。正常合法动作不增加模型调用。
+
+三病例 Fake 使用同一实现继续得到事件 1–8 和 `resolved / 100`；manual、MCP、Campaign、事件重放与 shadow off/on 隔离保持不变。冻结 P0/Pilot 历史轨迹仍按原历史语义重评，避免新修复步骤篡改既有结果。完整根因、证据与推断边界见 `docs/M5_P4C_AGENT_CONTRACT_AUDIT.md`。
+
+本阶段只有离线 Fake/Mock 证据。它不能证明 DeepSeek 会在拒绝后选择高效动作，也没有解决解释性 `respond` 或一般策略选择问题。P4b 仍是灰灶未完成、月井未运行的历史负结果；P4d 真实恢复复核尚未授权，P5 尚未开始。

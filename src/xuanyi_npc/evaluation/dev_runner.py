@@ -68,6 +68,7 @@ def run_dev_suite(
                 DoctorAgent(fake_llm),
                 clock=DeterministicDevClock(),
                 config=V0EpisodeConfig(max_steps=scenario.max_steps),
+                _preserve_historical_trace_semantics=True,
             ).run(
                 episode_id=f"{scenario.scenario_id}_{trajectory.trajectory_id}",
                 case=case,

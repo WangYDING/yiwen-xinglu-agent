@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 
 from xuanyi_npc.agents import (
+    AgentRepairKind,
     ChatMessage,
     ChatRole,
     DoctorAgent,
@@ -75,6 +76,7 @@ def test_doctor_agent_uses_only_filtered_read_only_context(
     assert decision.action.action_id == "agent_step_001"
     assert decision.llm_attempts == 1
     assert decision.used_fallback is False
+    assert decision.repair_kind is None
     assert len(fake.requests) == 1
     serialized_prompt = "\n".join(
         message.content for message in fake.requests[0].messages
@@ -204,6 +206,7 @@ def test_invalid_format_is_repaired_once(
     assert decision.action.dialogue == "修复后再观察。"
     assert decision.llm_attempts == 2
     assert decision.used_fallback is False
+    assert decision.repair_kind is AgentRepairKind.FORMAT_REPAIR
     assert len(fake.requests) == 2
     assert "只修复 JSON 格式和字段" in fake.requests[1].messages[-1].content
 
@@ -227,6 +230,7 @@ def test_two_invalid_formats_use_deterministic_non_mutating_fallback(
     )
     assert decision.llm_attempts == 2
     assert decision.used_fallback is True
+    assert decision.repair_kind is AgentRepairKind.FORMAT_REPAIR
     assert len(fake.requests) == 2
     assert fake.remaining_responses == 1
 

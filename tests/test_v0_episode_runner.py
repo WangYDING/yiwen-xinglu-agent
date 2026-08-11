@@ -247,7 +247,10 @@ def test_rule_rejection_is_recorded_without_state_change_or_hidden_error_detail(
     second_request_text = "\n".join(
         message.content for message in fake.requests[1].messages
     )
-    assert "工具请求被确定性规则层拒绝" in second_request_text
+    assert "action_contract_repair" in second_request_text
+    assert '"error_code": "action_mismatch"' in second_request_text
+    assert '"can_submit_diagnosis": false' in second_request_text
+    assert '"tool_name"' in second_request_text
     assert "tool name does not match" not in second_request_text
 
 
@@ -333,7 +336,9 @@ def test_unknown_diagnosis_gets_sanitized_rejection_without_state_change(
     second_request_text = "\n".join(
         message.content for message in fake.requests[1].messages
     )
-    assert "工具请求被确定性规则层拒绝" in second_request_text
+    assert "action_contract_repair" in second_request_text
+    assert '"error_code": "unknown_diagnosis"' in second_request_text
+    assert '"can_submit_diagnosis": false' in second_request_text
     assert "unknown diagnosis candidate" not in second_request_text
 
 

@@ -5,9 +5,10 @@ from typing import Annotated, Literal, Protocol, runtime_checkable
 from pydantic import ConfigDict, Field, StrictBool, StrictInt, ValidationError
 
 from xuanyi_npc.application.views import CaseObservation, PlayerView
+from xuanyi_npc.application.action_contract import SafeActionRecoveryFeedback
 from xuanyi_npc.domain import AgentAction, AgentActionType
 from xuanyi_npc.domain.base import DomainModel, NonEmptyText
-from xuanyi_npc.evaluation import ModelUsage
+from xuanyi_npc.evaluation import AgentRepairKind, ModelUsage
 
 from .llm import (
     ChatMessage,
@@ -64,6 +65,7 @@ class AgentDecision(DomainModel):
     action: AgentAction
     llm_attempts: Annotated[StrictInt, Field(ge=1, le=2)]
     used_fallback: StrictBool
+    repair_kind: AgentRepairKind | None = None
     usages: tuple[ModelUsage, ...] = Field(default_factory=tuple)
 
 
@@ -75,6 +77,20 @@ class DoctorAgentInterface(Protocol):
 
     def decide(self, agent_input: DoctorAgentInput) -> AgentDecision:
         """Propose one validated action from read-only input."""
+
+    def repair_action_contract(
+        self,
+        agent_input: DoctorAgentInput,
+        prior_decision: AgentDecision,
+        feedback: SafeActionRecoveryFeedback,
+    ) -> AgentDecision:
+        """Use the shared one-repair allowance for a contextual action error."""
+
+    def action_contract_fallback(
+        self,
+        prior_decision: AgentDecision,
+    ) -> AgentDecision:
+        """Return a deterministic non-tool action without another model call."""
 
 
 class FixedV0Curriculum:
@@ -138,16 +154,23 @@ class DoctorAgent:
                     2,
                     responses,
                     self._usage_from_error(exc),
+                    AgentRepairKind.FORMAT_REPAIR,
                 )
             responses.append(repaired_response)
             try:
                 action = self._parse_action(repaired_response, agent_input.step_index)
             except (ValidationError, ValueError):
-                return self._fallback(agent_input.step_index, 2, responses)
+                return self._fallback(
+                    agent_input.step_index,
+                    2,
+                    responses,
+                    repair_kind=AgentRepairKind.FORMAT_REPAIR,
+                )
             return AgentDecision(
                 action=action,
                 llm_attempts=2,
                 used_fallback=False,
+                repair_kind=AgentRepairKind.FORMAT_REPAIR,
                 usages=self._usages(responses),
             )
 
@@ -157,6 +180,51 @@ class DoctorAgent:
             used_fallback=False,
             usages=self._usages(responses),
         )
+
+    def repair_action_contract(
+        self,
+        agent_input: DoctorAgentInput,
+        prior_decision: AgentDecision,
+        feedback: SafeActionRecoveryFeedback,
+    ) -> AgentDecision:
+        """Spend the one shared repair allowance on a contextual action error."""
+
+        if prior_decision.llm_attempts != 1:
+            return self._contract_fallback(prior_decision)
+        request = self._build_action_contract_repair_request(agent_input, feedback)
+        try:
+            response = self.adapter.complete(request)
+        except Exception as exc:
+            if isinstance(exc, LLMAdapterError) and exc.abort_episode:
+                exc.prior_usages = (
+                    *prior_decision.usages,
+                    *exc.prior_usages,
+                )
+                raise
+            return self._contract_fallback(
+                prior_decision,
+                self._usage_from_error(exc),
+            )
+        try:
+            action = self._parse_action(response, agent_input.step_index)
+        except (ValidationError, ValueError):
+            return self._contract_fallback(
+                prior_decision,
+                self._usages([response]),
+            )
+        return AgentDecision(
+            action=action,
+            llm_attempts=2,
+            used_fallback=False,
+            repair_kind=AgentRepairKind.ACTION_CONTRACT_REPAIR,
+            usages=(*prior_decision.usages, *self._usages([response])),
+        )
+
+    def action_contract_fallback(
+        self,
+        prior_decision: AgentDecision,
+    ) -> AgentDecision:
+        return self._contract_fallback(prior_decision)
 
     def _build_request(self, agent_input: DoctorAgentInput) -> LLMRequest:
         expected_action_id = self._expected_action_id(agent_input.step_index)
@@ -204,6 +272,27 @@ class DoctorAgent:
             response_schema=original.response_schema,
         )
 
+    def _build_action_contract_repair_request(
+        self,
+        agent_input: DoctorAgentInput,
+        feedback: SafeActionRecoveryFeedback,
+    ) -> LLMRequest:
+        original = self._build_request(agent_input)
+        repair_message = (
+            "上一提案的 JSON 结构有效，但不符合当前公开行动契约。"
+            "这是 action_contract_repair，也是本步最后一次模型调用。"
+            "只依据以下安全反馈选择一个合法行动；不要推断隐藏门槛，不要解释。\n"
+            f"{feedback.model_dump_json(indent=2)}\n"
+            f"本步 action_id 必须为 {self._expected_action_id(agent_input.step_index)}。"
+        )
+        return LLMRequest(
+            messages=(
+                *original.messages,
+                ChatMessage(role=ChatRole.USER, content=repair_message),
+            ),
+            response_schema=original.response_schema,
+        )
+
     @staticmethod
     def _parse_action(response: LLMResponse, step_index: int) -> AgentAction:
         action = AgentAction.model_validate_json(response.content)
@@ -222,6 +311,7 @@ class DoctorAgent:
         llm_attempts: int,
         responses: list[LLMResponse],
         error_usages: tuple[ModelUsage, ...] = (),
+        repair_kind: AgentRepairKind | None = None,
     ) -> AgentDecision:
         return AgentDecision(
             action=AgentAction(
@@ -232,7 +322,29 @@ class DoctorAgent:
             ),
             llm_attempts=llm_attempts,
             used_fallback=True,
+            repair_kind=repair_kind,
             usages=(*DoctorAgent._usages(responses), *error_usages),
+        )
+
+    @staticmethod
+    def _contract_fallback(
+        prior_decision: AgentDecision,
+        additional_usages: tuple[ModelUsage, ...] = (),
+    ) -> AgentDecision:
+        return AgentDecision(
+            action=AgentAction(
+                action_id=prior_decision.action.action_id,
+                action_type=AgentActionType.RESPOND,
+                dialogue="行动契约修复未通过，此步不执行工具。",
+                confidence=0.0,
+            ),
+            llm_attempts=2,
+            used_fallback=True,
+            repair_kind=(
+                prior_decision.repair_kind
+                or AgentRepairKind.ACTION_CONTRACT_REPAIR
+            ),
+            usages=(*prior_decision.usages, *additional_usages),
         )
 
     @staticmethod

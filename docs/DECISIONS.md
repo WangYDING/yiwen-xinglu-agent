@@ -391,3 +391,14 @@
 - **shadow 决策**：record-only 只在领域事件已经保存后消费权限过滤公开观察，过滤其他玩家和当前 Episode，写入 Git 忽略目录中的脱敏记录后丢弃结果。记录固定声明未注入 Prompt、未影响行动、未影响状态；不保存完整 Prompt、原始聊天、隐藏真值或未发现线索。shadow 失败或安全拒绝不改变病例和 Campaign；off 对 Repository、Embedding、Torch、BGE 与 shadow 文件调用为 0。
 - **证据边界**：离线捕获测试证明 shadow off/on 的 Agent 请求、Schema、工具、固定课程、行动、领域事件、终态和 Campaign 一致，DeepSeek Mock 请求不含语义记忆。该证据不代表真实模型完成率或真实 BGE 语义效果。真实 P4b 仍需单独模型与预算授权，M5-P5 尚未开始。
 - **原因**：把观察型检索与行动 Agent 分离，可以保留 RAG 工程和真实负结果的展示价值，同时保证未过准入线的 Dense 召回不能暗中影响可玩产品。
+
+## ADR-049：M5-P4c 在状态执行前验证公开行动契约并共享一次修复额度
+
+- **状态**：已接受
+- **日期**：2026-08-11
+- **问题证据**：`AgentAction.tool_call.arguments` 作为供应商无关 JSON 边界保留通用字典，因此 `question_patient(target_id=...)` 可以通过外层结构校验；M5-P4b 中该错误直到工具执行时才被拒绝。原 Runner 又把 `invalid_tool_arguments`、`diagnosis_not_ready` 等不同拒绝压缩成通用文本，没有返回刷新后的准确工具名、`investigation_id` 和公开诊断就绪状态。规则层保证了零写入，但 Agent 难以在有限步骤内恢复。
+- **契约决策**：在 DoctorAgent 与状态服务之间增加基于当前 `CaseObservation` 的通用 `PublicActionContractValidator`。调查仅接受准确 `investigation_id` 并核对工具类型；诊断仅接受公开候选、已发现证据和已开放状态；处置仅接受当前公开 ID。契约层只拒绝提案，不执行命令、不生成事件，也不取代 `V0ToolExecutor`、诊断策略或 `CaseEngine` 的最终裁决。
+- **恢复决策**：首次结构有效但不符合当前公开契约的提案可以消费既有的一次修复额度，单独记录为 `action_contract_repair`，与 `format_repair` 区分。修复请求只包含稳定错误码、安全公开说明、诊断就绪状态和刷新后的公开选项；修复后仍不合法时确定性降级且不得第三次调用。正常合法动作不增加请求。
+- **历史与产品边界**：P0 冻结评测和既有 Pilot 脱敏轨迹保持原历史语义，不因新同一步修复而改写；该兼容仅存在于内部历史评测组装，不是产品或 CLI 开关。三个病例、Prompt `v0.2.1`、8 步上限、Campaign、评分、答案和诊断策略均不改变，`respond` 也不按病例答案硬禁。
+- **证据边界**：离线 Fake/Mock 只能证明共享契约、单次有界恢复、安全反馈和拒绝零写入；不能证明真实 DeepSeek 会采取高效策略。P4b 仍是工程安全通过、灰灶未完成、月井未运行的历史负结果；任何 P4d 都需要单独授权。
+- **原因**：把“JSON 结构正确”与“当前公开上下文中可执行”分层，可以在模型提案触达状态服务前提供最小权限纠错信息，同时保留规则引擎作为关键状态的唯一权威。

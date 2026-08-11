@@ -464,7 +464,7 @@ def model_handler(captured: list[bytes]):
                 "dialogue": "只使用公开选项。",
                 "tool_call": {
                     "name": "observe_patient",
-                    "arguments": {"investigation_id": "unknown_public_option"},
+                    "arguments": {"investigation_id": "observe_scholar"},
                 },
                 "confidence": 0.5,
             },
