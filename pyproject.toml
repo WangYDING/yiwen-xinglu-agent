@@ -48,6 +48,7 @@ xuanyi-memory-eval = "xuanyi_npc.evaluation.memory_runner:main"
 xuanyi-semantic-memory-eval = "xuanyi_npc.evaluation.semantic_memory_runner:main"
 xuanyi-play = "xuanyi_npc.cli.play:main"
 xuanyi-m5-acceptance = "xuanyi_npc.evaluation.m5_acceptance:main"
+xuanyi-clinic = "xuanyi_npc.clinic.server:main"
 
 [project.optional-dependencies]
 dev = [
@@ -81,6 +82,8 @@ include-package-data = false
     "permissions/*.json",
     "inheritance/*.json",
     "clinic/*.json",
+    "clinic/*.css",
+    "clinic/*.js",
     "release/*.json",
 ]
 

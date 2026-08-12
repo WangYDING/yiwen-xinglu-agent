@@ -11,6 +11,9 @@
 - [`R2_MENTOR_TEACHING_LOOP.md`](R2_MENTOR_TEACHING_LOOP.md)：R2 导师角色、固定课程、提示、师评、恢复与 CLI 边界。
 - [`R3_ADAPTIVE_THREE_CASE_TEACHING.md`](R3_ADAPTIVE_THREE_CASE_TEACHING.md)：R3 三核心课、固定补课、长期教学计划、结构化记忆与恢复边界。
 - [`R4_EXAM_PERMISSION_INHERITANCE.md`](R4_EXAM_PERMISSION_INHERITANCE.md)：R4 正式考试、补课重考、权限过滤、可达性审计与第一条传承链。
+- [`R5_SIX_CASE_CLINIC_PRODUCT.md`](R5_SIX_CASE_CLINIC_PRODUCT.md)：R5 六病例、组合式医馆服务、安全边界与传承作用。
+- [`R5_CASE_DESIGN.md`](R5_CASE_DESIGN.md)：三个进阶病例及课程设计。
+- [`R5_CLINIC_USER_GUIDE.md`](R5_CLINIC_USER_GUIDE.md)：普通用户启动、游玩、退出和恢复指南。
 - [`M5_PRODUCT_GAP_AUDIT.md`](M5_PRODUCT_GAP_AUDIT.md)：按 L0～L5 重新审计 M5 的产品成熟度、缺口和下一验收条件。
 - [`ROADMAP.md`](ROADMAP.md)：区分 M0～M6 历史与 Product Completion Plan v1 的 R1～R6 主线。
 

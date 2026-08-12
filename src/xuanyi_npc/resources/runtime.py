@@ -13,7 +13,7 @@ from typing import Iterator
 
 
 RESOURCE_PACKAGE = "xuanyi_npc.resources"
-CASE_RESOURCE_NAMES = (
+FOUNDATION_CASE_RESOURCE_NAMES = (
     "gray_hearth_inn.json",
     "moon_well_echo.json",
     "old_paper_umbrella.json",
@@ -23,6 +23,7 @@ ADVANCED_CASE_RESOURCE_NAMES = (
     "mist_ferry_borrowed_lantern.json",
     "returning_contract_nameless_shrine.json",
 )
+CASE_RESOURCE_NAMES = FOUNDATION_CASE_RESOURCE_NAMES + ADVANCED_CASE_RESOURCE_NAMES
 CAMPAIGN_RESOURCE_NAME = "cross_episode_rules_v1.json"
 M5_HISTORY_RESOURCE_NAME = "m5_history_evidence_v1.json"
 DEEPSEEK_POLICY_RESOURCE_NAME = "deepseek_v4_flash_pilot_policy_2026-08-07.json"
@@ -55,6 +56,8 @@ R5_RUNTIME_RESOURCES = (
     "clinic/r5_acceptance_v1.json",
     "clinic/case_access_policy_v1.json",
     "campaign/cross_episode_rules_v2.json",
+    "clinic/clinic.css",
+    "clinic/clinic.js",
 )
 ALLOWED_RUNTIME_RESOURCES = frozenset(
     {
@@ -84,6 +87,12 @@ class RuntimeResourcePaths:
     campaign_rules: Path
     m5_history_evidence: Path
     deepseek_policy: Path
+
+
+@dataclass(frozen=True)
+class ClinicRuntimeResourcePaths:
+    case_dir: Path
+    campaign_rules: Path
 
 
 def _resource(relative_path: str) -> Traversable:
@@ -134,7 +143,7 @@ def materialized_runtime_resources() -> Iterator[RuntimeResourcePaths]:
         with tempfile.TemporaryDirectory(prefix="xuanyi-runtime-") as temporary:
             root = Path(temporary)
             case_dir = root / "cases"
-            for name in CASE_RESOURCE_NAMES:
+            for name in FOUNDATION_CASE_RESOURCE_NAMES:
                 _copy_resource(f"cases/{name}", case_dir / name)
             campaign_rules = root / "campaign" / CAMPAIGN_RESOURCE_NAME
             _copy_resource(
@@ -154,3 +163,21 @@ def materialized_runtime_resources() -> Iterator[RuntimeResourcePaths]:
         raise
     except OSError as exc:
         raise PackageResourceError("runtime resources cannot be materialized") from exc
+
+
+@contextmanager
+def materialized_clinic_resources() -> Iterator[ClinicRuntimeResourcePaths]:
+    """Materialize the six packaged cases and R5 campaign for the local clinic."""
+    try:
+        with tempfile.TemporaryDirectory(prefix="xuanyi-clinic-runtime-") as temporary:
+            root = Path(temporary)
+            case_dir = root / "cases"
+            for name in CASE_RESOURCE_NAMES:
+                _copy_resource(f"cases/{name}", case_dir / name)
+            rules = root / "campaign" / "cross_episode_rules_v2.json"
+            _copy_resource("campaign/cross_episode_rules_v2.json", rules)
+            yield ClinicRuntimeResourcePaths(case_dir=case_dir, campaign_rules=rules)
+    except PackageResourceError:
+        raise
+    except OSError as exc:
+        raise PackageResourceError("clinic runtime resources cannot be materialized") from exc

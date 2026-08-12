@@ -733,13 +733,14 @@ def test_public_case_view_contains_no_hidden_truth_or_future_clues(case_id: str)
     assert observation.discovered_clues == ()
 
 
-def test_catalog_discovers_exactly_three_cases_in_stable_order(tmp_path: Path) -> None:
+def test_catalog_preserves_three_historical_cases_with_r5_extensions(tmp_path: Path) -> None:
     service, _ = build_service(tmp_path)
     created = service.create_player(CreatePlayerInput(display_name="目录测试者"))
     assert created.ok and created.player_id
     listed = service.list_cases(ListCasesInput(player_id=created.player_id))
     assert listed.ok
-    assert tuple(item.case_id for item in listed.cases) == tuple(sorted(ALL_CASE_IDS))
+    listed_ids = tuple(item.case_id for item in listed.cases)
+    assert listed_ids == tuple(sorted((*ALL_CASE_IDS, "lantern_alley_conflicting_testimony", "mist_ferry_borrowed_lantern", "returning_contract_nameless_shrine")))
     serialized = listed.model_dump_json()
     assert "灰灶客栈与无火炊烟" in serialized
     assert "月井回声与错投木简" in serialized

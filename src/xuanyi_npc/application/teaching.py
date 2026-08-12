@@ -451,6 +451,9 @@ class MentorTeachingService:
             "evidence_before_diagnosis_v1": ("observe_form", "ask_cause", "inspect_evidence", "reason_diagnosis"),
             "provenance_before_intent_v1": ("inspect_evidence", "reason_diagnosis", "ethical_practice"),
             "corroborate_before_handoff_v1": ("ask_cause", "inspect_evidence", "reason_diagnosis"),
+            "cross_check_conflicting_testimony_v1": ("ask_cause", "inspect_evidence", "reason_diagnosis", "ethical_practice"),
+            "bounded_treatment_and_consequence_v1": ("inspect_evidence", "apply_treatment", "ethical_practice"),
+            "integrated_causal_reasoning_v1": ("observe_form", "ask_cause", "inspect_evidence", "reason_diagnosis", "apply_treatment", "ethical_practice"),
         }[lesson.lesson_id]
         from xuanyi_npc.domain.apprenticeship import AbilityId
         memories = self.memory_selector.select(

@@ -116,6 +116,7 @@ from .teaching import (
 from .exams import ExamService, ExamServiceError, ExamServiceResult, PublicExamQuestion, PublicExamResult
 from .permissions import PermissionAccessError, PermissionCoordinator, PermissionPublicView, RestrictedKnowledgeView
 from .inheritance import InheritanceApplicationResult, InheritanceDecisionPolicy, InheritanceService, InheritanceServiceError
+from .curriculum_v2 import CurriculumV2Recommendation, CurriculumV2Selector
 
 __all__ = [
     "ApprenticeshipPlayerInput",
@@ -232,4 +233,6 @@ __all__ = [
     "InheritanceDecisionPolicy",
     "InheritanceService",
     "InheritanceServiceError",
+    "CurriculumV2Recommendation",
+    "CurriculumV2Selector",
 ]

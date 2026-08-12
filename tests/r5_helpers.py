@@ -49,4 +49,3 @@ def complete_case(service, store, player_id, contract, order=None):
     ))
     assert result.ok
     return started.session_id, result
-
