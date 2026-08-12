@@ -80,6 +80,7 @@ include-package-data = false
     "exams/*.json",
     "permissions/*.json",
     "inheritance/*.json",
+    "clinic/*.json",
     "release/*.json",
 ]
 

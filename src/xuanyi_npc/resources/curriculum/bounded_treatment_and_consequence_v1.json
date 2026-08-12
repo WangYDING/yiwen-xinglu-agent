@@ -1,0 +1,8 @@
+{
+  "lesson_id":"bounded_treatment_and_consequence_v1","version":"v1","title":"处置之前先看代价落在谁身上",
+  "public_description":"调查雾渡借寿灯，区分暂时压制与解除根因，并确认处置代价不会转移给无辜乘客。",
+  "learning_objectives":[{"objective_id":"map_affected_scope","description":"确认契物与全部受影响角色。"},{"objective_id":"distinguish_suppression","description":"区分压制现象和解除根因。"},{"objective_id":"trace_consequence_transfer","description":"追踪处置代价的承受者。"},{"objective_id":"choose_bounded_treatment","description":"选择不把后果转移给无辜者的处置。"}],
+  "assigned_case_id":"mist_ferry_borrowed_lantern","reflection_checkpoint":{"minimum_investigation_categories":3,"question":"每个处置会把灯契代价留在何处，又会由谁承担？"},
+  "maximum_hints":2,"public_hint_cards":[{"hint_id":"consequence_hint_1","text":"先列出灯、持灯人、船客和渡船之间的影响范围。"},{"hint_id":"consequence_hint_2","text":"能让雾暂退的方案未必解除根因；追问代价转移给了谁。"}],
+  "completion_condition":"绑定病例已完成、R1成长已投影、结构化师评与导师回顾均已保存。","fixed_next_step":"申请传承或继续归契古祠课程。"
+}

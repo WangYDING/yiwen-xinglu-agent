@@ -1,0 +1,25 @@
+{
+  "contract_id":"clinic_contract_v1","version":"v1","host":"127.0.0.1","default_port":0,"mentor_mode":"fake","semantic_memory":"off","entrypoint":"xuanyi-clinic",
+  "pages":["start","home","teaching","case","exam","inheritance","assessment"],
+  "routes":[
+    {"method":"GET","path":"/","page":"start","operation_id":"show_start","idempotency_required":false},
+    {"method":"POST","path":"/players","page":"home","operation_id":"create_player","idempotency_required":true},
+    {"method":"GET","path":"/clinic","page":"home","operation_id":"show_clinic","idempotency_required":false},
+    {"method":"GET","path":"/teaching","page":"teaching","operation_id":"show_teaching","idempotency_required":false},
+    {"method":"POST","path":"/remediations","page":"teaching","operation_id":"attempt_remediation","idempotency_required":true},
+    {"method":"GET","path":"/cases","page":"case","operation_id":"show_cases","idempotency_required":false},
+    {"method":"POST","path":"/cases/start","page":"case","operation_id":"start_case","idempotency_required":true},
+    {"method":"POST","path":"/cases/action","page":"case","operation_id":"submit_case_action","idempotency_required":true},
+    {"method":"GET","path":"/exam","page":"exam","operation_id":"show_exam","idempotency_required":false},
+    {"method":"POST","path":"/exam/start","page":"exam","operation_id":"start_exam","idempotency_required":true},
+    {"method":"POST","path":"/exam/answer","page":"exam","operation_id":"answer_exam","idempotency_required":true},
+    {"method":"POST","path":"/exam/submit","page":"exam","operation_id":"submit_exam","idempotency_required":true},
+    {"method":"GET","path":"/inheritance","page":"inheritance","operation_id":"show_inheritance","idempotency_required":false},
+    {"method":"POST","path":"/inheritance/request","page":"inheritance","operation_id":"request_inheritance","idempotency_required":true},
+    {"method":"GET","path":"/assessment","page":"assessment","operation_id":"show_assessment","idempotency_required":false},
+    {"method":"POST","path":"/quit","page":"home","operation_id":"quit_clinic","idempotency_required":true}
+  ],
+  "forbidden_public_fields":["root_cause","valid_diagnosis_ids","correct_option_ids","hidden_information","causal_chain","minimum_proficiency","mentor_secret","database_path","prompt","api_key","traceback"],
+  "static_asset_names":["clinic.css","clinic.js"],
+  "fictional_safety_notice":"本作全部病案与玄术均为架空游戏内容，不构成现实医疗建议。"
+}

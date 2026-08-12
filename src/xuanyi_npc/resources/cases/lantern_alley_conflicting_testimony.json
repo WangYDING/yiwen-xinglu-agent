@@ -1,0 +1,28 @@
+{
+  "case_id":"lantern_alley_conflicting_testimony","title":"双灯巷与相悖证词","synopsis":"双灯巷一枚守巷灯契失位，两名证人对移灯者与时辰说法相悖，灯守因此不敢点亮夜灯。","difficulty":3,
+  "patient":{"patient_id":"lantern_keeper_lin","display_name":"林照","public_profile":"负责照看双灯巷夜灯的灯守，因相悖证词担心误罚无辜。","hidden_information":["雨后西灯底座松动，巡夜人余青为避积水临时移灯，却记错了先后时辰。","商贩邵安只从巷口斜看见剪影，把归灯动作误认成盗灯；真正失序来自灯契牌在移动中落入东灯座下。"]},
+  "root_cause":"angled_testimony_and_misplaced_lantern_token","causal_chain":["西灯底座积水松动，余青临时移灯。","斜角观察和记忆偏差使两份证词冲突。","灯契牌落到东灯座下，双灯归属与位置错配。","按物证重建时间线并归还契牌可恢复灯序且不伤无辜。"],
+  "clues":{
+    "keeper_timing_notes":{"clue_id":"keeper_timing_notes","description":"灯守的换油记录显示两灯耗油差只够一刻钟，并非整夜熄灭。","is_key":true,"is_misleading":false},
+    "confident_accusation":{"clue_id":"confident_accusation","description":"邵安语气极笃定，称自己亲眼看见余青偷走西灯。","is_key":false,"is_misleading":true},
+    "yu_recalled_bell":{"clue_id":"yu_recalled_bell","description":"余青记得移灯时刚响二更梆，却承认雨声可能盖住了前一声。","is_key":true,"is_misleading":false},
+    "shao_view_angle":{"clue_id":"shao_view_angle","description":"邵安站位被布幌遮去灯座下半部，只能看见提灯剪影。","is_key":true,"is_misleading":false},
+    "lamp_oil_levels":{"clue_id":"lamp_oil_levels","description":"两盏灯的油面与灯守记录吻合，证明它们都曾在当夜点亮。","is_key":true,"is_misleading":false},
+    "festival_ribbon":{"clue_id":"festival_ribbon","description":"西灯提梁缠着醒目的旧彩带，容易让远处观察者认错提灯动作。","is_key":false,"is_misleading":true},
+    "footprints_cross_puddle":{"clue_id":"footprints_cross_puddle","description":"脚印从西灯绕过积水到东侧后又折返，没有通向巷外。","is_key":true,"is_misleading":false},
+    "token_under_east_base":{"clue_id":"token_under_east_base","description":"东灯座下找到刻有西巷号的契牌，泥痕与折返脚印同向。","is_key":true,"is_misleading":false}
+  },
+  "investigations":[
+    {"investigation_id":"observe_lantern_keeper","action_type":"observe_patient","target_id":"lantern_keeper_lin","public_description":"查看灯守的换油记录与两灯当前状态。","reveals_clue_ids":["keeper_timing_notes","confident_accusation"],"required_skill_id":"observe_form","minimum_skill_level":0,"required_clue_ids":[]},
+    {"investigation_id":"question_witness_yu","action_type":"question_patient","target_id":"witness_yu","public_description":"询问余青移灯的原因、路线和听见的更次。","reveals_clue_ids":["yu_recalled_bell"],"required_skill_id":"ask_cause","minimum_skill_level":0,"required_clue_ids":[]},
+    {"investigation_id":"question_witness_shao","action_type":"question_patient","target_id":"witness_shao","public_description":"询问邵安当时站位、视线与看见的动作。","reveals_clue_ids":["shao_view_angle"],"required_skill_id":"ask_cause","minimum_skill_level":0,"required_clue_ids":[]},
+    {"investigation_id":"inspect_twin_lanterns","action_type":"inspect_object","target_id":"twin_lanterns","public_description":"核对两灯油面、提梁与灯座痕迹。","reveals_clue_ids":["lamp_oil_levels","festival_ribbon"],"required_skill_id":"inspect_object","minimum_skill_level":0,"required_clue_ids":[]},
+    {"investigation_id":"inspect_alley_traces","action_type":"investigate_location","target_id":"twin_lantern_alley","public_description":"检查积水边缘、脚印方向与巷口视角。","reveals_clue_ids":["footprints_cross_puddle"],"required_skill_id":"inspect_object","minimum_skill_level":20,"required_clue_ids":["yu_recalled_bell","shao_view_angle"]},
+    {"investigation_id":"investigate_lantern_timeline","action_type":"observe_qi","target_id":"east_lantern_base","public_description":"结合油耗、脚印与灯座余炁核对契牌交接时间线。","reveals_clue_ids":["token_under_east_base"],"required_skill_id":"observe_qi","minimum_skill_level":20,"required_clue_ids":["lamp_oil_levels","footprints_cross_puddle"]}
+  ],
+  "diagnosis_candidates":{"deliberate_lantern_theft":{"diagnosis_id":"deliberate_lantern_theft","public_description":"余青主动偷换西灯并以雨夜掩饰。"},"haunting_between_lamps":{"diagnosis_id":"haunting_between_lamps","public_description":"双灯间的游影篡改了两名证人的记忆。"},"angled_witness_memory_and_moved_token":{"diagnosis_id":"angled_witness_memory_and_moved_token","public_description":"观察角度与时辰记忆造成证词分歧，移灯时契牌又发生错位。"}},
+  "valid_diagnosis_ids":["angled_witness_memory_and_moved_token"],
+  "treatments":{"reconstruct_timeline_and_return_token":{"treatment_id":"reconstruct_timeline_and_return_token","public_description":"公开重建时间线，将西巷契牌归还原灯座并澄清两名证人的观察边界。","description":"物证与证词共同复原经过，契牌归位且无人被误罚。","outcome":"resolved","required_clue_ids":["keeper_timing_notes","yu_recalled_bell","shao_view_angle","lamp_oil_levels","footprints_cross_puddle","token_under_east_base"]},"separate_witnesses_and_close_alley":{"treatment_id":"separate_witnesses_and_close_alley","public_description":"暂时封闭双灯巷并分开两名证人，避免争执扩大。","description":"争执被压下，但契牌仍未归位。","outcome":"suppressed","required_clue_ids":["shao_view_angle"]},"punish_certain_witness":{"treatment_id":"punish_certain_witness","public_description":"仅凭更笃定的说法惩罚另一名证人并强令其认错。","description":"无辜者受罚，证词对立加深，双灯契序进一步失衡。","outcome":"worsened","required_clue_ids":[]}},
+  "hints":[{"level":1,"text":"把两份证词拆成时间、位置和动作分别核对。","score_penalty":2},{"level":2,"text":"语气笃定不等于准确，检查油面、站位和脚印。","score_penalty":5},{"level":3,"text":"沿折返脚印检查东灯座下方，并与换油记录对照。","score_penalty":10}],
+  "scoring":{"key_clue_points":40,"correct_diagnosis_points":30,"correct_treatment_points":30,"unsafe_treatment_penalty":20,"max_score":100}
+}

@@ -1,0 +1,16 @@
+{
+  "policy_id":"curriculum_selection_v2","version":"v2","preserves_policy_id":"curriculum_selection_v1",
+  "foundation_lesson_order":["evidence_before_diagnosis_v1","provenance_before_intent_v1","corroborate_before_handoff_v1"],
+  "advanced_lesson_order":["cross_check_conflicting_testimony_v1","bounded_treatment_and_consequence_v1","integrated_causal_reasoning_v1"],
+  "steps":[
+    {"priority":1,"condition_code":"r3_remediation_unresolved","recommendation_kind":"remediation","recommendation_id":"current_r3_remediation","does_not_lock_cases":true},
+    {"priority":2,"condition_code":"foundation_lesson_incomplete","recommendation_kind":"core_lesson","recommendation_id":"next_foundation_lesson","does_not_lock_cases":true},
+    {"priority":3,"condition_code":"exam_not_passed","recommendation_kind":"exam","recommendation_id":"foundational_xuanyi_exam_v1","does_not_lock_cases":true},
+    {"priority":4,"condition_code":"inner_disciple_lantern_incomplete","recommendation_kind":"advanced_lesson","recommendation_id":"cross_check_conflicting_testimony_v1","does_not_lock_cases":true},
+    {"priority":5,"condition_code":"inner_disciple_ferry_incomplete","recommendation_kind":"advanced_lesson","recommendation_id":"bounded_treatment_and_consequence_v1","does_not_lock_cases":true},
+    {"priority":6,"condition_code":"inheritance_granted_shrine_incomplete","recommendation_kind":"advanced_lesson","recommendation_id":"integrated_causal_reasoning_v1","does_not_lock_cases":true},
+    {"priority":7,"condition_code":"inheritance_missing_shrine_visible","recommendation_kind":"inheritance","recommendation_id":"trace_vow_restore_v1","does_not_lock_cases":true},
+    {"priority":8,"condition_code":"six_lessons_complete","recommendation_kind":"complete","recommendation_id":"current_training_complete","does_not_lock_cases":true}
+  ],
+  "completion_recommendation_id":"current_training_complete"
+}

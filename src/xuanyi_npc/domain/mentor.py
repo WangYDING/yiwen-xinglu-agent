@@ -103,6 +103,9 @@ class LessonDefinition(MentorModel):
             "evidence_before_diagnosis_v1": "old_paper_umbrella",
             "provenance_before_intent_v1": "gray_hearth_inn",
             "corroborate_before_handoff_v1": "moon_well_echo",
+            "cross_check_conflicting_testimony_v1": "lantern_alley_conflicting_testimony",
+            "bounded_treatment_and_consequence_v1": "mist_ferry_borrowed_lantern",
+            "integrated_causal_reasoning_v1": "returning_contract_nameless_shrine",
         }
         if expected_cases.get(self.lesson_id) != self.assigned_case_id:
             raise ValueError("lesson_id must use its frozen R3 case binding")
