@@ -6,4 +6,6 @@
 - 雾渡客船与借寿灯：辨明快速压制与解除根因的区别，确认代价是否被转移给乘客。
 - 归契古祠与无名碑：综合人物、契物、地点和炁息还原因果链；普通路径完整，传承路径只减少一次核对成本。
 
+归契古祠以可信 Schema 声明六项必需调查要求。其中“核对被抹去的见证与原交接顺序”可由普通旧拓片调查，或权限过滤后加入的“溯契还因”调查满足。任一路径满足后，同组另一调查从公开选项消失；伪造调用会以 `investigation_requirement_already_satisfied` 零写入拒绝。未声明要求的五个病例在加载时规范化为单成员要求，原有诊断开放点不变。
+
 对应课程依次为 `cross_check_conflicting_testimony_v1`、`bounded_treatment_and_consequence_v1` 和 `integrated_causal_reasoning_v1`。课程只解释公开证据、反思、HintCard 和固定下一步，不改变病例答案与成长数值。

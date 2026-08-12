@@ -41,8 +41,16 @@ class PermissionFilteredCaseCatalog:
                 required_clue_ids=item.required_clue_ids,
             ) for item in additions
         ))
-        return case.model_copy(update={"investigations": investigations})
+        requirements = list(case.normalized_investigation_requirements())
+        for addition in additions:
+            index = next((index for index, item in enumerate(requirements) if item.requirement_id == addition.satisfies_requirement_id), None)
+            if index is None:
+                raise ValueError("permission investigation references unknown requirement")
+            requirement = requirements[index]
+            requirements[index] = requirement.model_copy(update={
+                "satisfying_investigation_ids": requirement.satisfying_investigation_ids | {addition.investigation_id}
+            })
+        return case.model_copy(update={"investigations": investigations, "investigation_requirements": tuple(requirements)})
 
     def case_ids(self) -> tuple[str, ...]:
         return self.base_catalog.case_ids()
-

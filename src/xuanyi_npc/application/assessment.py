@@ -68,9 +68,9 @@ class AssessmentBuilder:
             record.reference_id for record in session.action_history
             if record.action_type in INVESTIGATION_ACTIONS
         }
-        missing_investigations = tuple(
-            item for item in case.investigations
-            if item.investigation_id not in investigated_ids
+        missing_requirements = tuple(
+            item for item in case.normalized_investigation_requirements()
+            if not item.satisfying_investigation_ids.intersection(investigated_ids)
         )
         investigation_ability = {
             CaseActionType.OBSERVE_PATIENT: AbilityId.OBSERVE_FORM,
@@ -80,7 +80,8 @@ class AssessmentBuilder:
             CaseActionType.OBSERVE_QI: AbilityId.REASON_DIAGNOSIS,
         }
         improvement.update(
-            investigation_ability[item.action_type] for item in missing_investigations
+            investigation_ability[next(item for item in case.investigations if item.investigation_id in requirement.satisfying_investigation_ids).action_type]
+            for requirement in missing_requirements
         )
         ability_changes = tuple(
             PublicAbilityChange(
@@ -107,14 +108,13 @@ class AssessmentBuilder:
             and event.source_session_id == session.session_id
         )
 
-        required_ids = {item.investigation_id for item in case.investigations}
         diagnosis = next(
             (record for record in session.action_history
              if record.action_type is CaseActionType.SUBMIT_DIAGNOSIS),
             None,
         )
         completed: list[str] = []
-        complete_investigation = required_ids.issubset(investigated_ids)
+        complete_investigation = not missing_requirements
         cited_evidence = diagnosis is not None and bool(diagnosis.evidence_clue_ids)
         if not cited_evidence:
             improvement.add(AbilityId.INSPECT_EVIDENCE)

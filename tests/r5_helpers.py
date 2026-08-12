@@ -24,6 +24,8 @@ def complete_case(service, store, player_id, contract, order=None):
     case = service.case_catalog.get(contract.case_id)
     started = service.start_episode(StartEpisodeInput(player_id=player_id, case_id=case.case_id))
     investigation_ids = order or tuple(item.investigation_id for item in case.investigations)
+    if contract.inheritance_investigation_id in investigation_ids:
+        investigation_ids = tuple(item for item in investigation_ids if item != "investigate_hidden_witness_mark")
     index = 0
     for investigation_id in investigation_ids:
         investigation = next(item for item in case.investigations if item.investigation_id == investigation_id)

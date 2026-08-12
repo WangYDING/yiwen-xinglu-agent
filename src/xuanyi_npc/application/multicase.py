@@ -400,6 +400,7 @@ SAFE_SERVICE_MESSAGES: Mapping[str, str] = {
     "diagnosis_not_ready": "当前诊断尚未开放，请先使用刷新后的公开调查选项。",
     "unknown_investigation": "该调查不在当前病例中。",
     "investigation_already_completed": "该调查已经完成，请使用刷新后的公开选项。",
+    "investigation_requirement_already_satisfied": "该项调查要求已经通过等价路径满足，请使用刷新后的公开选项。",
     "action_mismatch": "调查类型与公开选项不匹配。",
     "skill_locked": "当前玩家尚未解锁执行该调查所需的能力。",
     "insufficient_skill": "当前玩家能力不足，无法执行该调查。",

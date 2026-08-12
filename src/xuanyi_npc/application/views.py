@@ -206,6 +206,7 @@ class AgentContextFilter:
             raise ViewContextError("session player_id does not match player state")
 
         is_active = session.status is CaseSessionStatus.ACTIVE
+        satisfied_requirement_ids = case.satisfied_requirement_ids(session)
         investigations = tuple(
             InvestigationOptionView(
                 investigation_id=investigation.investigation_id,
@@ -218,6 +219,7 @@ class AgentContextFilter:
                 key=lambda item: item.investigation_id,
             )
             if is_active
+            and case.requirement_for(investigation.investigation_id).requirement_id not in satisfied_requirement_ids
             and not any(
                 record.reference_id == investigation.investigation_id
                 and record.action_type == investigation.action_type

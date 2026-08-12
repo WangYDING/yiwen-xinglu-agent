@@ -27,6 +27,10 @@ class InvestigationAlreadyCompletedError(RuleViolation):
     code = "investigation_already_completed"
 
 
+class InvestigationRequirementAlreadySatisfiedError(RuleViolation):
+    code = "investigation_requirement_already_satisfied"
+
+
 class ActionMismatchError(RuleViolation):
     code = "action_mismatch"
 

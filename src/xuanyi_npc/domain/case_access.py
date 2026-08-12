@@ -24,6 +24,7 @@ class PermissionInvestigation(CaseAccessModel):
     required_skill_id: Identifier | None = None
     minimum_skill_level: int = 0
     required_clue_ids: frozenset[Identifier] = Field(default_factory=frozenset)
+    satisfies_requirement_id: Identifier
 
 
 class CaseAccessPolicy(CaseAccessModel):

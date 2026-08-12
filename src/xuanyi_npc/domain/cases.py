@@ -90,6 +90,13 @@ class InvestigationDefinition(DomainModel):
         return self
 
 
+class InvestigationRequirement(DomainModel):
+    requirement_id: Identifier
+    satisfying_investigation_ids: frozenset[Identifier] = Field(min_length=1)
+    minimum_required: Literal[1] = 1
+    public_description: NonEmptyText
+
+
 class TreatmentDefinition(DomainModel):
     treatment_id: Identifier
     public_description: NonEmptyText
@@ -130,6 +137,7 @@ class CaseDefinition(DomainModel):
     causal_chain: tuple[NonEmptyText, ...] = Field(min_length=1)
     clues: dict[Identifier, ClueDefinition] = Field(min_length=1)
     investigations: tuple[InvestigationDefinition, ...] = Field(min_length=1)
+    investigation_requirements: tuple[InvestigationRequirement, ...] = ()
     diagnosis_candidates: dict[Identifier, DiagnosisCandidateDefinition] = Field(
         min_length=2
     )
@@ -159,6 +167,20 @@ class CaseDefinition(DomainModel):
                 raise ValueError(
                     f"investigation {investigation.investigation_id!r} references unknown clues"
                 )
+
+        if self.investigation_requirements:
+            requirement_ids = tuple(item.requirement_id for item in self.investigation_requirements)
+            if len(requirement_ids) != len(set(requirement_ids)):
+                raise ValueError("investigation requirement ids must be unique")
+            members: set[str] = set()
+            for requirement in self.investigation_requirements:
+                if not requirement.satisfying_investigation_ids.issubset(investigation_ids):
+                    raise ValueError("investigation requirement references unknown investigation")
+                if members.intersection(requirement.satisfying_investigation_ids):
+                    raise ValueError("investigation requirements cannot overlap")
+                members.update(requirement.satisfying_investigation_ids)
+            if members != investigation_ids:
+                raise ValueError("explicit investigation requirements must cover every investigation")
 
         resolved_treatments = 0
         for key, treatment in self.treatments.items():
@@ -193,6 +215,31 @@ class CaseDefinition(DomainModel):
             raise ValueError("hint levels must contain exactly 1, 2, and 3")
 
         return self
+
+    def normalized_investigation_requirements(self) -> tuple[InvestigationRequirement, ...]:
+        if self.investigation_requirements:
+            return self.investigation_requirements
+        return tuple(
+            InvestigationRequirement(
+                requirement_id=f"requirement_{item.investigation_id}",
+                satisfying_investigation_ids=frozenset({item.investigation_id}),
+                public_description=item.public_description,
+            )
+            for item in self.investigations
+        )
+
+    def requirement_for(self, investigation_id: str) -> InvestigationRequirement:
+        return next(
+            item for item in self.normalized_investigation_requirements()
+            if investigation_id in item.satisfying_investigation_ids
+        )
+
+    def satisfied_requirement_ids(self, session: "CaseSessionState") -> frozenset[str]:
+        performed = {item.reference_id for item in session.action_history if item.action_type in INVESTIGATION_ACTIONS}
+        return frozenset(
+            item.requirement_id for item in self.normalized_investigation_requirements()
+            if len(item.satisfying_investigation_ids.intersection(performed)) >= item.minimum_required
+        )
 
 
 class ActionRecord(DomainModel):

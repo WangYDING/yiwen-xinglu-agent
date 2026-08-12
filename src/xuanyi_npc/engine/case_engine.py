@@ -26,6 +26,7 @@ from .errors import (
     DiagnosisRequiredError,
     EvidenceNotDiscoveredError,
     InvestigationAlreadyCompletedError,
+    InvestigationRequirementAlreadySatisfiedError,
     InsufficientSkillError,
     MissingCluePrerequisiteError,
     SessionClosedError,
@@ -106,6 +107,11 @@ class CaseEngine:
         ):
             raise InvestigationAlreadyCompletedError(
                 f"investigation already completed: {command.investigation_id}"
+            )
+        requirement = case.requirement_for(investigation.investigation_id)
+        if requirement.requirement_id in case.satisfied_requirement_ids(session):
+            raise InvestigationRequirementAlreadySatisfiedError(
+                f"investigation requirement already satisfied: {requirement.requirement_id}"
             )
 
         self._validate_skill(
