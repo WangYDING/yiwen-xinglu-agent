@@ -1,0 +1,26 @@
+{
+  "contract_id":"product_acceptance_v1","version":"v1","status_on_offline_pass":"r6_in_progress",
+  "gates":[
+    {"gate_id":"product_completeness","requirements":["1名导师与1名持续成长弟子","6项能力与3维关系","6病例与6核心课程","3补课、1正式考试、1完整传承链","结构化长期记忆、本地医馆、退出恢复和完整回放"]},
+    {"gate_id":"mentor_experience","requirements":["玩家行动且导师不代解","导师解释课程原因并引用至少三类可信历史","错误对应补课","解释能力、关系、考试和传承结果","不泄露答案、秘密权限或隐藏病例信息"]},
+    {"gate_id":"engineering_safety","requirements":["规则拒绝零领域写入且跨玩家隔离","当前Episode不冒充长期记忆","权限过滤先于Prompt与资源读取","考试答案不进入导师上下文且模型不能绕过传承","事件连续可回放且pending可协调","页面转义、ID路径不可越权、loopback正常退出"]},
+    {"gate_id":"stability","requirements":["Fake完整路线两次结果一致","六病例完成且规范化状态事件哈希一致","重复提交幂等","两个独立进程恢复","并行双玩家不串扰","仓库外wheel干净安装"]},
+    {"gate_id":"truthfulness_boundary","requirements":["离线确定性、Fake、单次真实模型、真人试玩分别报告","单次Pilot不称成功率","Fake不称真实Agent效果","少量试玩不称用户收益证明","生产能力未验证时必须明确"]}
+  ],
+  "routes":[
+    {"route_id":"route_1","title":"优秀完整主线","assertions":["六案resolved/100","六课完成且无补课残留","考试通过且传承单次授予","至少三类可信历史","所有变化有来源"]},
+    {"route_id":"route_2","title":"错误诊断与补课","assertions":["错误不增加辨证能力","产生改进证据并推荐辨证补课","补课不增加能力且后续表现证明改善","最终恢复主线"]},
+    {"route_id":"route_3","title":"危险处置与守则","assertions":["危险结局按R1改变关系","守则补课优先且不可跳过","导师不称危险结果为成功"]},
+    {"route_id":"route_4","title":"考试失败与重考","assertions":["失败attempt永久保留","补课前禁止重考","补课后新attempt通过","认可不重复增加"]},
+    {"route_id":"route_5","title":"传承拒绝与授予","assertions":["拒绝返回公开类别且零权限写入","补足条件后授予","重复申请不重复授予"]},
+    {"route_id":"route_6","title":"无传承普通结局","assertions":["专属调查不可见","普通路径resolved/100","不泄露传承且满分不降低"]},
+    {"route_id":"route_7","title":"有传承可选路径","assertions":["额外调查合法可见","不自动诊断或处置","真相终态与普通路径一致"]},
+    {"route_id":"route_8","title":"双玩家隔离","assertions":["成长教学记忆考试权限传承隔离","猜测标识全部拒绝","拒绝零写入"]}
+  ],
+  "determinism":{"runs":2,"normalized_streams":["case_events","apprenticeship_events","teaching_events","memory_receipts","exam_events","permission_events","inheritance_events","public_state","route_classification","safety_counts"],"allowed_differences":["run_directory","wall_clock","process_id"],"hashes_must_match":true},
+  "real_pilot_scenarios":["initial_lesson_hint","wrong_diagnosis_remediation","exam_failure_explanation","inheritance_refusal_and_grant"],
+  "real_pilot_budget_cny":0.05,"playtest_versions_minutes":[15,45],"playtest_recommended_people":"3-5",
+  "release_blockers":["cannot_start","operation_not_understood","save_lost","answer_leak","mentor_acts_for_player","growth_explanation_wrong","cross_player_leak","exam_inheritance_state_wrong"],
+  "forbidden_claim_conflations":["离线通过不等于R6完成","Fake结果不等于真实模型效果","探索性试玩不等于统计用户收益"],
+  "prohibited_external_actions":["deepseek_models","deepseek_chat","bge_load","embedding","external_network","contact_playtester","remote_repository","push","tag","release","public_deploy"]
+}

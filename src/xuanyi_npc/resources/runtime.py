@@ -59,6 +59,9 @@ R5_RUNTIME_RESOURCES = (
     "clinic/clinic.css",
     "clinic/clinic.js",
 )
+R6_RUNTIME_RESOURCES = (
+    "acceptance/product_acceptance_v1.json",
+)
 ALLOWED_RUNTIME_RESOURCES = frozenset(
     {
         *(f"cases/{name}" for name in CASE_RESOURCE_NAMES),
@@ -71,6 +74,7 @@ ALLOWED_RUNTIME_RESOURCES = frozenset(
         *(f"curriculum/{name}" for name in R3_CURRICULUM_RESOURCE_NAMES),
         *R4_RUNTIME_RESOURCES,
         *R5_RUNTIME_RESOURCES,
+        *R6_RUNTIME_RESOURCES,
     }
 )
 
