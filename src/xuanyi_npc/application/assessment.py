@@ -149,6 +149,8 @@ class AssessmentBuilder:
         if session.submitted_diagnosis_id != "evil_spirit_attack":
             completed.append("avoid_prejudging_anomaly")
         objective_ids = tuple(item.objective_id for item in lesson.learning_objectives)
+        if session.outcome is TreatmentOutcome.RESOLVED and diagnosis_positive:
+            completed.extend(objective_ids)
         completed_ordered = tuple(item for item in objective_ids if item in completed)
         missed = tuple(item for item in objective_ids if item not in completed)
         public_refs = tuple(sorted(diagnosis.evidence_clue_ids)) if diagnosis else ()

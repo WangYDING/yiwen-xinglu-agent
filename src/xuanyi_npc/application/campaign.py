@@ -282,9 +282,9 @@ class CampaignRuleSet:
         recommended_ids = {
             entry.case_id for entry in self.config.recommended_case_order
         }
-        if recommended_ids != catalog_ids:
+        if not recommended_ids or not recommended_ids.issubset(catalog_ids):
             raise CampaignRuleConfigurationError(
-                "recommended case order must cover the trusted catalog exactly"
+                "recommended case order must be a non-empty trusted catalog subset"
             )
         for context in self.config.target_case_contexts:
             self._require_case(context.case_id)

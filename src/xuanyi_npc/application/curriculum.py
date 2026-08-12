@@ -36,6 +36,9 @@ CORE_RESOURCE_NAMES = (
     "evidence_before_diagnosis_v1.json",
     "provenance_before_intent_v1.json",
     "corroborate_before_handoff_v1.json",
+    "cross_check_conflicting_testimony_v1.json",
+    "bounded_treatment_and_consequence_v1.json",
+    "integrated_causal_reasoning_v1.json",
 )
 REMEDIATION_RESOURCE_NAMES = (
     "remediate_evidence_completeness_v1.json",

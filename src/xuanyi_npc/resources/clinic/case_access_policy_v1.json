@@ -1,0 +1,7 @@
+{
+  "policy_id":"case_access_policy_v1","version":"v1","permission_investigations":[{
+    "case_id":"returning_contract_nameless_shrine","investigation_id":"trace_contract_handoff_with_inheritance","action_type":"investigate_location","target_id":"return_contract_ritual_trace","public_description":"运用已获授的‘溯契还因’沿公开契痕核对三段交接，得到与旧拓片等价的见证顺序线索。",
+    "reveals_clue_ids":["hidden_witness_rubbing"],"required_permission":"INHERITANCE","required_skill_id":"inspect_object","minimum_skill_level":20,
+    "required_clue_ids":["stele_layered_names","contract_handoff_marks","qi_returns_to_blank_line"]
+  }]
+}

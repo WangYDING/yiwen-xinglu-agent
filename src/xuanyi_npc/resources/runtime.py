@@ -18,6 +18,11 @@ CASE_RESOURCE_NAMES = (
     "moon_well_echo.json",
     "old_paper_umbrella.json",
 )
+ADVANCED_CASE_RESOURCE_NAMES = (
+    "lantern_alley_conflicting_testimony.json",
+    "mist_ferry_borrowed_lantern.json",
+    "returning_contract_nameless_shrine.json",
+)
 CAMPAIGN_RESOURCE_NAME = "cross_episode_rules_v1.json"
 M5_HISTORY_RESOURCE_NAME = "m5_history_evidence_v1.json"
 DEEPSEEK_POLICY_RESOURCE_NAME = "deepseek_v4_flash_pilot_policy_2026-08-07.json"
@@ -41,9 +46,20 @@ R4_RUNTIME_RESOURCES = (
     "inheritance/trace_vow_restore_v1.json",
     "inheritance/r4_acceptance_v1.json",
 )
+R5_RUNTIME_RESOURCES = (
+    "curriculum/curriculum_selection_v2.json",
+    "curriculum/cross_check_conflicting_testimony_v1.json",
+    "curriculum/bounded_treatment_and_consequence_v1.json",
+    "curriculum/integrated_causal_reasoning_v1.json",
+    "clinic/clinic_contract_v1.json",
+    "clinic/r5_acceptance_v1.json",
+    "clinic/case_access_policy_v1.json",
+    "campaign/cross_episode_rules_v2.json",
+)
 ALLOWED_RUNTIME_RESOURCES = frozenset(
     {
         *(f"cases/{name}" for name in CASE_RESOURCE_NAMES),
+        *(f"cases/{name}" for name in ADVANCED_CASE_RESOURCE_NAMES),
         f"campaign/{CAMPAIGN_RESOURCE_NAME}",
         f"release/{M5_HISTORY_RESOURCE_NAME}",
         f"pilot/{DEEPSEEK_POLICY_RESOURCE_NAME}",
@@ -51,6 +67,7 @@ ALLOWED_RUNTIME_RESOURCES = frozenset(
         f"mentor/{MENTOR_PROFILE_RESOURCE_NAME}",
         *(f"curriculum/{name}" for name in R3_CURRICULUM_RESOURCE_NAMES),
         *R4_RUNTIME_RESOURCES,
+        *R5_RUNTIME_RESOURCES,
     }
 )
 
