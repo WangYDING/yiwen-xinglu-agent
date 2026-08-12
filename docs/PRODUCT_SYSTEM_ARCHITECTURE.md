@@ -205,7 +205,8 @@ M0～M6 继续作为不可改写的历史工程里程碑。新的产品实现主
 5. R5：六病例与医馆入口（已完成）；
 6. R6：产品验收与发布准备。
 
-R1～R5 已完成；R6 尚未开始。R4 的 `ExamSessionState` 保存不可修改的考试 attempt；唯一 `PermissionState` 派生阶段、资格、权限、考试认可和传承。R5 的 `ClinicService` 只组合正式服务与安全公开视图，不成为新权威状态。权限过滤先于资源读取、导师上下文和结构化记忆选择；TeachingSession/TeachingPlan 与 R1 成长权威仍保持独立。
+R1～R5 已完成；R6 正在进行离线验收。R4 的 `ExamSessionState` 保存不可修改的考试 attempt；唯一 `PermissionState` 派生阶段、资格、权限、考试认可和传承。R5 的 `ClinicService` 只组合正式服务与安全公开视图，不成为新权威状态。权限过滤先于资源读取、导师上下文和结构化记忆选择；TeachingSession/TeachingPlan 与 R1 成长权威仍保持独立。
+R6 离线验收器只在隔离临时目录读取冻结包资源，并输出到显式 Git 忽略目录；它不成为产品权威，不导入付费模型或 Embedding 适配器。R6整体仍进行中。
 
 该顺序仅调整模块依赖。R1 不包含导师 Agent、教学、考试或传承，也不得让长期成长提前参与病例执行或 Prompt；关键状态仍只由确定性规则和领域事件写入。
 

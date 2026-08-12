@@ -18,6 +18,7 @@ Semantic memory remains disabled after failing its quality gate; current reprodu
 - **玩家行动、导师教学**：[R2 教学闭环](docs/R2_MENTOR_TEACHING_LOOP.md)让玩家亲自完成旧纸伞；玄医先生只布置固定课程、一次反思、最多两次可信提示和病例后师评，并解释 R1 的能力与关系变化。
 - **考试、权限与传承**：[R4 完整传承链](docs/R4_EXAM_PERMISSION_INHERITANCE.md)提供规则评分的六题正式考试、失败补课重考、先过滤权限和“溯契还因”单传承；导师不能看答案或自行授予。
 - **普通用户医馆入口**：[R5 本地产品](docs/R5_SIX_CASE_CLINIC_PRODUCT.md)组合六病例、教学、考试、传承、师评与恢复，仅绑定 `127.0.0.1`。
+- **R6 状态如实分层**：[离线验收](docs/R6_OFFLINE_PRODUCT_ACCEPTANCE.md)不等于真实模型或真人试玩通过；真实 Pilot、真人试玩和远程发布均未执行。
 - **模型不能直接改状态**：严格 `AgentAction`、公开行动契约、确定性规则和事件写入共同构成安全边界；[9 个 MCP 工具](docs/M3_EXIT_AUDIT.md)复用同一应用服务。
 - **保留真实失败**：[P4b 未闭环](docs/M5_P4B_DEEPSEEK_CAMPAIGN_PILOT_20260811.md)与 [P4d 单次 5/5 行动修复](docs/M5_P4D_DEEPSEEK_RECOVERY_VALIDATION_20260811.md)并列；Dense 语义记忆未过质量门禁后默认关闭，而不是包装成成功。
 

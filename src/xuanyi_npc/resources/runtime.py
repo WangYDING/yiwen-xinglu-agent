@@ -61,6 +61,7 @@ R5_RUNTIME_RESOURCES = (
 )
 R6_RUNTIME_RESOURCES = (
     "acceptance/product_acceptance_v1.json",
+    "acceptance/real_mentor_pilot_v1.json",
 )
 ALLOWED_RUNTIME_RESOURCES = frozenset(
     {

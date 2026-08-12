@@ -61,7 +61,7 @@ Word 设计总结、`xuanyi-npc-handoff` 和 `docs/algorithm-experiment-plan-v0.
 | M6-P3：两类岗位求职材料 | 已暂停 | 等待产品总纲审计和新增产品主线形成真实证据后再决定是否恢复 |
 | M6-P4：最终发布检查 | 已暂停 | 远程、推送、Tag、Release 和发布全部暂停；即使恢复也需要用户再次明确授权 |
 | 产品主题与总体架构冻结 | 已完成 | 《问道医途》总纲、产品系统架构、M5 产品差距审计和总体主题回归 ADR 成为后续依据 |
-| Product Completion Plan v1：R1～R6 | R1～R4 已完成；R5～R6 未开始 | 已建立确定性成长、三病例教学、正式考试、补课重考、权限过滤与第一条传承；下一阶段扩展六病例与医馆入口 |
+| Product Completion Plan v1：R1～R6 | R1～R5 已完成；R6进行中 | 已完成六病例医馆；R6离线冻结、验收和外部验证准备已执行，真实模型、真人试玩与发布尚未执行 |
 
 ## M0～M6 历史结论与 Product Completion Plan v1
 

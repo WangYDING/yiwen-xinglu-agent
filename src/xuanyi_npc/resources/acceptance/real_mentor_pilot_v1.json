@@ -1,0 +1,12 @@
+{
+  "pilot_id":"real_mentor_pilot_v1","status":"prepared_not_run","model":"deepseek-chat","budget_cny":0.05,
+  "requires_confirm_paid_run":true,"models_call_limit":1,"chat_calls_per_scenario":1,"contract_repair_limit":1,"automatic_round_retry_limit":0,"timeout_seconds":30,"freeze_if_usage_unverifiable":true,
+  "scenarios":[
+    {"scenario_id":"initial_lesson_hint","fixture":"old_paper_umbrella_lesson_start","expected":"课程与一次公开提示，不泄露答案"},
+    {"scenario_id":"wrong_diagnosis_remediation","fixture":"frozen_wrong_diagnosis_state","expected":"解释问题并保持规则补课决定"},
+    {"scenario_id":"exam_failure_explanation","fixture":"frozen_failed_exam_result","expected":"解释失败和补课，不接触答案或改分"},
+    {"scenario_id":"inheritance_refusal_and_grant","fixture":"frozen_two_permission_states","expected":"分别解释拒绝和授予，不泄露隐藏门槛"}
+  ],
+  "admission":["all_complete","json_schema_valid","repair_at_most_once","zero_case_tools","zero_state_writes","zero_hidden_leaks","zero_permission_bypass","zero_answer_leaks","rule_decisions_unchanged","history_sources_authoritative"],
+  "result_language":"单次四场景仅称工程案例验证，不称成功率。","raw_results":"git_ignored","prompt_persistence":"forbidden","api_key_output":"forbidden"
+}

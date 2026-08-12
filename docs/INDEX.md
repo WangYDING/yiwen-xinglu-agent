@@ -14,6 +14,10 @@
 - [`R5_SIX_CASE_CLINIC_PRODUCT.md`](R5_SIX_CASE_CLINIC_PRODUCT.md)：R5 六病例、组合式医馆服务、安全边界与传承作用。
 - [`R5_CASE_DESIGN.md`](R5_CASE_DESIGN.md)：三个进阶病例及课程设计。
 - [`R5_CLINIC_USER_GUIDE.md`](R5_CLINIC_USER_GUIDE.md)：普通用户启动、游玩、退出和恢复指南。
+- [`R6_OFFLINE_PRODUCT_ACCEPTANCE.md`](R6_OFFLINE_PRODUCT_ACCEPTANCE.md)：八路线、确定性重复运行与真实性分层。
+- [`R6_REAL_MENTOR_PILOT_PLAN.md`](R6_REAL_MENTOR_PILOT_PLAN.md)：未来付费 Pilot 的四场景和硬门禁；未运行。
+- [`R6_PLAYTEST_PROTOCOL.md`](R6_PLAYTEST_PROTOCOL.md)：15/45分钟试玩材料、数据最小化与严重问题门槛；未执行。
+- [`R6_RELEASE_READINESS_AUDIT.md`](R6_RELEASE_READINESS_AUDIT.md)：发布前离线审计和仍存在的发布阻塞项。
 - [`M5_PRODUCT_GAP_AUDIT.md`](M5_PRODUCT_GAP_AUDIT.md)：按 L0～L5 重新审计 M5 的产品成熟度、缺口和下一验收条件。
 - [`ROADMAP.md`](ROADMAP.md)：区分 M0～M6 历史与 Product Completion Plan v1 的 R1～R6 主线。
 
