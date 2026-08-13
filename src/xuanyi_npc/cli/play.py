@@ -72,6 +72,7 @@ from xuanyi_npc.resources.runtime import (
     PackageResourceError,
     materialized_runtime_resources,
 )
+from xuanyi_npc.application.public_presentation import PUBLIC_PRESENTATION
 
 
 class PlayConfigurationError(ValueError):
@@ -281,7 +282,7 @@ class PlayCLI:
             return None
         self._print("\n玩家列表")
         for index, player in enumerate(result.players, start=1):
-            self._print(f"{index}. {player.display_name}（{player.player_id}）")
+            self._print(f"{index}. {player.display_name}")
         self._print("0. 返回")
         choice = self._read("请选择玩家：")
         index = self._menu_index(choice, len(result.players))
@@ -326,12 +327,12 @@ class PlayCLI:
     def _show_r4_status(self, player_id: str) -> None:
         view = self.permission_coordinator.public_view(player_id)
         self._print("\n师门进度")
-        self._print(f"教学阶段：{view.teaching_stage.value}")
+        self._print(f"教学阶段：{PUBLIC_PRESENTATION.name('stage',view.teaching_stage.value)}")
         self._print(f"考试资格：{'已获得' if view.exam_eligible else '尚未获得'}")
-        self._print("当前权限：" + "、".join(item.value for item in view.permissions))
+        self._print("当前权限：" + "、".join(PUBLIC_PRESENTATION.name('permission',item.value) for item in view.permissions))
         self._print(f"当前认可（含考试认可）：{view.effective_recognition}")
         if view.granted_inheritance_ids:
-            self._print("已授予传承：" + "、".join(view.granted_inheritance_ids))
+            self._print("已授予传承：" + "、".join(PUBLIC_PRESENTATION.name('inheritance',item) for item in view.granted_inheritance_ids))
         else:
             self._print("已授予传承：暂无")
 
@@ -367,7 +368,7 @@ class PlayCLI:
             self._print(result.message)
             self._print(f"考试得分：{public.total_score}｜结果：{'通过' if public.passed else '未通过'}")
             if public.required_remediation_ids:
-                self._print("重考前补课：" + "、".join(public.required_remediation_ids))
+                self._print("重考前补课：" + "、".join(PUBLIC_PRESENTATION.name('remediation',item) for item in public.required_remediation_ids))
         except ExamServiceError as exc:
             self._print(str(exc))
 
@@ -398,17 +399,17 @@ class PlayCLI:
             teaching_plan = self.teaching_service.plan_service.ensure(player_id)
             recommendation = teaching_plan.current_recommendation
             if recommendation is not None:
-                self._print(f"教学推荐：{recommendation.recommendation_id}")
-                self._print("推荐原因：" + "、".join(recommendation.reason_codes))
+                self._print(f"教学推荐：{PUBLIC_PRESENTATION.recommendation_name(recommendation.kind.value,recommendation.recommendation_id)}")
+                self._print("推荐原因：" + "、".join(PUBLIC_PRESENTATION.name('reason',item,fallback='根据当前学习进度安排') for item in recommendation.reason_codes))
                 if recommendation.kind.value == "core_lesson":
                     recommended_lesson_id = recommendation.recommendation_id
                 elif recommendation.kind.value == "remediation":
-                    self._print("未解决补课：" + recommendation.recommendation_id)
+                    self._print("未解决补课：" + PUBLIC_PRESENTATION.name('remediation',recommendation.recommendation_id))
             completed = set(teaching_plan.completed_core_lessons)
             self._print("三门核心课程：")
             for lesson_id in self.teaching_service.curriculum.policy.core_lesson_order:
                 marker = "已完成" if lesson_id in completed else "未完成"
-                self._print(f"- {lesson_id}：{marker}")
+                self._print(f"- {PUBLIC_PRESENTATION.name('lesson',lesson_id)}：{marker}")
         for index, case in enumerate(visible_cases, start=1):
             status = {
                 CasePlayStatus.AVAILABLE: "可开始",
@@ -679,7 +680,7 @@ class PlayCLI:
             return
         report = result.state.assessment
         self._print("结构化师评")
-        self._print(f"结局：{report.outcome.value}｜得分：{report.final_score}")
+        self._print(f"结局：{PUBLIC_PRESENTATION.name('outcome',report.outcome.value)}｜得分：{report.final_score}")
         self._print(f"使用提示：{len(report.hints_used)} 次")
         if report.completed_objectives:
             self._print("完成目标：" + "、".join(report.completed_objectives))
@@ -687,10 +688,10 @@ class PlayCLI:
             self._print("待改进目标：" + "、".join(report.missed_objectives))
         self._print("R1 能力变化：")
         for change in report.ability_changes:
-            self._print(f"- {change.ability_id.value}：{change.proficiency_before} → {change.proficiency_after}")
+            self._print(f"- {PUBLIC_PRESENTATION.name('ability',change.ability_id.value)}：{change.proficiency_before} → {change.proficiency_after}")
         self._print("R1 关系变化：")
         for change in report.relationship_changes:
-            self._print(f"- {change.dimension.value}：{change.value_before} → {change.value_after}")
+            self._print(f"- {PUBLIC_PRESENTATION.name('relationship',change.dimension.value)}：{change.value_before} → {change.value_after}")
         if result.state.mentor_review is not None:
             self._print(f"玄医先生：{result.state.mentor_review.message}")
         review_event = next(
@@ -702,8 +703,8 @@ class PlayCLI:
         if self.teaching_service is not None:
             plan = self.teaching_service.plan_service.ensure(report.player_id)
             if plan.current_recommendation is not None:
-                self._print(f"当前推荐：{plan.current_recommendation.recommendation_id}")
-                self._print("推荐原因：" + "、".join(plan.recommendation_reason_codes))
+                self._print(f"当前推荐：{PUBLIC_PRESENTATION.recommendation_name(plan.current_recommendation.kind.value,plan.current_recommendation.recommendation_id)}")
+                self._print("推荐原因：" + "、".join(PUBLIC_PRESENTATION.name('reason',item,fallback='根据当前学习进度安排') for item in plan.recommendation_reason_codes))
 
     def _run_remediation(self, player_id: str, remediation_id: str) -> None:
         definition = self.teaching_service.curriculum.remediations[remediation_id]
@@ -781,11 +782,15 @@ class PlayCLI:
             )
         )
         for step in result.episode_result.steps:
-            tool = (
-                step.action.tool_call.name.value
-                if step.action.tool_call is not None
-                else step.action.action_type.value
-            )
+            tool_names = {
+                "investigate": "调查",
+                "submit_diagnosis": "提交辨证",
+                "execute_treatment": "执行处置",
+                "respond": "回应",
+                "use_tool": "执行病例行动",
+            }
+            internal_tool = (step.action.tool_call.name.value if step.action.tool_call is not None else step.action.action_type.value)
+            tool = tool_names.get(internal_tool, "病例行动")
             outcome = "已执行" if step.accepted else f"被拒绝：{step.error_code}"
             self._print(f"第 {step.step_index} 步｜{tool}｜{outcome}")
         self._print_episode_result(result.public_result)
@@ -805,7 +810,7 @@ class PlayCLI:
             self._print("已完成病例：")
             for case in view.completed_cases:
                 self._print(
-                    f"- {case.title}｜结局：{case.outcome.value}｜得分：{case.score}"
+                    f"- {case.title}｜结局：{PUBLIC_PRESENTATION.name('outcome',case.outcome.value)}｜得分：{case.score}"
                 )
         else:
             self._print("已完成病例：暂无")
@@ -871,15 +876,17 @@ class PlayCLI:
             self._print(result.message)
             return
         self._print("\n病例公开结果")
-        self._print(f"状态：{episode.status.value}")
+        self._print(f"状态：{PUBLIC_PRESENTATION.name('case_status', episode.status.value, fallback='状态已更新')}")
         if episode.outcome is not None:
-            self._print(f"结局：{episode.outcome.value}")
+            self._print(f"结局：{PUBLIC_PRESENTATION.name('outcome', episode.outcome.value)}")
         if episode.score is not None:
             self._print(f"得分：{episode.score}")
         if episode.submitted_diagnosis_id is not None:
-            self._print(f"已提交诊断：{episode.submitted_diagnosis_id}")
+            diagnosis = next((item.public_description for item in (result.action_options.diagnoses if result.action_options else ()) if item.diagnosis_id == episode.submitted_diagnosis_id), "已记录的公开辨证")
+            self._print(f"已提交辨证：{diagnosis}")
         if episode.selected_treatment_id is not None:
-            self._print(f"已执行处置：{episode.selected_treatment_id}")
+            treatment = next((item.public_description for item in (result.action_options.treatments if result.action_options else ()) if item.treatment_id == episode.selected_treatment_id), "已记录的公开处置")
+            self._print(f"已执行处置：{treatment}")
 
     def _print_growth(self, result: MultiCaseServiceResult) -> None:
         if (

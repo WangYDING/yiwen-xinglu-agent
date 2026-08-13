@@ -17,7 +17,7 @@ Current reproducibility evidence is limited to Windows and Python 3.12.
 - **玩家行动、导师教学**：[R2～R3 教学闭环](docs/R3_ADAPTIVE_THREE_CASE_TEACHING.md)让玩家亲自处理病例；玄医先生负责课程、反思、有限可信提示、病例后师评和结构化历史引用，不替玩家操作病例。
 - **考试、权限与传承**：[R4 完整传承链](docs/R4_EXAM_PERMISSION_INHERITANCE.md)提供规则评分的六题正式考试、失败补课重考、先过滤权限和“溯契还因”单传承；导师不能看答案或自行授予。
 - **普通用户医馆入口**：[R5 本地产品](docs/R5_SIX_CASE_CLINIC_PRODUCT.md)组合六病例、教学、考试、传承、师评与恢复，仅绑定 `127.0.0.1`。
-- **R6 状态如实分层**：[离线验收](docs/R6_OFFLINE_PRODUCT_ACCEPTANCE.md)不等于真实模型或真人试玩通过；v2 Pilot 已运行但未过准入，v3 五请求工程案例已通过，[真实导师医馆模式](docs/R6_REAL_MENTOR_CLINIC_INTEGRATION.md)仅完成离线装配，真实医馆烟雾、真人试玩和远程发布均未执行。
+- **R6 状态如实分层**：[离线验收](docs/R6_OFFLINE_PRODUCT_ACCEPTANCE.md)不等于真实模型或真人试玩通过；v2 Pilot 已运行但未过准入，v3 五请求工程案例及真实医馆五请求烟雾已完成；烟雾发现的内部 ID 展示缺陷已[离线修复](docs/R6_PUBLIC_PRESENTATION_BOUNDARY.md)，真人试玩和远程发布仍未执行。
 - **模型不能直接改状态**：MentorAgent 只能提交受限 `MentorAction`；病例事实、师评、成长、考试、权限和传承均由确定性规则持有。历史 DoctorAgent/MCP 安全契约保留为工程证据。
 - **保留真实失败**：历史 DoctorAgent Pilot 与 Dense 语义检索的正负结果继续可审计，但不作为导师效果或玩家收益证据；Dense 语义记忆未过质量门禁后默认关闭。
 
@@ -100,7 +100,7 @@ New-Item -ItemType Directory -Force .\runtime_data\play | Out-Null
 | 玩家行动与独立 MentorAgent 教学边界 | [R2 教学闭环](docs/R2_MENTOR_TEACHING_LOOP.md) |
 | 确定性成长、课程与结构化导师记忆 | [R1 成长](docs/R1_APPRENTICESHIP_GROWTH.md)、[R3 教学](docs/R3_ADAPTIVE_THREE_CASE_TEACHING.md) |
 | R4 正式考试、权限过滤、两进程恢复与单传承链 | [R4 实现与审计](docs/R4_EXAM_PERMISSION_INHERITANCE.md) |
-| R6 八路线离线验收通过；v3 真实导师工程案例通过；医馆真实模式仅离线装配 | [R6 离线验收](docs/R6_OFFLINE_PRODUCT_ACCEPTANCE.md)、[医馆集成](docs/R6_REAL_MENTOR_CLINIC_INTEGRATION.md) |
+| R6 八路线离线验收通过；v3 真实导师工程案例及医馆五请求烟雾完成；内部 ID 展示缺陷已离线修复 | [R6 离线验收](docs/R6_OFFLINE_PRODUCT_ACCEPTANCE.md)、[烟雾结果](docs/R6_REAL_MENTOR_CLINIC_SMOKE_RESULT.md)、[公开展示边界](docs/R6_PUBLIC_PRESENTATION_BOUNDARY.md) |
 | 历史 DoctorAgent 与 BGE 正负结果 | [文档导航](docs/INDEX.md)；不作为导师效果指标 |
 
 本地复验命令：
@@ -138,4 +138,4 @@ New-Item -ItemType Directory -Force .\results\r6_local | Out-Null
 - [R6 发布前审计](docs/R6_RELEASE_READINESS_AUDIT.md)
 - [历史技术总览（原 README 详细内容）](docs/TECHNICAL_OVERVIEW.md)
 
-当前没有远程仓库、Tag 或 Release。R6 已完成离线验收和 v3 单次工程案例；真实导师医馆烟雾、真人试玩和正式发布仍未执行。
+当前没有远程仓库、Tag 或 Release。R6 已完成离线验收、v3 单次工程案例和真实导师医馆五请求烟雾；烟雾暴露的内部 ID 问题已离线修复，但真人试玩和正式发布仍未执行。

@@ -10,6 +10,7 @@ from xuanyi_npc.domain.structured_memory import RetrievedStructuredMemory
 from xuanyi_npc.memory.contracts import StructuredTeachingPublicPayload
 from xuanyi_npc.memory.projection import DeterministicMemoryProjector
 from xuanyi_npc.storage.sqlite_memory import SQLiteMemoryRepository
+from xuanyi_npc.application.public_presentation import PUBLIC_PRESENTATION
 
 
 STRUCTURED_PROJECTION_VERSION = "structured_teaching_memory_v1"
@@ -24,7 +25,7 @@ class StructuredTeachingMemoryProjector:
             (
                 StructuredTeachingMemoryType.CASE_EXPERIENCE,
                 StructuredMemorySourceType.CASE_COMPLETION,
-                f"你曾完成病例 {report.case_id}，公开结局为 {report.outcome.value}。",
+                f"你曾完成一则病例，公开结局为{PUBLIC_PRESENTATION.name('outcome', report.outcome.value)}。",
                 "prior_case_completion",
                 (),
             ),
@@ -40,7 +41,7 @@ class StructuredTeachingMemoryProjector:
             (
                 StructuredTeachingMemoryType.ABILITY_STRENGTH,
                 StructuredMemorySourceType.ABILITY_EVIDENCE,
-                f"你此前在能力 {ability.value} 上有已提交的良好表现。",
+                f"你此前在{PUBLIC_PRESENTATION.name('ability', ability.value)}方面有已提交的良好表现。",
                 "demonstrated_ability_history",
                 (ability.value,),
             )
@@ -50,7 +51,7 @@ class StructuredTeachingMemoryProjector:
             (
                 StructuredTeachingMemoryType.LEARNING_PATTERN,
                 StructuredMemorySourceType.ABILITY_EVIDENCE,
-                f"你此前在能力 {ability.value} 上仍有已提交的改进证据。",
+                f"你此前在{PUBLIC_PRESENTATION.name('ability', ability.value)}方面仍有已提交的改进证据。",
                 "unresolved_ability_history",
                 (ability.value,),
             )
@@ -102,7 +103,7 @@ class StructuredTeachingMemoryProjector:
             structured_memory_type=StructuredTeachingMemoryType.REMEDIATION_HISTORY,
             source_type=StructuredMemorySourceType.REMEDIATION_RESULT,
             source_reference_id=attempt_id,
-            public_summary=f"你已完成固定补课 {remediation_id}；后续病例表现才会形成新的能力证据。",
+            public_summary=f"你已完成{PUBLIC_PRESENTATION.name('remediation', remediation_id)}；后续病例表现才会形成新的能力证据。",
             reason_code="completed_remediation_history",
             ability_ids=tuple(item.value for item in ability_ids),
         )
@@ -211,7 +212,7 @@ class StructuredMentorMemorySelector:
                         RetrievedStructuredMemory(
                             memory_id=record.memory_id,
                             memory_type=payload.structured_memory_type,
-                            public_summary=payload.public_summary,
+                            public_summary=PUBLIC_PRESENTATION.sanitize_legacy_text(payload.public_summary),
                             source_case_id=payload.source_case_id,
                             occurred_at=record.occurred_at,
                             reason_code=reason_code,

@@ -23,6 +23,7 @@ from .permissions import PermissionCoordinator
 from .teaching import MentorTeachingService
 from .teaching import CreateTeachingSessionInput, TeachingRequest
 from .clinic_mentor import ClinicMentorMode, ClinicMentorRuntime
+from .public_presentation import PUBLIC_PRESENTATION
 
 
 class ClinicError(ValueError):
@@ -139,12 +140,12 @@ class ClinicService:
         elif request_id=="wrong_diagnosis_remediation_1":
             recommendation=home.current_recommendation.recommendation_id
             if recommendation!="remediate_diagnostic_reasoning_v1":raise ClinicError("mentor_interaction_unavailable","当前没有辨证补课需要解释。")
-            context={"case_title":"旧纸伞","submitted_result":"玩家提交了合法但错误的诊断；辨证能力没有因此增加","public_improvement_area":"reason_diagnosis","deterministic_curriculum_decision":{"remediation_id":recommendation,"title":"辨证改进补课","effect":"补课本身不直接增加能力"}}
+            context={"case_title":"旧纸伞","submitted_result":"玩家提交了合法但错误的诊断；辨证能力没有因此增加","public_improvement_area":PUBLIC_PRESENTATION.public_object("ability","reason_diagnosis"),"assigned_remediation":PUBLIC_PRESENTATION.public_object("remediation",recommendation),"deterministic_curriculum_decision":{"title":PUBLIC_PRESENTATION.name("remediation",recommendation),"effect":"补课本身不直接增加能力"}}
         elif request_id=="exam_failure_explanation_1":
             attempts=sorted((x for x in self.store.list_exam_sessions() if x.player_id==player_id and x.result is not None),key=lambda x:x.attempt_number)
             if not attempts or attempts[-1].result.passed:raise ClinicError("mentor_interaction_unavailable","当前没有考试失败结果需要解释。")
             result=attempts[-1].result
-            context={"exam_result":{"passed":False,"total_score":result.total_score,"critical_failure":result.critical_failure,"improvement_areas":[x.value for x in result.improvement_areas],"required_remediation_ids":list(result.required_remediation_ids)},"deterministic_decision":"考试失败；补课完成前不能重考；分数与通过状态不可由导师修改"}
+            context={"exam_result":{"passed":False,"total_score":result.total_score,"critical_failure":result.critical_failure,"public_improvement_areas":[PUBLIC_PRESENTATION.public_object("ability",x.value) for x in result.improvement_areas],"assigned_remediations":[PUBLIC_PRESENTATION.public_object("remediation",x) for x in result.required_remediation_ids]},"deterministic_decision":"考试失败；补课完成前不能重考；分数与通过状态不可由导师修改"}
         elif request_id=="inheritance_refusal_1":
             decision=self.inheritance.policy.decide(player_id)
             if decision.eligible:raise ClinicError("mentor_interaction_unavailable","当前传承决定不是拒绝。")
@@ -152,7 +153,7 @@ class ClinicService:
         elif request_id=="inheritance_grant_1":
             permission=self.permissions.public_view(player_id)
             if not permission.granted_inheritance_ids:raise ClinicError("mentor_interaction_unavailable","当前尚无已授予传承。")
-            context={"same_player_state":"after_requirements_met","deterministic_decision":"granted_once","public_grant":{"inheritance_title":"溯契还因","permission_level":"inheritance","duplicate_grant":False},"instruction":"解释规则层已经授予；导师语言不创建或重复写入权限"}
+            context={"same_player_state":"after_requirements_met","deterministic_decision":"granted_once","public_grant":{"inheritance_title":"溯契还因","permission_name":PUBLIC_PRESENTATION.name("permission","INHERITANCE"),"duplicate_grant":False},"instruction":"解释规则层已经授予；导师语言不创建或重复写入权限"}
         else:raise ClinicError("mentor_interaction_unplanned","该交互继续使用本地确定性说明。")
         return runtime.express(request_id,context)
 
@@ -180,7 +181,7 @@ class ClinicService:
             teaching_stage=permission.teaching_stage.value,
             current_recommendation=recommendation,
             unresolved_remediations=tuple(item.value for item in plan.unresolved_improvement_areas),
-            abilities=tuple({"ability_id": key.value, "name": value.ability_id.value, "proficiency": value.proficiency} for key, value in apprenticeship.abilities.items()),
+            abilities=tuple({"ability_id": key.value, "name": PUBLIC_PRESENTATION.name("ability", value.ability_id.value), "proficiency": value.proficiency} for key, value in apprenticeship.abilities.items()),
             relationship=apprenticeship.relationship.model_dump(),
             visible_cases=tuple(ClinicCaseView(case_id=item.case_id, title=item.title, synopsis=item.synopsis, status=item.play_status.value, recommended=item.is_recommended_next) for item in cases.cases),
             active_case=active,

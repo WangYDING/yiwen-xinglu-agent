@@ -48,3 +48,7 @@
 原始页面、脱敏运行指标、预算账本和本地状态保存在 Git 忽略目录 `results/r6_real_mentor_clinic_smoke/`。原始证据包 SHA-256：`54e091489d092ea32b9806b56d07de41e2eb201cd380866d0b77bef64c36fdcb`。不提交完整响应、Prompt、API Key、供应商请求 ID、烟雾玩家存档或自由文本。
 
 结论：正式医馆到真实 MentorActionV2 的五类链路、预算跨进程恢复、fallback 边界和权威状态隔离已得到一次工程烟雾证据；内部标识仍会出现在两类玩家页面，需监督窗口另行授权离线产品修复与 Mock 回归后再决定是否进入 3～5 人试玩。真人试玩、BGE/Embedding 和远程发布均未执行。
+
+## 后续离线修复说明（不改写历史观察）
+
+上述内部 ID 暴露是本次烟雾当时真实存在的缺陷，原始证据、SHA、五请求结果和观察表均保持不变。后续版本新增统一公开术语映射与显示前扫描防线，并以 Mock 和保存文本离线重评确认：已知内部 ID 会触发 `presentation_quality_failure` 与确定性公开 fallback，页面、CLI 和结构化记忆投影改用公开名称。该结论不表示烟雾当时通过了展示门槛，也不构成新的真实 API 或真人试玩验证。详见 [`R6_PUBLIC_PRESENTATION_BOUNDARY.md`](R6_PUBLIC_PRESENTATION_BOUNDARY.md)。

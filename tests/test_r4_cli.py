@@ -21,7 +21,7 @@ def test_cli_shows_stage_runs_exam_and_grants_inheritance(tmp_path):
     cli._run_exam_menu(player)
     cli._run_inheritance_menu(player)
     text = output.getvalue()
-    assert "EXAM_CANDIDATE" in text
+    assert "候考弟子" in text
     assert "考试得分：100" in text and "结果：通过" in text
     assert "溯契还因" in text
 
@@ -39,4 +39,3 @@ def test_cli_refusal_shows_only_public_categories(tmp_path):
     text = output.getvalue()
     assert "公开原因类别" in text
     assert "minimum_proficiency" not in text and "passing_score" not in text
-

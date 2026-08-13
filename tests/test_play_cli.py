@@ -281,7 +281,7 @@ def test_complete_no_llm_cli_reference_is_resolved_100_and_replayable(
     assert completed.stderr == b""
     output = completed.stdout.decode("utf-8")
     assert "病例公开结果" in output
-    assert "结局：resolved" in output
+    assert "结局：圆满解决" in output
     assert "得分：100" in output
     assert "Traceback" not in output
 

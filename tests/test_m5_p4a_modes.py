@@ -642,6 +642,6 @@ def test_fake_cli_displays_each_public_step_and_result(tmp_path: Path) -> None:
     assert "行动模式：fake（离线演示 Agent）" in output
     assert "第 1 步" in output
     assert "第 8 步" in output
-    assert "结局：resolved" in output
+    assert "结局：圆满解决" in output
     assert "得分：100" in output
     assert "API Key" in output

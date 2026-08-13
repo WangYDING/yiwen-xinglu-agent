@@ -67,6 +67,7 @@ R6_RUNTIME_RESOURCES = (
     "acceptance/r6_real_mentor_pilot_v3_inputs.json",
     "acceptance/r6_real_mentor_pilot_v3_expectations.json",
     "pilot/deepseek_v4_flash_mentor_pricing_2026-08-13.json",
+    "presentation/public_terminology_v1.json",
 )
 ALLOWED_RUNTIME_RESOURCES = frozenset(
     {

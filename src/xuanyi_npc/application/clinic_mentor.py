@@ -18,7 +18,33 @@ from xuanyi_npc.application.mentor_communication import (
     classify_transport_failure,
 )
 from xuanyi_npc.domain.base import DomainModel, Identifier
+from xuanyi_npc.application.public_presentation import PUBLIC_PRESENTATION
 MAX_OUTPUT_TOKENS=512
+
+
+class ClinicPublicCommunicationPlanner:
+    """P2b presentation plan; preserves the frozen five point identifiers and semantics."""
+    def __init__(self): self.legacy=MentorCommunicationPlanner()
+    def build(self,request_id,ctx):
+        if request_id not in {"wrong_diagnosis_remediation_1","exam_failure_explanation_1","inheritance_grant_1"}:
+            return self.legacy.build(request_id,ctx)
+        if request_id=="wrong_diagnosis_remediation_1":
+            raw_area=ctx["public_improvement_area"];area=raw_area if isinstance(raw_area,dict) else PUBLIC_PRESENTATION.public_object("ability",raw_area)
+            raw_rem=ctx.get("assigned_remediation") or PUBLIC_PRESENTATION.public_object("remediation",ctx["deterministic_curriculum_decision"].get("remediation_id",""));rem=raw_rem;facts={
+              "diagnosis_needs_improvement":ctx["submitted_result"],"assigned_remediation":f"已确定安排{rem['public_name']}。",
+              "remediation_reason":f"安排原因是{area['public_name']}方面仍需改进：{area['public_description']}。",
+              "remediation_has_no_direct_skill_gain":ctx["deterministic_curriculum_decision"]["effect"],"future_case_performance_proves_improvement":"完成补课后仍需以后续病例中的正确表现证明改善。"}
+            return self._clone(self.legacy.build(request_id,{"submitted_result":ctx["submitted_result"],"deterministic_curriculum_decision":{"title":rem["public_name"],"remediation_id":"公开补课","effect":ctx["deterministic_curriculum_decision"]["effect"]}}),facts,())
+        if request_id=="exam_failure_explanation_1":
+            r=ctx["exam_result"];public_areas=r.get("public_improvement_areas") or [PUBLIC_PRESENTATION.public_object("ability",x) for x in r.get("improvement_areas",())];public_rem=r.get("assigned_remediations") or [PUBLIC_PRESENTATION.public_object("remediation",x) for x in r.get("required_remediation_ids",())];areas="、".join(x["public_name"] for x in public_areas);rem="、".join(x["public_name"] for x in public_rem);facts={
+              "exam_not_passed":f"本次考试未通过，总分{r['total_score']}。","public_failure_categories":f"公开改进类别为{areas}。","assigned_remediation":f"已安排{rem}。","retake_requires_remediation":"完成指定补课前不能重考。","score_and_permission_unchanged":"导师不能修改分数、通过状态或权限。"}
+            legacy_ctx={"exam_result":{"total_score":r["total_score"],"required_remediation_ids":["公开补课"]}}
+            return self._clone(self.legacy.build(request_id,legacy_ctx),facts,())
+        grant=ctx["public_grant"];permission=grant.get("permission_name") or PUBLIC_PRESENTATION.name("permission",str(grant.get("permission_level","")).upper());facts={"inheritance_granted":"确定性规则已经授予传承。","granted_inheritance_name":f"授予的传承是{grant['inheritance_title']}。","decision_owned_by_rules":"授予决定来自确定性规则，不由导师语言创建。","granted_permission":f"已授予{permission}权限，且不重复写入。","inheritance_does_not_replace_player_judgment":"传承只增加合法公开路线，不替弟子诊断或处置。"}
+        return self._clone(self.legacy.build(request_id,{"public_grant":{"inheritance_title":grant["inheritance_title"],"permission_level":"公开权限"}}),facts,())
+    @staticmethod
+    def _clone(plan,facts,forbidden):
+        return plan.model_copy(update={"required_public_facts":facts,"forbidden_topics":tuple(dict.fromkeys((*plan.forbidden_topics,*forbidden)))})
 
 
 class ClinicMentorRuntimeError(RuntimeError):
@@ -92,7 +118,7 @@ class ClinicMentorRuntime:
     state_root: Path
     transport: Any|None=None
     authorized_budget: Decimal=Decimal("0.05")
-    planner: MentorCommunicationPlanner=MentorCommunicationPlanner()
+    planner: object=ClinicPublicCommunicationPlanner()
 
     def __post_init__(self):
         self.state_root=Path(self.state_root);self.path=self.state_root/"clinic_mentor_budget.json"
@@ -147,6 +173,10 @@ class ClinicMentorRuntime:
                 if any(term.lower() in content.lower() for term in ("AgentAction","病例工具","MCP工具","MENTOR_SECRET","精确门槛","正确答案","我已替你调查","我替你诊断","我替你处置","我自行授予")):
                     return self._freeze(plan,request_id,PilotStopCategory.SAFETY.value,attempt,request_inc=0)
                 action=MentorActionV2.model_validate_json(content);evaluation=evaluate_mentor_action_v2(plan,action);last_eval=evaluation
+                leaked=PUBLIC_PRESENTATION.detected_internal_ids(action.message)
+                if leaked:
+                    self._metric(request_id,"presentation_fallback",response.usage,"presentation_quality_failure")
+                    return ClinicMentorResult(request_id=request_id,mode=self.mode,message=fallback.message,model_passed=False,fallback_used=True,attempts=attempt,stop_category="presentation_quality_failure",notice="本次导师表达已切换为公开说明",covered_point_count=len(action.covered_point_ids),required_point_count=len(plan.required_public_point_ids))
                 if not evaluation.safe:return self._freeze(plan,request_id,PilotStopCategory.SAFETY.value,attempt,request_inc=0)
                 if evaluation.unknown_point_ids:
                     if attempt==2:return self._freeze(plan,request_id,PilotStopCategory.CONTRACT.value,attempt,request_inc=0)

@@ -38,7 +38,7 @@ def test_fake_mentor_cli_completes_old_umbrella_with_review(tmp_path):
     output = completed.stdout.decode("utf-8")
     assert "导师课程：证据齐备再定证" in output
     assert "结构化师评" in output
-    assert "结局：resolved｜得分：100" in output
+    assert "结局：圆满解决｜得分：100" in output
     assert "R1 能力变化" in output and "R1 关系变化" in output
     assert "下一步：下一步练习交叉核对契物来源。" in output
     sessions = JsonStateStore(state_dir).list_teaching_sessions()

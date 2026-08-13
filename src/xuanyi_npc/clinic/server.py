@@ -22,6 +22,7 @@ from xuanyi_npc.application.multicase import CaseCatalog, SystemEpisodeClock
 from xuanyi_npc.resources.runtime import materialized_clinic_resources
 from xuanyi_npc.resources.runtime import read_runtime_text
 from xuanyi_npc.storage import JsonStateStore
+from xuanyi_npc.application.public_presentation import PUBLIC_PRESENTATION
 
 
 STYLE = """
@@ -234,12 +235,17 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
     def _home(self, player_id):
         view = self.server.clinic_service.home(player_id)
         ability = "".join(f"<li>{_esc(item['name'])}：{item['proficiency']}</li>" for item in view.abilities)
-        cases = "".join(f"<li>{_esc(item.title)}：{_esc(item.status)}</li>" for item in view.visible_cases)
+        cases = "".join(f"<li>{_esc(item.title)}：{_esc(PUBLIC_PRESENTATION.name('case_status', item.status, fallback='状态已更新'))}</li>" for item in view.visible_cases)
         mentor = self.server.clinic_service.mentor_status
         runtime = ""
         if mentor["mode"] == "deepseek":
             runtime = f'''<section class="card"><h3>导师运行</h3><p>模式：真实DeepSeek</p><p>状态：{_esc('可用' if mentor['available'] else '已切换安全模式')}</p><p>已用费用：{_esc(mentor['used_cost'])} CNY · 剩余：{_esc(mentor['remaining_budget'])} CNY</p><p>fallback：{_esc('是' if mentor['fallback_active'] else '否')}</p></section>'''
-        body = f'''{self._nav(player_id)}<h2>{_esc(view.player_summary.display_name)}的医馆</h2>{runtime}<div class="grid"><section class="card"><h3>导师与课程</h3><p>{_esc(view.mentor_summary)}</p><p>阶段：{_esc(view.teaching_stage)}</p><p>当前建议：{_esc(view.current_recommendation.recommendation_id)}</p></section><section class="card"><h3>六项能力</h3><ul>{ability}</ul></section><section class="card"><h3>关系</h3><p>亲近 {_esc(view.relationship['affinity'])} · 信任 {_esc(view.relationship['trust'])} · 认可 {_esc(view.relationship['recognition'])}</p></section><section class="card"><h3>六病例</h3><ul>{cases}</ul></section><section class="card"><h3>考试与传承</h3><p>考试：{_esc(view.exam_status)}</p><p>传承：{_esc(view.inheritance_status)}</p><p>权限：{_esc('、'.join(view.permissions))}</p></section></div>'''
+        recommendation = PUBLIC_PRESENTATION.recommendation_name(view.current_recommendation.kind, view.current_recommendation.recommendation_id)
+        stage = PUBLIC_PRESENTATION.name("stage", view.teaching_stage, fallback="当前修习阶段")
+        permissions = "、".join(PUBLIC_PRESENTATION.name("permission", item, fallback="已开放内容") for item in view.permissions)
+        exam_status = PUBLIC_PRESENTATION.name("exam_status", view.exam_status, fallback="考试状态已更新")
+        inheritance_status = PUBLIC_PRESENTATION.name("inheritance_status", view.inheritance_status, fallback="传承状态已更新")
+        body = f'''{self._nav(player_id)}<h2>{_esc(view.player_summary.display_name)}的医馆</h2>{runtime}<div class="grid"><section class="card"><h3>导师与课程</h3><p>{_esc(view.mentor_summary)}</p><p>阶段：{_esc(stage)}</p><p>当前建议：{_esc(recommendation)}</p></section><section class="card"><h3>六项能力</h3><ul>{ability}</ul></section><section class="card"><h3>关系</h3><p>亲近 {_esc(view.relationship['affinity'])} · 信任 {_esc(view.relationship['trust'])} · 认可 {_esc(view.relationship['recognition'])}</p></section><section class="card"><h3>六病例</h3><ul>{cases}</ul></section><section class="card"><h3>考试与传承</h3><p>考试：{_esc(exam_status)}</p><p>传承：{_esc(inheritance_status)}</p><p>权限：{_esc(permissions)}</p></section></div>'''
         self._send(200, _page("医馆", body))
 
     def _cases(self, player_id, case_id=None, session_id=None):
@@ -272,10 +278,12 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
         attempts = sorted((item for item in self.server.clinic_service.store.list_exam_sessions() if item.player_id == player_id), key=lambda item: item.attempt_number)
         active = next((item for item in attempts if item.result is None), None)
         query=self._query();message=query.get("mentor_message","");notice=query.get("mentor_notice","")
-        body = self._nav(player_id) + f"<h2>玄医入门综合考</h2><p>当前状态：{_esc(view.exam_status)}</p><p>考试由固定规则评分，不由导师代答。</p>"+(f'<p class="notice">{_esc(notice)}</p>' if notice else '')+(f'<section class="card"><h3>导师解释</h3><p>{_esc(message)}</p></section>' if message else '')
+        public_exam_status=PUBLIC_PRESENTATION.name("exam_status",view.exam_status,fallback="考试状态已更新")
+        body = self._nav(player_id) + f"<h2>玄医入门综合考</h2><p>当前状态：{_esc(public_exam_status)}</p><p>考试由固定规则评分，不由导师代答。</p>"+(f'<p class="notice">{_esc(notice)}</p>' if notice else '')+(f'<section class="card"><h3>导师解释</h3><p>{_esc(message)}</p></section>' if message else '')
         if attempts and attempts[-1].result is not None:
             result = attempts[-1].result
-            body += f'<section class="card"><h3>公开结果</h3><p>{"通过" if result.passed else "未通过"} · {result.total_score} 分</p><p>补课：{_esc("、".join(result.required_remediation_ids) or "无")}</p></section>'
+            remediation = "、".join(PUBLIC_PRESENTATION.name("remediation", item) for item in result.required_remediation_ids) or "无"
+            body += f'<section class="card"><h3>公开结果</h3><p>{"通过" if result.passed else "未通过"} · {result.total_score} 分</p><p>补课：{_esc(remediation)}</p></section>'
         if active is None and view.exam_status == "eligible":
             body += self._post_button("/exam/start", player_id, "开始考试")
         elif active is not None:
@@ -307,12 +315,12 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
             if real_mode and remediation_id == "remediate_diagnostic_reasoning_v1":
                 body += f'<form method="post" action="/mentor/explain"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="request_id" value="wrong_diagnosis_remediation_1"><input type="hidden" name="operation_id" value="{self._token()}"><button>请导师解释本次辨证补课</button></form>'
         sessions = [item for item in self.server.clinic_service.store.list_teaching_sessions() if item.player_id == player_id]
-        body += '<section class="card"><h3>课程记录</h3><ul>' + ("".join(f'<li>{_esc(item.lesson_id)} · {_esc(item.phase.value)} · 提示 {len(item.used_hint_ids)}/2</li>' for item in sessions) or '<li>尚无课程记录</li>') + '</ul></section>'
+        body += '<section class="card"><h3>课程记录</h3><ul>' + ("".join(f'<li>{_esc(PUBLIC_PRESENTATION.name("lesson",item.lesson_id))} · {_esc(PUBLIC_PRESENTATION.name("phase",item.phase.value))} · 提示 {len(item.used_hint_ids)}/2</li>' for item in sessions) or '<li>尚无课程记录</li>') + '</ul></section>'
         self._send(200, _page("导师教学", body))
 
     def _assessment(self, player_id):
         sessions = [item for item in self.server.clinic_service.store.list_teaching_sessions() if item.player_id == player_id and item.assessment is not None]
-        cards = "".join(f'<section class="card"><h3>{_esc(item.lesson_id)}</h3><p>{_esc(item.mentor_review.message if item.mentor_review else "结构化师评已形成")}</p><p>改进方向：{_esc("、".join(value.value for value in item.assessment.improvement_abilities) or "无")}</p></section>' for item in sessions)
+        cards = "".join(f'<section class="card"><h3>{_esc(PUBLIC_PRESENTATION.name("lesson",item.lesson_id))}</h3><p>{_esc(PUBLIC_PRESENTATION.sanitize_legacy_text(item.mentor_review.message) if item.mentor_review else "结构化师评已形成")}</p><p>改进方向：{_esc("、".join(PUBLIC_PRESENTATION.name("ability",value.value) for value in item.assessment.improvement_abilities) or "无")}</p></section>' for item in sessions)
         self._send(200, _page("师评", self._nav(player_id) + '<h2>成长与师徒历程</h2>' + (cards or '<p>完成病例后将在此显示师评。</p>')))
 
     def _post_button(self, path, player_id, label):
