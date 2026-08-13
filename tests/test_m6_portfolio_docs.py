@@ -10,7 +10,7 @@ REPO_ROOT = Path(__file__).parents[1]
 README = REPO_ROOT / "README.md"
 
 
-def test_readme_is_a_recruiter_homepage_in_the_frozen_order() -> None:
+def test_readme_presents_the_current_mentor_product_in_order() -> None:
     text = README.read_text(encoding="utf-8")
     headings = (
         "# 玄医问道：可审计的师承型智能 NPC",
@@ -18,33 +18,31 @@ def test_readme_is_a_recruiter_homepage_in_the_frozen_order() -> None:
         "## 为什么值得看",
         "## 60 秒无 Key 启动",
         "## 安全架构",
-        "## 三病例 Campaign",
+        "## 六病例教学与成长",
         "## 真实本地演示",
-        "## 两条阅读路径",
+        "## 当前阅读路径",
         "## 可复现证据",
         "## 诚实边界",
         "## 许可证与文档",
     )
     positions = [text.index(heading) for heading in headings]
     assert positions == sorted(positions)
-    assert "P4b 未闭环" in text
-    assert "5/5 行动修复" in text
-    assert "语义记忆默认关闭" in text
+    assert "six-case game-AI product" in text
+    assert "MentorAgent" in text
+    assert "DoctorAgent" in text and "历史" in text
+    assert "语义记忆" in text and "默认关闭" in text
     assert "Windows 10、CPython 3.12" in text
-    assert "远程 CI" in text and "尚未" in text
+    assert "公共 CI" in text and "尚未" in text
 
 
-def test_every_homepage_number_has_a_nearby_evidence_link() -> None:
+def test_current_product_claims_have_evidence_links() -> None:
     text = README.read_text(encoding="utf-8")
     required_linked_claims = (
-        "| 3 个可玩病例 | [",
-        "| 9 个冻结 MCP 工具 | [",
-        "| 三案各 8 个连续事件",
-        "| CampaignEvent 连续 1–3",
-        "| M6-P1 基线 488 项离线测试 | [",
-        "| M6-P2 当前 492 项离线测试 | [",
-        "P4d 单次 5/5 行动契约修复，费用 `0.02345744 CNY` | [",
-        "M4.5 排名 `Recall@3=1.00`，但返回门禁 `micro F1=0.6667`",
+        "| 6 个可玩病例与本地医馆 | [",
+        "| 玩家行动与独立 MentorAgent 教学边界 | [",
+        "| 确定性成长、课程与结构化导师记忆 | [",
+        "| R4 正式考试、权限过滤、两进程恢复与单传承链 | [",
+        "| R6 八路线离线验收通过；真实导师与真人试玩未执行 | [",
     )
     for claim in required_linked_claims:
         assert claim in text

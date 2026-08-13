@@ -76,11 +76,11 @@ M0～M6 的代码、提交、验证记录和正负实验全部保留，不因本
 | R3 | 三病例教学与结构化记忆 | **已完成** | 三核心课、三固定补课、确定性弱点优先级、可回放教学计划、同一 SQLite 结构化记忆、跨病例历史引用和下一课程选择；不使用 BGE/Embedding/LLM 选课 |
 | R4 | 考试、权限与传承 | **已完成** | 四阶段晋级、六题规则考试、失败补课重考、六级权限、拒绝零写入、两进程恢复及“溯契还因”完整传承链 |
 | R5 | 六病例和医馆入口 | **已完成** | 三个通用 Schema 进阶病例、课程选择 v2、loopback 医馆主循环和普通用户入口，展示成长、关系、课程、师评、考试与传承 |
-| R6 | 产品验收 | **进行中（P0已冻结）** | `product_acceptance_v1` 已冻结；R5等价调查缺口已以通用Schema关闭，P1离线验收随后执行；真实模型、真人试玩与远程发布均未授权执行 |
+| R6 | 产品验收 | **进行中（离线验收已完成）** | `product_acceptance_v1` 已冻结；R5 等价调查缺口已关闭，八路线确定性离线验收已通过；真实 MentorAgent、真人试玩与远程发布均未执行 |
 
 R1 的详细范围与门禁见 [`PRODUCT_COMPLETION_PLAN_V1.md`](PRODUCT_COMPLETION_PLAN_V1.md)、[`PROJECT_MASTER_BLUEPRINT.md`](PROJECT_MASTER_BLUEPRINT.md) 和 [`M5_PRODUCT_GAP_AUDIT.md`](M5_PRODUCT_GAP_AUDIT.md)。M0～M6 的历史结论不变；语义记忆继续默认关闭，不得把 M4.5 的合成指标、M5 自动解题案例或 R1 状态底座描述为导师教学效果或玩家收益。
 
-R2 的实现、公开/隐藏边界、故障语义和 CLI 入口见 [`R2_MENTOR_TEACHING_LOOP.md`](R2_MENTOR_TEACHING_LOOP.md)。R3 的三课、补课、教学计划和结构化记忆边界见 [`R3_ADAPTIVE_THREE_CASE_TEACHING.md`](R3_ADAPTIVE_THREE_CASE_TEACHING.md)。真实导师模型、考试、权限与传承均未开始。
+R2 的实现、公开/隐藏边界、故障语义和 CLI 入口见 [`R2_MENTOR_TEACHING_LOOP.md`](R2_MENTOR_TEACHING_LOOP.md)。R3 的课程、补课、教学计划和结构化记忆边界见 [`R3_ADAPTIVE_THREE_CASE_TEACHING.md`](R3_ADAPTIVE_THREE_CASE_TEACHING.md)；R4 的考试、权限与传承以及 R5 的六病例医馆均已完成。尚未执行的是 R6 真实 MentorAgent Pilot、真人试玩和远程发布。
 
 ## 双岗位作品集主线
 
@@ -98,9 +98,9 @@ R2 的实现、公开/隐藏边界、故障语义和 CLI 入口见 [`R2_MENTOR_T
 
 P2c 新 holdout 的合成指标只能描述工程和语义检索符合度，不能描述游戏产品效果、玩家收益或正式准确率。唯一一组两次正式运行已经结束且未通过全部语义准入线；本轮 Dense-only 优化已经关闭。reranker、其他模型、向量数据库和大规模题库不属于当前路线，只有在真实多病例轨迹形成后重新论证岗位展示收益与产品必要性，才可另行立项。
 
-M5-P0～P5 已完成，M5 工程纵向切片已关闭。三个病例既可按推荐顺序游玩，也可无前史独立完成；已提交会话会确定性投影公开 CampaignFact 和知识，并改变后续公开反应与调查建议，但不改变病例答案或评分。P4b 的真实负结果和 P4d 的单次真实恢复案例均按原结论保留，P5 没有重跑付费实验。P5 离线入口通过独立子进程逐行动恢复，验证三案各 8 事件、`resolved / 100`、CampaignEvent 1–3、两项知识、两处历史反应、双玩家隔离、拒绝零写入、事件重放和 shadow off/on 一致；普通用户 CLI 的两进程退出/恢复也已实际验证。语义向量记忆继续默认关闭且未进入请求。详细退出证据见 `docs/M5_EXIT_AUDIT.md`，演示与作品集证据见 `docs/M5_DEMO_GUIDE.md`、`docs/M5_PORTFOLIO_EVIDENCE.md`。下一阶段尚未开始。
+M5-P0～P5 是主线修正前完成并关闭的历史工程纵向切片。三个病例、Campaign 连续性、DoctorAgent/Fake 自动验收和相关正负结果均按原结论保留；这些证据不代表导师教学效果。其后项目已完成 R1～R5，并进入 R6：离线验收已通过，真实 MentorAgent Pilot、真人试玩和发布尚未执行。
 
-M6-P0 已在基线 `cf23d198e7a1f48d8a31d60eaa811580977b0a8c` 上完成本地离线发布准备审计。M6-P1 随后落实用户决策：只修改仓库本地 Git 身份，保留 53 个 `wyd <wyd@localhost>` 历史提交；代码/测试/工程脚本采用 Apache-2.0，病例、世界观、Campaign、文档与演示文案保留所有权；运行数据迁入唯一包资源边界；wheel、sdist、仓库外 Windows Python 3.12 干净安装、三入口、M5 验收和 MCP stdio 均已本地通过。M6-P2 已把首页收敛为 30 秒项目概览和 3 分钟证据导航，增加英文摘要、安全/Campaign SVG、三张真实离线终端素材、四个演示版本和本地链接/素材审计；旧首页完整保存在 `docs/TECHNICAL_OVERVIEW.md`。公共 CI 配置仍未在远程运行，Linux、macOS 与其他 Python 版本仍未验证。当前仍无远程、Tag、Release 或发布；M6-P3/P4 已因产品主题回归暂停，后续按 Product Completion Plan v1 从 R1 长期状态与确定性成长底座开始。
+M6-P0～P2 是主线修正前完成的本地发布与作品集准备历史，相关分发、版权和审计结论继续有效；M6-P3/P4 已暂停。主题回归后执行的 Product Completion Plan v1 已完成 R1～R5，当前位于 R6。公共 CI 仍未远程运行，Linux、macOS 与其他 Python 版本仍未验证；当前仍无远程、Tag、Release 或正式发布。
 
 ## M2a 完成边界
 
@@ -245,7 +245,7 @@ P4 的 Precision、Recall、F1 与 False Memory Rate 只描述冻结合成 Gold 
 
 M4 退出审计已核对两个同名 Gold 检查点，确认 `118b3b1` 是包含 14 条场景、预期、manifest 和严格契约的最终有效冻结基线；从冻结到 P4 最终提交，三份 Gold 文件、阈值、排序规则与 P1–P3 产品实现均未修改。14/14 场景与两次确定性哈希再次通过，安全硬门槛全部为 0。完整逐项证据见 `docs/M4_EXIT_AUDIT.md`。
 
-M4 的完成只表示 Fake Embedding 下的离线工程契约与安全边界闭环。真实 V1 DoctorAgent 记忆注入、真实玩家收益、生产性能和并发多进程事务仍未验证；它们不构成 M4 退出阻塞。当前 M5-P0～P5 已完成：普通用户可以运行并恢复三个病例，确定性 Campaign 会显示推荐、完成历史、知识成长和两处跨案反应，Fake 可走同一正式路径自动完成三案，semantic shadow 只做离线旁路记录。P4b 历史负结果保持不变；P4c 离线修复公开行动契约和拒绝恢复；P4d 单次真实案例完成两个新病例并验证完整 Campaign；P5 完成离线自动验收、真实 CLI 两进程恢复、演示指南、双岗位证据与退出审计。下一阶段尚未开始。
+M4 的完成只表示 Fake Embedding 下的历史离线工程契约与安全边界闭环。真实 V1 DoctorAgent 记忆注入、真实玩家收益、生产性能和并发多进程事务未被证明；这些不再是当前导师主线的退出条件。后续 M5 及 R1～R6 状态以本文件顶部“当前状态”为准。
 
 ## M4.5 终止边界与 M5 入口
 
@@ -259,7 +259,7 @@ M4.5 不重新打开或改写 M4。P0 已完成本机只读调查、官方资料
 4. M4.5-P2c 已实现最小方案并冻结 36 条全新 holdout；P2d 已在独立 runner 上完成唯一一组两次本地 BGE 运行；
 5. P2d 工程、安全和重复性通过，但 micro F1 与更正切片未过线；本轮 Dense-only 优化已经关闭，不进入 P3，也不自动扩展检索研究；
 6. M4.5 已以 `closed_with_known_dense_retrieval_limitations` 完成终止审计；
-7. M5-P0 已冻结三病例游戏纵向切片；P1 完成本地交互式多病例 Runner，P2 完成两个新病例，P3 完成确定性 Campaign 连续性，P4a 完成离线模式装配与 shadow 隔离；P4b 保留灰灶行为负结果；P4c 完成通用行动契约和有界恢复；P4d 最终单次案例验证 5 次修复、两个新病例与完整 Campaign；P5 完成离线验收与文档收口。M5 已关闭，下一阶段尚未开始。
+7. M5-P0～P5 已完成并作为历史工程纵向切片关闭；后续项目已按 Product Completion Plan v1 完成 R1～R5，当前进入 R6 外部验证阶段。
 
 M5 原先等待 M4.5，是为了避免把记忆召回问题与教学策略问题混为同一个实验变量。M4.5-P1 已在项目 `.venv` 中安装固定可选依赖，只下载固定 revision 的 11 个 dense safetensors 白名单文件，并以网络阻断方式完成真实本地权重烟雾；详细身份、哈希、磁盘和性能证据见 `docs/M45_P1_LOCAL_EMBEDDING_REPORT.md`。P2 v1 已在 `e813312` 冻结 15 条/75 文本，但第一次正式本地运行因评测器把合法语义负例误计为生命周期安全违规而停止；P2a 保留该历史并冻结 v2 三分区契约。v2 随后经历入口、身份和 Windows 遥测三次诚实停止，最终在 `cad07ff` 上完成两次正式运行：安全和重复性门禁通过，但 test Recall@3 与 False Memory Rate 未过线。P2b 只用已保存向量确认正确更正与极短相关项均落到第 4，且相关/负例分数重叠；任何阈值或 Top-N 都不能修复候选顺序。完整证据见 `docs/M45_P2B_SEMANTIC_FAILURE_ANALYSIS.md`，新 holdout 设计见 `docs/M45_HOLDOUT_VALIDATION_PLAN.md`；当前 P3 已取消本轮执行。
 
@@ -267,4 +267,4 @@ P2c 随后冻结 V2 表示和 36 条全新 holdout；P2d 在精确执行提交 `
 
 V1 语义记忆从本审计起默认关闭、仅为实验功能且不得进入正式 Agent Prompt。可选 shadow mode 只能记录“本来会召回什么”，不得影响 Agent 行动、课程、工具或玩家状态。未来只有基于真实多病例轨迹重新立项并通过独立验证，才可再次申请 Prompt 注入。
 
-M5 游戏 AI 产品纵向切片现已完成：P1 提供多病例 Runner，P2 新增两个完整病例，P3 用确定性事件投影实现跨 Episode 连续性，P4 完成 no-LLM/Fake/DeepSeek V0 与语义 shadow 模式，P5 完成三病例试玩、恢复、重放、隔离、演示和双岗位验收。自适应教学、Reflection、多 Agent 和网页界面不属于 M5 最小切片，后续阶段尚未开始。
+M5 游戏 AI 工程纵向切片已完成并保留为历史基础：P1 提供多病例 Runner，P2 新增两个完整病例，P3 实现跨 Episode 连续性，P4 验证 no-LLM/Fake/DeepSeek V0 与语义 shadow，P5 完成三病例恢复、重放、隔离和验收。其后的自适应教学、Reflection 和本地网页医馆已经在 R2～R5 实现；当前状态以本文件顶部为准。
