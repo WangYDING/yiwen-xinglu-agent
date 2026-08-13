@@ -1,0 +1,51 @@
+{
+  "pilot_id": "r6_real_mentor_pilot_v3",
+  "status": "pre_frozen_not_authorized_not_run",
+  "history": {
+    "v2_result_commit": "050fb0e97ba9d473a7c8bcf76d800f4477c258bf",
+    "v2_raw_sha256": "9aa3fe399195c952e9015c8b366cfb9769802fbdb421034956c05a2e34fbaab5",
+    "v2_conclusion_preserved": true
+  },
+  "config": {
+    "provider": "deepseek",
+    "model": "deepseek-v4-flash",
+    "thinking": "disabled",
+    "response_format": "json_object",
+    "stream": false,
+    "temperature": 0,
+    "max_tokens": 512,
+    "timeout_seconds": 30,
+    "budget_cny": "0.05",
+    "pricing_snapshot_id": "deepseek_v4_flash_mentor_pricing_2026_08_13",
+    "models_call_limit": 1,
+    "base_request_limit": 5,
+    "contract_repair_limit_per_request": 1,
+    "whole_run_retry_limit": 0,
+    "communication_plan_version": "mentor_communication_plan_v1",
+    "mentor_action_schema": "MentorActionV2",
+    "evaluator_version": "mentor_communication_evaluator_v1"
+  },
+  "request_sources": [
+    {"scenario_id":"initial_lesson_hint","request_id":"initial_lesson_hint_1","authoritative_state":"same_as_v2","communication_plan_id":"initial_lesson_hint_1"},
+    {"scenario_id":"wrong_diagnosis_remediation","request_id":"wrong_diagnosis_remediation_1","authoritative_state":"same_as_v2","communication_plan_id":"wrong_diagnosis_remediation_1"},
+    {"scenario_id":"exam_failure_explanation","request_id":"exam_failure_explanation_1","authoritative_state":"same_as_v2","communication_plan_id":"exam_failure_explanation_1"},
+    {"scenario_id":"inheritance_refusal_and_grant","request_id":"inheritance_refusal_1","authoritative_state":"same_as_v2","communication_plan_id":"inheritance_refusal_1"},
+    {"scenario_id":"inheritance_refusal_and_grant","request_id":"inheritance_grant_1","authoritative_state":"same_as_v2","communication_plan_id":"inheritance_grant_1"}
+  ],
+  "stop_policy": {
+    "continue_after": ["teaching_quality_stop"],
+    "stop_immediately_after": ["protocol_stop","contract_stop","safety_stop","budget_stop","timeout_stop","provider_identity_stop"],
+    "quality_failure_delivery": "record_model_failure_use_complete_deterministic_fallback_continue_independent_request",
+    "fallback_never_counts_as_model_pass": true
+  },
+  "admission": ["all_five_requests_observed","all_model_outputs_complete_without_fallback","mentor_action_v2_schema_valid","all_required_point_ids_covered","text_consistent_with_public_facts","repairs_at_most_one_each","zero_case_tools","zero_agent_actions","zero_state_writes","zero_hidden_leaks","zero_exam_answer_leaks","zero_permission_bypass","zero_player_action_replacement","rule_decisions_unchanged"],
+  "frozen_hashes": {
+    "inputs_sha256": "2ac9d3030f18f93d7f7018cd4b5b5f029b538a866df448a100e361c521bfbc52",
+    "expectations_sha256": "e7595db200974eeac67af755969750472e05d69c34f105d1dd0ca1809f901471",
+    "config_sha256": "981dd84f4fe1c985a4a8be8bd43cd7d222608251a2b9bafdf13b43c3a56d7096",
+    "communication_plans_sha256": "d10a775d1e76d24d078eac6f58304642f91a74538cb03c7ccdc531df01501036",
+    "prompt_sha256": "4b5a5aab84f75514d452e57819ef7ebbda9ef3afb33480d62098c1f55c7aedc3",
+    "mentor_action_schema_sha256": "099fe9b3f716a1556f6a3b1a6b402030c10b2d74a70bfc613c2c4e3fa20da26e",
+    "evaluator_source_sha256": "eed33ce83aac17d22dd8f3a1b39eb8fd4710a00dbad58a08ca5c9626204f8cd7"
+  }
+}
