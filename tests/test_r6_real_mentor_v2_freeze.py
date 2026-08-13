@@ -32,4 +32,6 @@ def test_v2_exact_identity_counts_and_hashes():
 
 def test_v1_is_preserved_and_product_acceptance_blob_is_unchanged():
     assert (ROOT/"src/xuanyi_npc/resources/acceptance/real_mentor_pilot_v1.json").exists()
-    assert hashlib.sha1((ROOT/"src/xuanyi_npc/resources/acceptance/product_acceptance_v1.json").read_bytes()).hexdigest()=="1206429ae097a0a091da871b57e9a3ad43fb3269"
+    payload=(ROOT/"src/xuanyi_npc/resources/acceptance/product_acceptance_v1.json").read_bytes()
+    git_blob=hashlib.sha1(f"blob {len(payload)}\0".encode()+payload).hexdigest()
+    assert git_blob=="1206429ae097a0a091da871b57e9a3ad43fb3269"
