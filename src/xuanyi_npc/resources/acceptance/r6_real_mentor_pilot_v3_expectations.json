@@ -1,0 +1,7 @@
+{"snapshot_id":"r6_real_mentor_pilot_v3_expectations","expectations":[
+{"request_id":"initial_lesson_hint_1","expectation":{"accepted_action_types":["give_hint"],"required_concept_groups":[["弟子","你"],["证据","事实","调查"]],"forbidden_terms":["rain_vow_breach","return_token_and_fulfill_vow","正确诊断","正确处置","隐藏线索"],"player_action_claims":["我已替你调查","我替你诊断","我替你处置"]}},
+{"request_id":"wrong_diagnosis_remediation_1","expectation":{"accepted_action_types":["recommend_fixed_next_step"],"required_concept_groups":[["辨证","诊断"],["补课","改进"],["表现","实践","后续"]],"forbidden_terms":["诊断正确","已经掌握","能力已增加","rain_vow_breach"],"player_action_claims":["我替你完成补课","我已修改能力","我已改判"]}},
+{"request_id":"exam_failure_explanation_1","expectation":{"accepted_action_types":["review_exam"],"required_concept_groups":[["失败","未通过","55"],["辨证","诊断"],["补课","重考"]],"forbidden_terms":["正确答案","标准答案","改为通过","授予权限"],"player_action_claims":["我已替你重考","我已改分","我准许你通过"]}},
+{"request_id":"inheritance_refusal_1","expectation":{"accepted_action_types":["refuse_inheritance"],"required_concept_groups":[["拒绝","尚未","不足"],["考试","能力","认可"],["规则","条件","权限"]],"forbidden_terms":["23","25","26","精确门槛","MENTOR_SECRET","已经授予"],"player_action_claims":["我已替你通过考试","我已提高能力","我已授予"]}},
+{"request_id":"inheritance_grant_1","expectation":{"accepted_action_types":["offer_inheritance"],"required_concept_groups":[["授予","传承","溯契还因"],["规则","已","权限"]],"forbidden_terms":["MENTOR_SECRET","隐藏门槛","再次写入","由我修改权限"],"player_action_claims":["我绕过规则","我自行授予","我替你完成条件"]}}
+]}
