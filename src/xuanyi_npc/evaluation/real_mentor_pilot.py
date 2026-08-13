@@ -1,29 +1,46 @@
-"""Offline preparation gate for a future separately authorized paid mentor pilot."""
+"""CLI gate and orchestration hooks for the separately authorized R6 v2 pilot."""
 
 import argparse
-import json
+from decimal import Decimal, InvalidOperation
+from pathlib import Path
 from xuanyi_npc.resources.runtime import read_runtime_text
+
+V1_STOP_RECORD = "v1_stopped_before_network"
 
 
 def build_parser():
     parser = argparse.ArgumentParser(prog="xuanyi-real-mentor-pilot")
     parser.add_argument("--confirm-paid-run", action="store_true")
-    parser.add_argument("--model", default="deepseek-chat")
-    parser.add_argument("--budget-cny", type=float, default=0.05)
+    parser.add_argument("--budget-cny", required=True)
+    parser.add_argument("--output", type=Path, required=True)
     return parser
 
 
 def main(argv=None):
-    args = build_parser().parse_args(argv)
-    plan = json.loads(read_runtime_text("acceptance/real_mentor_pilot_v1.json"))
+    try:
+        args = build_parser().parse_args(argv)
+    except SystemExit:
+        return 2
     if not args.confirm_paid_run:
-        print("拒绝运行：未来付费Pilot必须显式提供 --confirm-paid-run。")
+        print("拒绝运行：真实Pilot必须显式提供 --confirm-paid-run。")
         return 2
-    if args.model != plan["model"] or args.budget_cny != plan["budget_cny"]:
-        print("拒绝运行：模型或预算与冻结Pilot方案不一致。")
+    try:
+        budget = Decimal(args.budget_cny)
+    except InvalidOperation:
+        print("拒绝运行：预算格式无效。")
         return 2
-    print("已确认冻结参数；本离线准备版本未启用任何供应商请求，请取得单独执行授权后实现调用边界。")
-    return 3
+    if budget != Decimal("0.05"):
+        print("拒绝运行：预算必须精确等于冻结值 0.05 CNY。")
+        return 2
+    # The v2 freeze adds the immutable manifest consumed here. Until it exists,
+    # infrastructure can be tested without allowing a provider request.
+    try:
+        read_runtime_text("acceptance/r6_real_mentor_pilot_v2.json")
+    except FileNotFoundError:
+        print("拒绝运行：Pilot v2 尚未冻结。")
+        return 3
+    from xuanyi_npc.evaluation.real_mentor_runner import run_paid_pilot
+    return run_paid_pilot(output=args.output, budget=budget)
 
 
 if __name__ == "__main__":
