@@ -61,7 +61,7 @@ Word 设计总结、`xuanyi-npc-handoff` 和 `docs/algorithm-experiment-plan-v0.
 | M6-P3：两类岗位求职材料 | 已暂停 | 等待产品总纲审计和新增产品主线形成真实证据后再决定是否恢复 |
 | M6-P4：最终发布检查 | 已暂停 | 远程、推送、Tag、Release 和发布全部暂停；即使恢复也需要用户再次明确授权 |
 | 产品主题与总体架构冻结 | 已完成 | 《问道医途》总纲、产品系统架构、M5 产品差距审计和总体主题回归 ADR 成为后续依据 |
-| Product Completion Plan v1：R1～R6 | R1～R5 已完成；R6进行中 | 已完成六病例医馆；R6离线冻结、验收和外部验证准备已执行，真实模型、真人试玩与发布尚未执行 |
+| Product Completion Plan v1：R1～R6 | R1～R5 已完成；R6进行中 | 已完成六病例医馆与离线验收；v2 真实 Pilot 未过准入，v3 五请求工程案例通过，真实导师医馆仅完成离线装配；真人试玩与发布未执行 |
 
 ## M0～M6 历史结论与 Product Completion Plan v1
 
@@ -76,11 +76,11 @@ M0～M6 的代码、提交、验证记录和正负实验全部保留，不因本
 | R3 | 三病例教学与结构化记忆 | **已完成** | 三核心课、三固定补课、确定性弱点优先级、可回放教学计划、同一 SQLite 结构化记忆、跨病例历史引用和下一课程选择；不使用 BGE/Embedding/LLM 选课 |
 | R4 | 考试、权限与传承 | **已完成** | 四阶段晋级、六题规则考试、失败补课重考、六级权限、拒绝零写入、两进程恢复及“溯契还因”完整传承链 |
 | R5 | 六病例和医馆入口 | **已完成** | 三个通用 Schema 进阶病例、课程选择 v2、loopback 医馆主循环和普通用户入口，展示成长、关系、课程、师评、考试与传承 |
-| R6 | 产品验收 | **进行中（离线验收已完成）** | `product_acceptance_v1` 已冻结；R5 等价调查缺口已关闭，八路线确定性离线验收已通过；真实 MentorAgent、真人试玩与远程发布均未执行 |
+| R6 | 产品验收 | **进行中（P2b 离线装配已完成）** | `product_acceptance_v1` 与八路线离线验收保持；v3 五请求真实导师工程案例通过；off/fake/deepseek 医馆模式已离线装配，真实医馆烟雾、真人试玩与远程发布未执行 |
 
 R1 的详细范围与门禁见 [`PRODUCT_COMPLETION_PLAN_V1.md`](PRODUCT_COMPLETION_PLAN_V1.md)、[`PROJECT_MASTER_BLUEPRINT.md`](PROJECT_MASTER_BLUEPRINT.md) 和 [`M5_PRODUCT_GAP_AUDIT.md`](M5_PRODUCT_GAP_AUDIT.md)。M0～M6 的历史结论不变；语义记忆继续默认关闭，不得把 M4.5 的合成指标、M5 自动解题案例或 R1 状态底座描述为导师教学效果或玩家收益。
 
-R2 的实现、公开/隐藏边界、故障语义和 CLI 入口见 [`R2_MENTOR_TEACHING_LOOP.md`](R2_MENTOR_TEACHING_LOOP.md)。R3 的课程、补课、教学计划和结构化记忆边界见 [`R3_ADAPTIVE_THREE_CASE_TEACHING.md`](R3_ADAPTIVE_THREE_CASE_TEACHING.md)；R4 的考试、权限与传承以及 R5 的六病例医馆均已完成。尚未执行的是 R6 真实 MentorAgent Pilot、真人试玩和远程发布。
+R2 的实现、公开/隐藏边界、故障语义和 CLI 入口见 [`R2_MENTOR_TEACHING_LOOP.md`](R2_MENTOR_TEACHING_LOOP.md)。R3 的课程、补课、教学计划和结构化记忆边界见 [`R3_ADAPTIVE_THREE_CASE_TEACHING.md`](R3_ADAPTIVE_THREE_CASE_TEACHING.md)；R4 的考试、权限与传承以及 R5 的六病例医馆均已完成。R6 v3 Pilot 已作为单次工程案例运行，真实医馆烟雾、真人试玩和远程发布尚未执行。
 
 ## 双岗位作品集主线
 
@@ -98,7 +98,7 @@ R2 的实现、公开/隐藏边界、故障语义和 CLI 入口见 [`R2_MENTOR_T
 
 P2c 新 holdout 的合成指标只能描述工程和语义检索符合度，不能描述游戏产品效果、玩家收益或正式准确率。唯一一组两次正式运行已经结束且未通过全部语义准入线；本轮 Dense-only 优化已经关闭。reranker、其他模型、向量数据库和大规模题库不属于当前路线，只有在真实多病例轨迹形成后重新论证岗位展示收益与产品必要性，才可另行立项。
 
-M5-P0～P5 是主线修正前完成并关闭的历史工程纵向切片。三个病例、Campaign 连续性、DoctorAgent/Fake 自动验收和相关正负结果均按原结论保留；这些证据不代表导师教学效果。其后项目已完成 R1～R5，并进入 R6：离线验收已通过，真实 MentorAgent Pilot、真人试玩和发布尚未执行。
+M5-P0～P5 是主线修正前完成并关闭的历史工程纵向切片。三个病例、Campaign 连续性、DoctorAgent/Fake 自动验收和相关正负结果均按原结论保留；这些证据不代表导师教学效果。其后项目已完成 R1～R5，并进入 R6：离线验收与 v3 单次真实 MentorAgent 工程案例已通过，真实医馆烟雾、真人试玩和发布尚未执行。
 
 M6-P0～P2 是主线修正前完成的本地发布与作品集准备历史，相关分发、版权和审计结论继续有效；M6-P3/P4 已暂停。主题回归后执行的 Product Completion Plan v1 已完成 R1～R5，当前位于 R6。公共 CI 仍未远程运行，Linux、macOS 与其他 Python 版本仍未验证；当前仍无远程、Tag、Release 或正式发布。
 

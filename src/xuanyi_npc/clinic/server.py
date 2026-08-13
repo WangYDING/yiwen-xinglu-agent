@@ -7,6 +7,7 @@ import html
 import secrets
 import re
 import sys
+from decimal import Decimal, InvalidOperation
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -14,7 +15,9 @@ from urllib.parse import parse_qs, urlencode, urlparse
 
 from pydantic import ValidationError
 
+from xuanyi_npc.agents import DeterministicFakeMentor
 from xuanyi_npc.application.clinic import ClinicActionInput, ClinicError, ClinicService
+from xuanyi_npc.application.clinic_mentor import ClinicMentorMode, ClinicMentorRuntime
 from xuanyi_npc.application.multicase import CaseCatalog, SystemEpisodeClock
 from xuanyi_npc.resources.runtime import materialized_clinic_resources
 from xuanyi_npc.resources.runtime import read_runtime_text
@@ -41,10 +44,11 @@ def _page(title: str, body: str) -> bytes:
     return document.encode("utf-8")
 
 
-def build_clinic_service(state_dir: Path, resources) -> ClinicService:
+def build_clinic_service(state_dir: Path, resources, mentor_runtime=None) -> ClinicService:
     return ClinicService(
         store=JsonStateStore(state_dir), base_catalog=CaseCatalog(resources.case_dir),
-        campaign_path=resources.campaign_rules, clock=SystemEpisodeClock(),
+        campaign_path=resources.campaign_rules, clock=SystemEpisodeClock(), mentor_runtime=mentor_runtime,
+        mentor_agent_factory=DeterministicFakeMentor,
     )
 
 
@@ -162,8 +166,19 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
                 location = "/cases?" + urlencode({"player_id": request.player_id, "case_id": request.case_id, "session_id": request.session_id})
             elif path == "/inheritance/request":
                 player_id = self._player_id(form)
-                self.server.clinic_service.inheritance.request(player_id)
-                location = "/inheritance?" + urlencode({"player_id": player_id})
+                applied = self.server.clinic_service.inheritance.request(player_id)
+                values = {"player_id": player_id}
+                if self.server.clinic_service.mentor_status["mode"] == "deepseek":
+                    request_id = "inheritance_grant_1" if applied.granted else "inheritance_refusal_1"
+                    explained = self.server.clinic_service.mentor_expression(player_id, request_id)
+                    values.update({"mentor_message": explained.message, "mentor_notice": explained.notice or ""})
+                location = "/inheritance?" + urlencode(values)
+            elif path == "/mentor/explain":
+                if self.server.clinic_service.mentor_status["mode"] != "deepseek":
+                    raise ClinicError("mentor_mode_local", "当前使用本地确定性导师。")
+                player_id = self._player_id(form)
+                result = self.server.clinic_service.mentor_expression(player_id, form.get("request_id", ""))
+                location = "/teaching?" + urlencode({"player_id": player_id, "mentor_message": result.message, "mentor_notice": result.notice or ""})
             elif path == "/remediations":
                 player_id = self._player_id(form)
                 teaching = self.server.clinic_service.teaching_service(player_id)
@@ -186,10 +201,15 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
                 location = "/exam?" + urlencode({"player_id": player_id})
             elif path == "/exam/submit":
                 player_id = self._player_id(form)
-                self.server.clinic_service.exams.submit(
+                submitted=self.server.clinic_service.exams.submit(
                     player_id=player_id, exam_session_id=form.get("exam_session_id", ""),
                 )
-                location = "/exam?" + urlencode({"player_id": player_id})
+                public=self.server.clinic_service.exams.public_result(player_id,form.get("exam_session_id",""))
+                values={"player_id":player_id}
+                if not public.passed and self.server.clinic_service.mentor_status["mode"] == "deepseek":
+                    explained = self.server.clinic_service.mentor_expression(player_id, "exam_failure_explanation_1")
+                    values.update({"mentor_message": explained.message, "mentor_notice": explained.notice or ""})
+                location = "/exam?" + urlencode(values)
             elif path == "/quit":
                 location = "/"
             else:
@@ -215,7 +235,11 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
         view = self.server.clinic_service.home(player_id)
         ability = "".join(f"<li>{_esc(item['name'])}：{item['proficiency']}</li>" for item in view.abilities)
         cases = "".join(f"<li>{_esc(item.title)}：{_esc(item.status)}</li>" for item in view.visible_cases)
-        body = f'''{self._nav(player_id)}<h2>{_esc(view.player_summary.display_name)}的医馆</h2><div class="grid"><section class="card"><h3>导师与课程</h3><p>{_esc(view.mentor_summary)}</p><p>阶段：{_esc(view.teaching_stage)}</p><p>当前建议：{_esc(view.current_recommendation.recommendation_id)}</p></section><section class="card"><h3>六项能力</h3><ul>{ability}</ul></section><section class="card"><h3>关系</h3><p>亲近 {_esc(view.relationship['affinity'])} · 信任 {_esc(view.relationship['trust'])} · 认可 {_esc(view.relationship['recognition'])}</p></section><section class="card"><h3>六病例</h3><ul>{cases}</ul></section><section class="card"><h3>考试与传承</h3><p>考试：{_esc(view.exam_status)}</p><p>传承：{_esc(view.inheritance_status)}</p><p>权限：{_esc('、'.join(view.permissions))}</p></section></div>'''
+        mentor = self.server.clinic_service.mentor_status
+        runtime = ""
+        if mentor["mode"] == "deepseek":
+            runtime = f'''<section class="card"><h3>导师运行</h3><p>模式：真实DeepSeek</p><p>状态：{_esc('可用' if mentor['available'] else '已切换安全模式')}</p><p>已用费用：{_esc(mentor['used_cost'])} CNY · 剩余：{_esc(mentor['remaining_budget'])} CNY</p><p>fallback：{_esc('是' if mentor['fallback_active'] else '否')}</p></section>'''
+        body = f'''{self._nav(player_id)}<h2>{_esc(view.player_summary.display_name)}的医馆</h2>{runtime}<div class="grid"><section class="card"><h3>导师与课程</h3><p>{_esc(view.mentor_summary)}</p><p>阶段：{_esc(view.teaching_stage)}</p><p>当前建议：{_esc(view.current_recommendation.recommendation_id)}</p></section><section class="card"><h3>六项能力</h3><ul>{ability}</ul></section><section class="card"><h3>关系</h3><p>亲近 {_esc(view.relationship['affinity'])} · 信任 {_esc(view.relationship['trust'])} · 认可 {_esc(view.relationship['recognition'])}</p></section><section class="card"><h3>六病例</h3><ul>{cases}</ul></section><section class="card"><h3>考试与传承</h3><p>考试：{_esc(view.exam_status)}</p><p>传承：{_esc(view.inheritance_status)}</p><p>权限：{_esc('、'.join(view.permissions))}</p></section></div>'''
         self._send(200, _page("医馆", body))
 
     def _cases(self, player_id, case_id=None, session_id=None):
@@ -247,7 +271,8 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
         view = self.server.clinic_service.home(player_id)
         attempts = sorted((item for item in self.server.clinic_service.store.list_exam_sessions() if item.player_id == player_id), key=lambda item: item.attempt_number)
         active = next((item for item in attempts if item.result is None), None)
-        body = self._nav(player_id) + f"<h2>玄医入门综合考</h2><p>当前状态：{_esc(view.exam_status)}</p><p>考试由固定规则评分，不由导师代答。</p>"
+        query=self._query();message=query.get("mentor_message","");notice=query.get("mentor_notice","")
+        body = self._nav(player_id) + f"<h2>玄医入门综合考</h2><p>当前状态：{_esc(view.exam_status)}</p><p>考试由固定规则评分，不由导师代答。</p>"+(f'<p class="notice">{_esc(notice)}</p>' if notice else '')+(f'<section class="card"><h3>导师解释</h3><p>{_esc(message)}</p></section>' if message else '')
         if attempts and attempts[-1].result is not None:
             result = attempts[-1].result
             body += f'<section class="card"><h3>公开结果</h3><p>{"通过" if result.passed else "未通过"} · {result.total_score} 分</p><p>补课：{_esc("、".join(result.required_remediation_ids) or "无")}</p></section>'
@@ -267,13 +292,20 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
     def _teaching(self, player_id):
         teaching = self.server.clinic_service.teaching_service(player_id)
         plan = teaching.plan_service.ensure(player_id)
-        body = self._nav(player_id) + '<h2>导师教学</h2><p>课程、提示与师评均来自固定公开契约。</p>'
+        query=self._query();message=query.get("mentor_message","");notice=query.get("mentor_notice","")
+        rendered=(f'<p class="notice">{_esc(notice)}</p>' if notice else '')+(f'<section class="card"><h3>导师说明</h3><p>{_esc(message)}</p></section>' if message else '')
+        body = self._nav(player_id) + '<h2>导师教学</h2><p>课程、提示与师评均来自固定公开契约。</p>'+rendered
+        real_mode = self.server.clinic_service.mentor_status["mode"] == "deepseek"
+        if real_mode:
+            body += f'<form method="post" action="/mentor/explain"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="request_id" value="initial_lesson_hint_1"><input type="hidden" name="operation_id" value="{self._token()}"><button>请导师说明初课与提示</button></form>'
         for remediation_id in (plan.current_recommendation.recommendation_id,):
             if remediation_id not in teaching.curriculum.remediations:
                 continue
             item = teaching.curriculum.remediations[remediation_id]
             options = "".join(f'<button name="option_id" value="{_esc(option.option_id)}">{_esc(option.public_text)}</button>' for option in item.answer_options)
             body += f'<section class="card"><h3>{_esc(item.title)}</h3><p>{_esc(item.structured_question)}</p><form method="post" action="/remediations"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="remediation_id" value="{_esc(remediation_id)}"><input type="hidden" name="operation_id" value="{self._token()}">{options}</form></section>'
+            if real_mode and remediation_id == "remediate_diagnostic_reasoning_v1":
+                body += f'<form method="post" action="/mentor/explain"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="request_id" value="wrong_diagnosis_remediation_1"><input type="hidden" name="operation_id" value="{self._token()}"><button>请导师解释本次辨证补课</button></form>'
         sessions = [item for item in self.server.clinic_service.store.list_teaching_sessions() if item.player_id == player_id]
         body += '<section class="card"><h3>课程记录</h3><ul>' + ("".join(f'<li>{_esc(item.lesson_id)} · {_esc(item.phase.value)} · 提示 {len(item.used_hint_ids)}/2</li>' for item in sessions) or '<li>尚无课程记录</li>') + '</ul></section>'
         self._send(200, _page("导师教学", body))
@@ -289,7 +321,8 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
     def _inheritance(self, player_id):
         result = self.server.clinic_service.inheritance.policy.decide(player_id)
         reasons = "、".join(result.missing_requirement_categories) or "公开条件已满足"
-        body = self._nav(player_id) + f'<h2>传承</h2><p>当前资格：{_esc(reasons)}</p><form method="post" action="/inheritance/request"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="operation_id" value="{self._token()}"><button>申请“溯契还因”</button></form>'
+        query=self._query();message=query.get("mentor_message","");notice=query.get("mentor_notice","")
+        body = self._nav(player_id) + f'<h2>传承</h2><p>当前资格：{_esc(reasons)}</p>'+(f'<p class="notice">{_esc(notice)}</p>' if notice else '')+(f'<section class="card"><h3>导师解释</h3><p>{_esc(message)}</p></section>' if message else '')+f'<form method="post" action="/inheritance/request"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="operation_id" value="{self._token()}"><button>申请“溯契还因”</button></form>'
         self._send(200, _page("传承", body))
 
     def _error(self, status, message):
@@ -298,19 +331,46 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
 
 def build_parser():
     parser = argparse.ArgumentParser(prog="xuanyi-clinic", description="启动仅绑定 127.0.0.1 的本地玄医馆。")
-    parser.add_argument("--state-dir", type=Path, required=True)
+    parser.add_argument("--state-dir", type=Path)
     parser.add_argument("--host", default="127.0.0.1", choices=("127.0.0.1",))
     parser.add_argument("--port", type=int, default=0)
+    parser.add_argument("--mentor-mode",choices=("off","fake","deepseek"),default="fake")
+    parser.add_argument("--confirm-paid-run",action="store_true")
+    parser.add_argument("--budget-cny")
+    parser.add_argument("--dry-run",action="store_true")
     return parser
 
 
 def main(argv=None):
     args = build_parser().parse_args(argv)
-    if not args.state_dir.is_dir():
+    if args.dry_run:
+        if args.mentor_mode!="deepseek": print("dry-run：本地确定性导师；loopback=127.0.0.1；网络调用=0");return 0
+        try: budget=Decimal(args.budget_cny or "")
+        except InvalidOperation: print("启动失败：预算格式无效。",file=sys.stderr);return 2
+        if budget<=0 or budget>Decimal("0.05"): print("启动失败：预算必须大于0且不超过0.05 CNY。",file=sys.stderr);return 2
+        print(f"dry-run：model=deepseek-v4-flash；thinking=disabled；pricing=deepseek_v4_flash_mentor_pricing_2026_08_13；budget={budget}；interactions=初课提示,错误诊断补课,考试失败,传承拒绝,传承授予；fallback=确定性；storage=state-dir本地脱敏账本；loopback=127.0.0.1；网络调用=0")
+        return 0
+    if args.state_dir is None or not args.state_dir.is_dir():
         print("启动失败：存档目录必须已经存在。", file=sys.stderr)
         return 2
+    mode=ClinicMentorMode(args.mentor_mode);runtime=None
+    if mode is ClinicMentorMode.DEEPSEEK:
+        if not args.confirm_paid_run: print("启动失败：真实导师必须显式确认付费运行。",file=sys.stderr);return 2
+        try: budget=Decimal(args.budget_cny or "")
+        except InvalidOperation: print("启动失败：预算格式无效。",file=sys.stderr);return 2
+        if budget<=0 or budget>Decimal("0.05"): print("启动失败：预算必须大于0且不超过0.05 CNY。",file=sys.stderr);return 2
+        from dotenv import dotenv_values
+        from pydantic import SecretStr
+        from xuanyi_npc.evaluation.real_mentor_transport import RealMentorDeepSeekTransport,load_mentor_pilot_pricing
+        from xuanyi_npc.application.clinic_mentor import ClinicMentorBudgetGuard
+        pricing=load_mentor_pilot_pricing(Path(__file__).parents[1]/"resources/pilot/deepseek_v4_flash_mentor_pricing_2026-08-13.json")
+        key=(dotenv_values(Path.cwd()/".env",encoding="utf-8",interpolate=False).get("DEEPSEEK_API_KEY") or "").strip()
+        if not key: print("启动失败：真实导师凭据不可用。",file=sys.stderr);return 2
+        transport=RealMentorDeepSeekTransport(SecretStr(key),ClinicMentorBudgetGuard(budget,pricing),timeout_seconds=30)
+        runtime=ClinicMentorRuntime(mode,args.state_dir,transport,budget)
+    elif mode is ClinicMentorMode.OFF: runtime=ClinicMentorRuntime(mode,args.state_dir)
     with materialized_clinic_resources() as resources:
-        service = build_clinic_service(args.state_dir, resources)
+        service = build_clinic_service(args.state_dir, resources,runtime)
         server = ClinicHTTPServer((args.host, args.port), service)
         host, port = server.server_address
         print(f"玄医馆已启动：http://{host}:{port}", flush=True)

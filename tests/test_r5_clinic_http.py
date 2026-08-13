@@ -59,3 +59,13 @@ def test_post_refresh_is_idempotent_and_unknown_ids_are_safe(clinic_http):
 def test_server_refuses_non_loopback_binding(tmp_path):
     with pytest.raises(ValueError):
         ClinicHTTPServer(("0.0.0.0", 0), build_clinic(tmp_path))
+
+
+def test_default_fake_home_keeps_existing_page_surface(clinic_http):
+    port, _ = clinic_http
+    _, _, start = request(port, "GET", "/")
+    token = re.search(r'name="operation_id" value="([^"]+)', start).group(1)
+    _, headers, _ = request(port, "POST", "/players", {"display_name": "状态弟子", "operation_id": token})
+    _, _, home = request(port, "GET", headers["Location"])
+    assert "导师运行" not in home and "fallback" not in home
+    assert "/mentor/explain" not in request(port, "GET", headers["Location"].replace("/clinic", "/teaching"))[2]

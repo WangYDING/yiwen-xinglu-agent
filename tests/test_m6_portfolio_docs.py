@@ -42,7 +42,7 @@ def test_current_product_claims_have_evidence_links() -> None:
         "| 玩家行动与独立 MentorAgent 教学边界 | [",
         "| 确定性成长、课程与结构化导师记忆 | [",
         "| R4 正式考试、权限过滤、两进程恢复与单传承链 | [",
-        "| R6 八路线离线验收通过；真实导师与真人试玩未执行 | [",
+        "| R6 八路线离线验收通过；v3 真实导师工程案例通过；医馆真实模式仅离线装配 | [",
     )
     for claim in required_linked_claims:
         assert claim in text
