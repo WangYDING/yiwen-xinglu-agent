@@ -26,13 +26,16 @@ New-Item -ItemType Directory -Force .\runtime_data\clinic | Out-Null
 - 下次使用相同命令启动，即可从开始页恢复弟子。
 - 回到运行医馆的 PowerShell，按 `Ctrl+C` 正常退出。
 
-## 可选：CLI 工程入口
+## 入口边界
 
-```powershell
-New-Item -ItemType Directory -Force .\runtime_data\play | Out-Null
-.\.venv\Scripts\xuanyi-play.exe --state-dir .\runtime_data\play
-```
+`xuanyi-clinic` 是唯一正式玩家产品入口。
 
-选择 `manual` 由玩家亲自操作；Fake 自动路线只用于回归和演示，不代表真人游玩。
+| 类别 | 安装入口 | 边界 |
+|---|---|---|
+| 玩家 | `xuanyi-clinic` | 正式本地医馆，推荐入口 |
+| CLI | `xuanyi-play` | 手动玩法与工程调试 |
+| MCP | `xuanyi-mcp-stdio` | 本地集成入口 |
+| 验收 | `xuanyi-m5-acceptance`、`xuanyi-product-acceptance` | 离线确定性验收 |
+| 历史实验 | `xuanyi-case-demo`、`xuanyi-deepseek-models`、`xuanyi-real-mentor-pilot` | 工程证据或显式受控实验，不是玩家入口 |
 
 遇到问题请查看[医馆用户指南](docs/product/R5_CLINIC_USER_GUIDE.md)。项目定位、架构和历史证据不在本页展开，可从 [README](README.md) 和[文档索引](docs/INDEX.md)进入。

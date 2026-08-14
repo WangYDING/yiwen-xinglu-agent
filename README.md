@@ -34,28 +34,15 @@ New-Item -ItemType Directory -Force .\runtime_data\clinic | Out-Null
 .\.venv\Scripts\xuanyi-clinic.exe --state-dir .\runtime_data\clinic
 ```
 
-`xuanyi-clinic` 是产品入口；`xuanyi-play` 是 CLI/工程入口，MCP 是集成入口，DoctorAgent 自动解题只用于评测。详见 [医馆用户指南](docs/product/R5_CLINIC_USER_GUIDE.md)。
+`xuanyi-clinic` 是唯一正式玩家产品入口。详见 [医馆用户指南](docs/product/R5_CLINIC_USER_GUIDE.md)。
 
-```powershell
-py -3.12 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -e .
-New-Item -ItemType Directory -Force .\runtime_data\play | Out-Null
-.\.venv\Scripts\xuanyi-play.exe --state-dir .\runtime_data\play
-```
-
-选择 `manual` 时由玩家操作。以下 Fake 自动解题仅用于历史回归与病例引擎验收，不是产品主流程：
-
-```powershell
-.\.venv\Scripts\xuanyi-play.exe --state-dir .\runtime_data\play `
-  --mode fake --semantic-shadow off
-```
-
-离线导师教学模式使用：
-
-```powershell
-.\.venv\Scripts\xuanyi-play.exe --state-dir .\runtime_data\play `
-  --mode manual --mentor-mode fake
-```
+| 类别 | 安装入口 | 边界 |
+|---|---|---|
+| 玩家 | `xuanyi-clinic` | 正式本地医馆，推荐入口 |
+| CLI | `xuanyi-play` | 手动玩法与工程调试 |
+| MCP | `xuanyi-mcp-stdio` | 本地集成入口 |
+| 验收 | `xuanyi-m5-acceptance`、`xuanyi-product-acceptance` | 离线确定性验收 |
+| 历史实验 | `xuanyi-case-demo`、`xuanyi-deepseek-models`、`xuanyi-real-mentor-pilot` | 工程证据或显式受控实验，不是玩家入口；仓库数据型 Runner 保留为 Python 模块但不随 wheel 安装命令 |
 
 病例与 Campaign 规则已作为包资源安装，普通用户无需寻找 `site-packages`、编辑 JSON 或配置 `.env`。完整安装、构建与仓库外验证见 [M6-P1 分发记录](docs/archive/M6_P1_DISTRIBUTION_VERIFICATION.md)。
 
