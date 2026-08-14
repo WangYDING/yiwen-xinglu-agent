@@ -9,12 +9,12 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 CHECKED_MARKDOWN = (
     REPO_ROOT / "README.md",
     REPO_ROOT / "docs" / "INDEX.md",
-    REPO_ROOT / "docs" / "M5_DEMO_GUIDE.md",
-    REPO_ROOT / "docs" / "assets" / "README.md",
+    REPO_ROOT / "docs" / "archive" / "M5_DEMO_GUIDE.md",
+    REPO_ROOT / "docs" / "portfolio" / "assets" / "README.md",
 )
 ASSET_HASHES = {
     "transcripts/01_case_catalog.txt": "81AFD803C94298FBDB02E89722BD8C3C597CF068EF49CC2E7E12E9FAB5DD36FC",
@@ -60,7 +60,7 @@ def _local_link_errors(markdown_path: Path) -> list[str]:
 
 def run_checks() -> list[str]:
     errors: list[str] = []
-    asset_root = REPO_ROOT / "docs" / "assets"
+    asset_root = REPO_ROOT / "docs" / "portfolio" / "assets"
     for markdown_path in CHECKED_MARKDOWN:
         errors.extend(_local_link_errors(markdown_path))
 

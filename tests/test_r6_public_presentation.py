@@ -85,7 +85,7 @@ def test_secret_identifier_upgrades_to_safety_stop(tmp_path):
 
 
 def test_saved_smoke_observation_is_detected_and_safely_re_evaluated():
-    report=(Path(__file__).parents[1]/"docs/R6_REAL_MENTOR_CLINIC_SMOKE_RESULT.md").read_text(encoding="utf-8")
+    report=(Path(__file__).parents[1]/"docs/evaluation/R6_REAL_MENTOR_CLINIC_SMOKE_RESULT.md").read_text(encoding="utf-8")
     historical=" ".join(re.findall(r"`([^`]+)`",report))
     assert {"reason_diagnosis","remediate_diagnostic_reasoning_v1","remediate_treatment_alignment_v1"}.issubset(PUBLIC_PRESENTATION.detected_internal_ids(historical))
     rendered=PUBLIC_PRESENTATION.sanitize_legacy_text(historical)

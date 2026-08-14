@@ -50,7 +50,7 @@
 
 ## M5 后续顺序修订：先实施 R1 成长底座
 
-本节保留 M5 的历史审计结论，但后续实现顺序已由 ADR-055 和 [`PRODUCT_COMPLETION_PLAN_V1.md`](PRODUCT_COMPLETION_PLAN_V1.md) 修订。M5 仍未实现成长或导师教学；不得把本次顺序调整回写成 M5 能力。
+本节保留 M5 的历史审计结论，但后续实现顺序已由 ADR-055 和 [`PRODUCT_COMPLETION_PLAN_V1.md`](../product/PRODUCT_COMPLETION_PLAN_V1.md) 修订。M5 仍未实现成长或导师教学；不得把本次顺序调整回写成 M5 能力。
 
 R1 已在 M5 历史关闭之后完成以下验收；这不改变上表对 M5 当时能力的审计：
 
@@ -73,4 +73,4 @@ R2 尚未开始；届时才实现原计划中的玩家手动行动、案前目�
 - `docs/M5_PORTFOLIO_EVIDENCE.md` 的“真实 Agent 体验”重点是 P4d 自动完成病例，应明确它属于工程评测，不是最终玩家体验。
 - `docs/M5_EXIT_AUDIT.md` 已写明 Fake 是回归/演示而非玩家决策模型，但首页短路径没有同等醒目的限定。
 
-这些是表述层偏差，不改写 M5、M6-P2 的历史验收和素材来源。后续统一修正必须以 [`PROJECT_MASTER_BLUEPRINT.md`](PROJECT_MASTER_BLUEPRINT.md) 为准。
+这些是表述层偏差，不改写 M5、M6-P2 的历史验收和素材来源。后续统一修正必须以 [`PROJECT_MASTER_BLUEPRINT.md`](../architecture/PROJECT_MASTER_BLUEPRINT.md) 为准。

@@ -1,6 +1,6 @@
 # 历史技术总览（M6-P2 前 README）
 
-> 本页保存 M6-P2 首页重构前的详细实现、运行命令与里程碑说明，避免招聘展示首页淹没工程历史。当前状态仍以 [`ROADMAP.md`](ROADMAP.md) 为准，快速入口回到 [`../README.md`](../README.md)。
+> 本页保存 M6-P2 首页重构前的详细实现、运行命令与里程碑说明，避免招聘展示首页淹没工程历史。当前状态仍以 [`ROADMAP.md`](../product/ROADMAP.md) 为准，快速入口回到 [`../README.md`](../../README.md)。
 
 **Xuanyi: An Auditable Agentic Mentor NPC**
 
@@ -14,12 +14,12 @@ cross-Episode continuity, and honest positive and negative model evidence.
 
 项目中的病例、医术、异常现象和处置方式均为架空设定，不提供现实诊断、处方或剂量。
 
-> **授权边界**：程序代码、测试和工程脚本按 [Apache-2.0](LICENSE)
+> **授权边界**：程序代码、测试和工程脚本按 [Apache-2.0](../../LICENSE)
 > 授权；病例、世界观、Campaign 内容、文档和演示文案为
 > © 2026 WangYDING，保留所有权。招聘评估可浏览、克隆并运行项目，但
-> 不获得复制、改编或再分发这些内容的权利。详见 [NOTICE](NOTICE) 与
-> [CONTENT_RIGHTS.md](CONTENT_RIGHTS.md)。第三方归属见
-> [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+> 不获得复制、改编或再分发这些内容的权利。详见 [NOTICE](../../NOTICE) 与
+> [CONTENT_RIGHTS.md](../../CONTENT_RIGHTS.md)。第三方归属见
+> [THIRD_PARTY_NOTICES.md](../../THIRD_PARTY_NOTICES.md)。
 
 ## 当前状态
 
@@ -87,11 +87,11 @@ cross-Episode continuity, and honest positive and negative model evidence.
 - `xuanyi-m5-acceptance` 离线验收入口：用独立子进程逐行动恢复三病例，验证 Campaign、双玩家隔离、拒绝零写入、事件重放和 semantic shadow 隔离，并输出脱敏 JSON 与摘要。
 - 可直接录屏的 3 分钟与 8～10 分钟演示指南，以及分别面向 Agent 应用岗和游戏 AI 产品岗的证据清单。
 
-**当前已完成 M5，并完成 M6-P1 本地发布工程**：P4b 的[历史负结果](docs/M5_P4B_DEEPSEEK_CAMPAIGN_PILOT_20260811.md)保持不变；P4c 的[离线行动契约审计](docs/M5_P4C_AGENT_CONTRACT_AUDIT.md)没有回写该结果；P4d 的[最终单次恢复验证](docs/M5_P4D_DEEPSEEK_RECOVERY_VALIDATION_20260811.md)以 21 次 Chat、`0.02345744 CNY` 完成灰灶和月井，并验证 5/5 行动契约修复。P5 只做离线验收，没有重跑付费实验。完整退出证据见 [`docs/M5_EXIT_AUDIT.md`](docs/M5_EXIT_AUDIT.md)，发布验证见 [`docs/M6_P1_DISTRIBUTION_VERIFICATION.md`](docs/M6_P1_DISTRIBUTION_VERIFICATION.md)，全部文档按主题汇总在 [`docs/INDEX.md`](docs/INDEX.md)。
+**当前已完成 M5，并完成 M6-P1 本地发布工程**：P4b 的[历史负结果](../archive/M5_P4B_DEEPSEEK_CAMPAIGN_PILOT_20260811.md)保持不变；P4c 的[离线行动契约审计](../archive/M5_P4C_AGENT_CONTRACT_AUDIT.md)没有回写该结果；P4d 的[最终单次恢复验证](../archive/M5_P4D_DEEPSEEK_RECOVERY_VALIDATION_20260811.md)以 21 次 Chat、`0.02345744 CNY` 完成灰灶和月井，并验证 5/5 行动契约修复。P5 只做离线验收，没有重跑付费实验。完整退出证据见 [`docs/archive/M5_EXIT_AUDIT.md`](../archive/M5_EXIT_AUDIT.md)，发布验证见 [`docs/archive/M6_P1_DISTRIBUTION_VERIFICATION.md`](../archive/M6_P1_DISTRIBUTION_VERIFICATION.md)，全部文档按主题汇总在 [`docs/INDEX.md`](../INDEX.md)。
 
 最终 M2 退出依据包括：标准探针在 8 步内完成正确诊断和处置，终态 `resolved / 100`；`SAFETY_ONLY` 的错误诱导探针抵抗了 `evil_spirit_attack` 暗示并提交正确诊断，但因一次解释性 `respond` 未能处置；过早行动探针的 1 次未知调查和 4 次过早诊断均被规则拒绝，没有状态污染。最新三探针共 24 次 Chat，24/24 首次结构化成功，格式修复、降级和非法状态写入均为 0，事件均连续且可重放。三探针共用一个病例且各运行一次，不是正式成功率样本。
 
-M2 分层结论和数据身份见 [`docs/M2_EXIT_AUDIT.md`](docs/M2_EXIT_AUDIT.md)，M3 证据和限制见 [`docs/M3_EXIT_AUDIT.md`](docs/M3_EXIT_AUDIT.md)，M4 退出结论见 [`docs/M4_EXIT_AUDIT.md`](docs/M4_EXIT_AUDIT.md)。M4 架构与 P1–P4 实现边界见 [`docs/M4_MEMORY_PLAN.md`](docs/M4_MEMORY_PLAN.md)，Gold 契约、指标和实测结果见 [`docs/M4_MEMORY_EVALUATION_PLAN.md`](docs/M4_MEMORY_EVALUATION_PLAN.md)。M4.5 的完整负结果见 [`docs/M45_P2D_HOLDOUT_PILOT_REPORT_20260810.md`](docs/M45_P2D_HOLDOUT_PILOT_REPORT_20260810.md)，最终终止状态见 [`docs/M45_TERMINATION_AUDIT.md`](docs/M45_TERMINATION_AUDIT.md)。M5 的产品流程见 [`docs/M5_MULTI_CASE_VERTICAL_SLICE_PLAN.md`](docs/M5_MULTI_CASE_VERTICAL_SLICE_PLAN.md)，病例审计见 [`docs/M5_CASE_DESIGN.md`](docs/M5_CASE_DESIGN.md)，P3 的 Campaign 契约与故障边界见 [`docs/M5_CAMPAIGN_CONTINUITY.md`](docs/M5_CAMPAIGN_CONTINUITY.md)。项目仍不包含 HTTP/SSE、认证、远程部署或已获准的真实 V1 记忆 Prompt。
+M2 分层结论和数据身份见 [`docs/archive/M2_EXIT_AUDIT.md`](../archive/M2_EXIT_AUDIT.md)，M3 证据和限制见 [`docs/archive/M3_EXIT_AUDIT.md`](../archive/M3_EXIT_AUDIT.md)，M4 退出结论见 [`docs/archive/M4_EXIT_AUDIT.md`](../archive/M4_EXIT_AUDIT.md)。M4 架构与 P1–P4 实现边界见 [`docs/archive/M4_MEMORY_PLAN.md`](../archive/M4_MEMORY_PLAN.md)，Gold 契约、指标和实测结果见 [`docs/archive/M4_MEMORY_EVALUATION_PLAN.md`](../archive/M4_MEMORY_EVALUATION_PLAN.md)。M4.5 的完整负结果见 [`docs/archive/M45_P2D_HOLDOUT_PILOT_REPORT_20260810.md`](../archive/M45_P2D_HOLDOUT_PILOT_REPORT_20260810.md)，最终终止状态见 [`docs/archive/M45_TERMINATION_AUDIT.md`](../archive/M45_TERMINATION_AUDIT.md)。M5 的产品流程见 [`docs/archive/M5_MULTI_CASE_VERTICAL_SLICE_PLAN.md`](../archive/M5_MULTI_CASE_VERTICAL_SLICE_PLAN.md)，病例审计见 [`docs/archive/M5_CASE_DESIGN.md`](../archive/M5_CASE_DESIGN.md)，P3 的 Campaign 契约与故障边界见 [`docs/archive/M5_CAMPAIGN_CONTINUITY.md`](../archive/M5_CAMPAIGN_CONTINUITY.md)。项目仍不包含 HTTP/SSE、认证、远程部署或已获准的真实 V1 记忆 Prompt。
 
 ## 设计边界
 
@@ -117,13 +117,13 @@ src/xuanyi_npc/mcp_server/ 官方 MCP v2 的进程内工具契约与 Server fact
 src/xuanyi_npc/memory/   M4 公开来源、投影、生命周期与 Embedding 契约
 src/xuanyi_npc/storage/  JSON 状态与 SQLite 权威记忆存储
 src/xuanyi_npc/resources/ wheel/source 共用的病例、Campaign 与最小运行数据
-data/evaluation/         P0 dev、真实行为探针、脱敏轨迹与 M4 合成记忆 Gold
-data/pilot/              不进入核心 wheel 的历史 Pilot 配置快照
+tools/experiments/data/evaluation/         P0 dev、真实行为探针、脱敏轨迹与 M4 合成记忆 Gold
+tools/experiments/data/pilot/              不进入核心 wheel 的历史 Pilot 配置快照
 docs/                    架构决策记录
 tests/                   自动化测试
 ```
 
-当前执行状态以 `docs/ROADMAP.md` 为唯一路线来源；架构约束见 `docs/DECISIONS.md`，历史和当前可复现性验证见 `docs/VERIFICATION.md`。
+当前执行状态以 `docs/product/ROADMAP.md` 为唯一路线来源；架构约束见 `docs/architecture/DECISIONS.md`，历史和当前可复现性验证见 `docs/evaluation/VERIFICATION.md`。
 
 ## 本地运行
 
@@ -229,7 +229,7 @@ python -m xuanyi_npc.evaluation.memory_runner
 
 命令会在两个全新临时目录中重复完整套件，比较排序后的 SQLite 逻辑快照与确定性结果哈希，并自动清理临时状态。输出指标只属于合成 Gold 与 64 维确定性 Fake Embedding；不代表真实 Embedding 语义质量、真实模型长期记忆成功率或生产性能。
 
-M4.5-P1 的本地 Embedding 是可选能力，基础 `pip install -e ".[dev]"` 不会安装大型 ML 依赖。固定 Windows/Python 3.12/CUDA 12.6 环境的依赖、受控下载和离线烟雾命令见 `docs/M45_P1_LOCAL_EMBEDDING_REPORT.md`；模型目录、缓存和烟雾结果均被 Git 忽略。不要在没有单独下载授权时执行模型下载脚本。
+M4.5-P1 的本地 Embedding 是可选能力，基础 `pip install -e ".[dev]"` 不会安装大型 ML 依赖。固定 Windows/Python 3.12/CUDA 12.6 环境的依赖、受控下载和离线烟雾命令见 `docs/archive/M45_P1_LOCAL_EMBEDDING_REPORT.md`；模型目录、缓存和烟雾结果均被 Git 忽略。不要在没有单独下载授权时执行模型下载脚本。
 
 M2b-P0 的 3 条 dev 场景也完全离线，可由一条命令重复运行：
 

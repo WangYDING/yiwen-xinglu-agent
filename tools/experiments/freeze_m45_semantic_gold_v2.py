@@ -23,7 +23,7 @@ from xuanyi_npc.evaluation.semantic_memory_contracts import (
 from xuanyi_npc.memory.canonical import sha256_hex
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 DATA = ROOT / "data" / "evaluation"
 INPUT_PATH = DATA / "m45_semantic_gold_inputs.json"
 V1_EXPECTATION_PATH = DATA / "m45_semantic_gold_expectations.json"

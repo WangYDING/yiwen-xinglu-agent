@@ -5,15 +5,15 @@
 本文件是项目唯一有效的里程碑状态来源；产品身份与目标体验以总纲、系统边界以产品架构为准。发生冲突时，按以下顺序解释：
 
 1. 用户当前明确要求；
-2. `docs/PROJECT_MASTER_BLUEPRINT.md`；
-3. `docs/PRODUCT_SYSTEM_ARCHITECTURE.md`；
-4. `docs/ROADMAP.md`；
-5. `docs/DECISIONS.md` 中最新且状态为“已接受”的 ADR；
-6. `docs/M5_PRODUCT_GAP_AUDIT.md`；
-7. `README.md` 与 `docs/VERIFICATION.md`；
+2. `docs/architecture/PROJECT_MASTER_BLUEPRINT.md`；
+3. `docs/architecture/PRODUCT_SYSTEM_ARCHITECTURE.md`；
+4. `docs/product/ROADMAP.md`；
+5. `docs/architecture/DECISIONS.md` 中最新且状态为“已接受”的 ADR；
+6. `docs/archive/M5_PRODUCT_GAP_AUDIT.md`；
+7. `README.md` 与 `docs/evaluation/VERIFICATION.md`；
 8. 其他历史材料。
 
-Word 设计总结、`xuanyi-npc-handoff` 和 `docs/algorithm-experiment-plan-v0.1.md` 仅作为历史基线，不再表示当前执行状态。实验执行使用 v0.2 或更高版本。
+Word 设计总结、`xuanyi-npc-handoff` 和 `docs/archive/algorithm-experiment-plan-v0.1.md` 仅作为历史基线，不再表示当前执行状态。实验执行使用 v0.2 或更高版本。
 
 ## 当前状态
 
@@ -28,13 +28,13 @@ Word 设计总结、`xuanyi-npc-handoff` 和 `docs/algorithm-experiment-plan-v0.
 | M2b-P1b：真实 LLM Pilot | 已完成（工程退出） | 标准探针 `resolved / 100`；错误诱导主要安全目标达到但任务未闭环；过早行动由规则层安全拒绝但 Agent 未恢复。真实接入、指标、预算和重放已验证，不代表模型完全可靠或正式成功率 |
 | M3-P0：MCP 工具契约与进程内验证 | 已完成 | 官方 MCP SDK v2、9 个冻结工具、应用 Facade、严格 Schema、安全错误、拒绝零写入、`Client(server)` 参考轨迹 |
 | M3-P1：stdio 集成验证 | 已完成 | 独立 Python 子进程启动、9 工具发现、调用、拒绝零写入、磁盘恢复、重启、正常关闭、错误启动隔离 |
-| M3：最小 MCP 工具层 | 已完成 | P0/P1 的 15 项退出条件全部通过；完整结论见 `docs/M3_EXIT_AUDIT.md` |
+| M3：最小 MCP 工具层 | 已完成 | P0/P1 的 15 项退出条件全部通过；完整结论见 `docs/archive/M3_EXIT_AUDIT.md` |
 | M4-P0：V1 基础长期记忆规划冻结 | 已完成 | 来源事件允许列表、SQLite 权威存储、幂等/删除/重建、派生向量、基础 Top-K、安全上下文和离线 Gold 规划 |
 | M4-P1：事件投影与持久化 | 已完成 | 公开来源收据、三类确定性投影、SQLite Schema v1、幂等/冲突、生命周期、故障窗口与显式协调 |
 | M4-P2：Embedding 与基础 Top-K | 已完成 | 供应商无关契约、确定性 64 维 Fake、Schema v2 派生向量、按玩家余弦 Top-K、索引状态与重建 |
 | M4-P3：V1 Agent 安全上下文 | 已完成 | 跨 Episode MemoryScope、检索前/后过滤、最小 MemoryView、memory_query_v1、独立 V1 Prompt 与安全停止 |
 | M4-P4：离线记忆 Gold 与安全评测 | 已完成 | 14 条冻结合成场景、严格输入/Gold 契约、确定性双运行器、macro/micro 指标、逻辑快照与安全硬门槛 |
-| M4：V1 基础长期记忆 | 已完成 | P0–P4 与退出审计全部通过；完整结论见 `docs/M4_EXIT_AUDIT.md`，不代表真实 Embedding 或真实 V1 模型效果 |
+| M4：V1 基础长期记忆 | 已完成 | P0–P4 与退出审计全部通过；完整结论见 `docs/archive/M4_EXIT_AUDIT.md`，不代表真实 Embedding 或真实 V1 模型效果 |
 | M4.5-P0：真实 Embedding 与 V1 Pilot 规划 | 已完成 | 本机只读规格、三路线比较、本地 BGE-M3 首选、外部 API 备选、15 条语义 Gold 设计、P1–P3 授权与停止门禁 |
 | M4.5-P1：本地 Adapter 与离线烟雾 | 已完成 | 固定依赖、BGE-M3 revision/SHA 白名单、延迟加载 Adapter、Mock、真实 CUDA/FP32 离线烟雾；未运行语义 Gold |
 | M4.5-P2a：语义 Gold v2 离线纠偏 | 已完成 | 保留 v1 冻结与停止历史；复用相同 15 条/75 文本，将相关项、合法语义负例和实际安全排除项完整分区；没有加载 BGE 或读取失败指标 |
@@ -43,7 +43,7 @@ Word 设计总结、`xuanyi-npc-handoff` 和 `docs/algorithm-experiment-plan-v0.
 | M4.5-P2c：V2 表示与新 holdout 冻结 | 已完成 | `retrieval_query_v2`、`embedding_document_v2`、表示空间隔离、索引过期状态、保守策略契约；36 条/144 候选 calibration/test 已冻结 |
 | M4.5-P2d：新 holdout 本地验证 | 已完成运行（语义质量未通过） | 唯一一组两次 BGE-M3 运行工程/安全/重复性通过；final Recall@3 `1.0`、MRR `0.975`，但 micro F1 `0.6667` 且更正切片 FN `1`，未达到准入线；Dense-only 优化关闭 |
 | M4.5-P3：真实 V1 Agent Pilot | 本轮取消 | P2d 未达到准入线，真实语义记忆不得进入 Agent Prompt；不描述为通过或已执行 |
-| M4.5 终止审计 | 已完成：`closed_with_known_dense_retrieval_limitations` | 本地 BGE 工程、安全与重复性通过，Dense 排名主要门槛通过，但保守召回 micro F1 `0.6667`、更正切片 FN `1`；完整结论见 `docs/M45_TERMINATION_AUDIT.md` |
+| M4.5 终止审计 | 已完成：`closed_with_known_dense_retrieval_limitations` | 本地 BGE 工程、安全与重复性通过，Dense 排名主要门槛通过，但保守召回 micro F1 `0.6667`、更正切片 FN `1`；完整结论见 `docs/archive/M45_TERMINATION_AUDIT.md` |
 | M5-P0：多病例纵向切片规划 | 已完成 | 三病例用户流程、Runner 边界、确定性跨 Episode 连续性、两个新病例概要、双岗位证据与 P1–P5 验收已冻结 |
 | M5-P1：正式多病例 Episode Runner | 已完成 | 可注入 CaseCatalog/应用服务、严格公开结果、交互式 CLI、玩家/病例选择、原子保存、真实双进程恢复、完整旧纸伞 `resolved / 100` |
 | M5-P2：两个完整新病例 | 已完成 | 新增灰灶客栈与月井回声；复用现有 Schema/Engine，各支持两种调查顺序、三类结局、无 LLM 闭环、重放与恢复 |
@@ -78,7 +78,7 @@ M0～M6 的代码、提交、验证记录和正负实验全部保留，不因本
 | R5 | 六病例和医馆入口 | **已完成** | 三个通用 Schema 进阶病例、课程选择 v2、loopback 医馆主循环和普通用户入口，展示成长、关系、课程、师评、考试与传承 |
 | R6 | 产品验收 | **进行中（真实医馆烟雾后离线修复）** | `product_acceptance_v1` 与八路线离线验收保持；v3 五请求真实导师工程案例通过；真实医馆五请求烟雾完成，发现的内部 ID 展示缺陷已离线修复；真人试玩与远程发布未执行 |
 
-R1 的详细范围与门禁见 [`PRODUCT_COMPLETION_PLAN_V1.md`](PRODUCT_COMPLETION_PLAN_V1.md)、[`PROJECT_MASTER_BLUEPRINT.md`](PROJECT_MASTER_BLUEPRINT.md) 和 [`M5_PRODUCT_GAP_AUDIT.md`](M5_PRODUCT_GAP_AUDIT.md)。M0～M6 的历史结论不变；语义记忆继续默认关闭，不得把 M4.5 的合成指标、M5 自动解题案例或 R1 状态底座描述为导师教学效果或玩家收益。
+R1 的详细范围与门禁见 [`PRODUCT_COMPLETION_PLAN_V1.md`](PRODUCT_COMPLETION_PLAN_V1.md)、[`PROJECT_MASTER_BLUEPRINT.md`](../architecture/PROJECT_MASTER_BLUEPRINT.md) 和 [`M5_PRODUCT_GAP_AUDIT.md`](../archive/M5_PRODUCT_GAP_AUDIT.md)。M0～M6 的历史结论不变；语义记忆继续默认关闭，不得把 M4.5 的合成指标、M5 自动解题案例或 R1 状态底座描述为导师教学效果或玩家收益。
 
 R2 的实现、公开/隐藏边界、故障语义和 CLI 入口见 [`R2_MENTOR_TEACHING_LOOP.md`](R2_MENTOR_TEACHING_LOOP.md)。R3 的课程、补课、教学计划和结构化记忆边界见 [`R3_ADAPTIVE_THREE_CASE_TEACHING.md`](R3_ADAPTIVE_THREE_CASE_TEACHING.md)；R4 的考试、权限与传承以及 R5 的六病例医馆均已完成。R6 v3 Pilot 与真实医馆烟雾均已作为单次工程案例运行；烟雾发现的内部 ID 展示缺陷已离线修复，真人试玩和远程发布尚未执行。
 
@@ -174,7 +174,7 @@ M3-P0 已把现有能力包装为最小 MCP 工具，没有复制领域规则：
 
 M3-P1 已使用官方 stdio 客户端启动两个先后独立的 Python 子进程：第一进程完成发现、只读调用、拒绝验证和首个合法动作后正常退出；第二进程从磁盘恢复修订 1，完成事件 2 至 8 后正常退出。最终状态为 `resolved / 100`，两个子进程退出码均为 0，错误启动的 stdout 为空且没有文件污染。
 
-M3-P0/P1 的 15 项退出条件已经通过，M3 工程里程碑完成。完整证据、逐项判定和限制见 `docs/M3_EXIT_AUDIT.md`。M3 结论不证明并发写入、指定第三方 Host、HTTP/SSE、OAuth、远程部署或生产运维可用，这些不是当前最小 M3 的退出阻塞。后续边界保持如下：
+M3-P0/P1 的 15 项退出条件已经通过，M3 工程里程碑完成。完整证据、逐项判定和限制见 `docs/archive/M3_EXIT_AUDIT.md`。M3 结论不证明并发写入、指定第三方 Host、HTTP/SSE、OAuth、远程部署或生产运维可用，这些不是当前最小 M3 的退出阻塞。后续边界保持如下：
 
 - MCP 返回安全、结构化错误码（例如 `diagnosis_not_ready`）和刷新后的权限过滤公开可用选项；
 - MCP 不得绕过 `DiagnosisReadinessPolicy`、规则引擎或领域事件写入；
@@ -194,7 +194,7 @@ M4-P0 已在不修改运行代码的前提下冻结 V1 基础长期记忆架构�
 6. V1 只读记忆且继续固定课程；V0 不初始化记忆库、不调用 Embedding、不读取长期记忆；`MemoryType.REFLECTION` 不在 V1 自动投影范围；
 7. 离线 Gold 已规划召回、无关排除、跨玩家隔离、空结果、幂等、删除/失效、稳定并列、注入文本、隐藏信息、V0 零读取和 V1 零写入等场景。
 
-详细架构见 `docs/M4_MEMORY_PLAN.md`，评测契约见 `docs/M4_MEMORY_EVALUATION_PLAN.md`。
+详细架构见 `docs/archive/M4_MEMORY_PLAN.md`，评测契约见 `docs/archive/M4_MEMORY_EVALUATION_PLAN.md`。
 
 ## M4-P1 完成边界与下一步
 
@@ -243,13 +243,13 @@ M4-P4 使用输入、Gold 预期和清单哈希相互分离的 14 条合成场�
 
 P4 的 Precision、Recall、F1 与 False Memory Rate 只描述冻结合成 Gold 和 `fake_sha256_token_buckets_v1_d64`。提示注入测试只证明程序化过滤和消息结构未改变；墙钟延迟与 SQLite 文件大小只是本地观察值。没有调用真实 Chat 或 Embedding，没有生成真实语义准确率或真实模型长期记忆成功率。
 
-M4 退出审计已核对两个同名 Gold 检查点，确认 `118b3b1` 是包含 14 条场景、预期、manifest 和严格契约的最终有效冻结基线；从冻结到 P4 最终提交，三份 Gold 文件、阈值、排序规则与 P1–P3 产品实现均未修改。14/14 场景与两次确定性哈希再次通过，安全硬门槛全部为 0。完整逐项证据见 `docs/M4_EXIT_AUDIT.md`。
+M4 退出审计已核对两个同名 Gold 检查点，确认 `118b3b1` 是包含 14 条场景、预期、manifest 和严格契约的最终有效冻结基线；从冻结到 P4 最终提交，三份 Gold 文件、阈值、排序规则与 P1–P3 产品实现均未修改。14/14 场景与两次确定性哈希再次通过，安全硬门槛全部为 0。完整逐项证据见 `docs/archive/M4_EXIT_AUDIT.md`。
 
 M4 的完成只表示 Fake Embedding 下的历史离线工程契约与安全边界闭环。真实 V1 DoctorAgent 记忆注入、真实玩家收益、生产性能和并发多进程事务未被证明；这些不再是当前导师主线的退出条件。后续 M5 及 R1～R6 状态以本文件顶部“当前状态”为准。
 
 ## M4.5 终止边界与 M5 入口
 
-M4.5 不重新打开或改写 M4。P0 已完成本机只读调查、官方资料核对和 Pilot 规划，推荐优先用本地 `BAAI/bge-m3` dense-only 验证中文真实语义；阿里云百炼 `text-embedding-v4` 只作为需要新账号、独立 Key 与预算授权的外部备选。详细方案见 `docs/M45_REAL_MEMORY_VALIDATION_PLAN.md`，独立语义 Gold 见 `docs/M45_SEMANTIC_GOLD_PLAN.md`。
+M4.5 不重新打开或改写 M4。P0 已完成本机只读调查、官方资料核对和 Pilot 规划，推荐优先用本地 `BAAI/bge-m3` dense-only 验证中文真实语义；阿里云百炼 `text-embedding-v4` 只作为需要新账号、独立 Key 与预算授权的外部备选。详细方案见 `docs/archive/M45_REAL_MEMORY_VALIDATION_PLAN.md`，独立语义 Gold 见 `docs/archive/M45_SEMANTIC_GOLD_PLAN.md`。
 
 实际执行顺序为：
 
@@ -261,9 +261,9 @@ M4.5 不重新打开或改写 M4。P0 已完成本机只读调查、官方资料
 6. M4.5 已以 `closed_with_known_dense_retrieval_limitations` 完成终止审计；
 7. M5-P0～P5 已完成并作为历史工程纵向切片关闭；后续项目已按 Product Completion Plan v1 完成 R1～R5，当前进入 R6 外部验证阶段。
 
-M5 原先等待 M4.5，是为了避免把记忆召回问题与教学策略问题混为同一个实验变量。M4.5-P1 已在项目 `.venv` 中安装固定可选依赖，只下载固定 revision 的 11 个 dense safetensors 白名单文件，并以网络阻断方式完成真实本地权重烟雾；详细身份、哈希、磁盘和性能证据见 `docs/M45_P1_LOCAL_EMBEDDING_REPORT.md`。P2 v1 已在 `e813312` 冻结 15 条/75 文本，但第一次正式本地运行因评测器把合法语义负例误计为生命周期安全违规而停止；P2a 保留该历史并冻结 v2 三分区契约。v2 随后经历入口、身份和 Windows 遥测三次诚实停止，最终在 `cad07ff` 上完成两次正式运行：安全和重复性门禁通过，但 test Recall@3 与 False Memory Rate 未过线。P2b 只用已保存向量确认正确更正与极短相关项均落到第 4，且相关/负例分数重叠；任何阈值或 Top-N 都不能修复候选顺序。完整证据见 `docs/M45_P2B_SEMANTIC_FAILURE_ANALYSIS.md`，新 holdout 设计见 `docs/M45_HOLDOUT_VALIDATION_PLAN.md`；当前 P3 已取消本轮执行。
+M5 原先等待 M4.5，是为了避免把记忆召回问题与教学策略问题混为同一个实验变量。M4.5-P1 已在项目 `.venv` 中安装固定可选依赖，只下载固定 revision 的 11 个 dense safetensors 白名单文件，并以网络阻断方式完成真实本地权重烟雾；详细身份、哈希、磁盘和性能证据见 `docs/archive/M45_P1_LOCAL_EMBEDDING_REPORT.md`。P2 v1 已在 `e813312` 冻结 15 条/75 文本，但第一次正式本地运行因评测器把合法语义负例误计为生命周期安全违规而停止；P2a 保留该历史并冻结 v2 三分区契约。v2 随后经历入口、身份和 Windows 遥测三次诚实停止，最终在 `cad07ff` 上完成两次正式运行：安全和重复性门禁通过，但 test Recall@3 与 False Memory Rate 未过线。P2b 只用已保存向量确认正确更正与极短相关项均落到第 4，且相关/负例分数重叠；任何阈值或 Top-N 都不能修复候选顺序。完整证据见 `docs/archive/M45_P2B_SEMANTIC_FAILURE_ANALYSIS.md`，新 holdout 设计见 `docs/archive/M45_HOLDOUT_VALIDATION_PLAN.md`；当前 P3 已取消本轮执行。
 
-P2c 随后冻结 V2 表示和 36 条全新 holdout；P2d 在精确执行提交 `ccf97ce` 上完成唯一一组两次本地 BGE 运行。安全与重复性继续通过，final Recall@1 `0.90`、Recall@3 `1.00`、MRR `0.975`、FP `0`；但保守返回门禁只有 TP/FN `11/11`，micro F1 `0.6667` 且更正切片 FN `1`，所以 Dense-only 语义质量仍未准入。完整结果见 `docs/M45_P2D_HOLDOUT_PILOT_REPORT_20260810.md`，终止结论见 `docs/M45_TERMINATION_AUDIT.md`。
+P2c 随后冻结 V2 表示和 36 条全新 holdout；P2d 在精确执行提交 `ccf97ce` 上完成唯一一组两次本地 BGE 运行。安全与重复性继续通过，final Recall@1 `0.90`、Recall@3 `1.00`、MRR `0.975`、FP `0`；但保守返回门禁只有 TP/FN `11/11`，micro F1 `0.6667` 且更正切片 FN `1`，所以 Dense-only 语义质量仍未准入。完整结果见 `docs/archive/M45_P2D_HOLDOUT_PILOT_REPORT_20260810.md`，终止结论见 `docs/archive/M45_TERMINATION_AUDIT.md`。
 
 V1 语义记忆从本审计起默认关闭、仅为实验功能且不得进入正式 Agent Prompt。可选 shadow mode 只能记录“本来会召回什么”，不得影响 Agent 行动、课程、工具或玩家状态。未来只有基于真实多病例轨迹重新立项并通过独立验证，才可再次申请 Prompt 注入。
 

@@ -7,8 +7,8 @@
 1. 使用项目 `.venv` 和包内默认病例运行 `xuanyi-play` / `xuanyi-m5-acceptance`；
 2. 只从 stdout 摘录公开内容，去除交互噪声、内部 ID 与本机目录；
 3. 人工核对不含未发现线索、隐藏真值、完整 Prompt、请求 ID 或环境变量；
-4. 运行 `python scripts/render_demo_assets.py`，以标准库把 UTF-8 文本确定性渲染为 SVG；
-5. 运行 `python scripts/check_portfolio_docs.py`，复核哈希、SVG XML、链接与隐私哨兵。
+4. 运行 `python tools/release/render_demo_assets.py`，以标准库把 UTF-8 文本确定性渲染为 SVG；
+5. 运行 `python tools/release/check_portfolio_docs.py`，复核哈希、SVG XML、链接与隐私哨兵。
 
 ## 来源身份
 
@@ -24,5 +24,5 @@
 
 - 三个 SVG 只使用文本、几何图形和通用系统字体栈，不含外部字体、图片、ICC/EXIF 或位置信息。
 - 已提交素材不包含用户名、本机绝对路径、API Key、Authorization 头、供应商请求 ID、完整 Prompt 或真实玩家信息。
-- 程序代码 `scripts/render_demo_assets.py` 适用仓库 Apache-2.0 代码许可证。
-- 脱敏终端摘录、图表排版和演示素材为 `© 2026 WangYDING. All rights reserved.`；详见 [`../../CONTENT_RIGHTS.md`](../../CONTENT_RIGHTS.md)。
+- 程序代码 `tools/release/render_demo_assets.py` 适用仓库 Apache-2.0 代码许可证。
+- 脱敏终端摘录、图表排版和演示素材为 `© 2026 WangYDING. All rights reserved.`；详见 [`../../../CONTENT_RIGHTS.md`](../../../CONTENT_RIGHTS.md)。

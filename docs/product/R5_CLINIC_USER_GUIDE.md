@@ -1,6 +1,6 @@
 # 本地玄医馆使用指南
 
-默认命令继续使用离线 Fake Mentor，页面与 R5 保持一致。R6-P2b 新增的 `off/fake/deepseek` 显式模式、五类真实表达和付费门禁见 [R6 真实导师医馆离线装配](R6_REAL_MENTOR_CLINIC_INTEGRATION.md)；真实 DeepSeek 医馆本轮未运行。
+默认命令继续使用离线 Fake Mentor，页面与 R5 保持一致。R6-P2b 新增的 `off/fake/deepseek` 显式模式、五类真实表达和付费门禁见 [R6 真实导师医馆离线装配]RR6_REAL_MENTOR_CLINIC_INTEGRATION.md)；真实 DeepSeek 医馆本轮未运行。
 
 先创建存档目录，然后启动：
 

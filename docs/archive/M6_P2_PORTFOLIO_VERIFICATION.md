@@ -7,13 +7,13 @@
 ## 首页与阅读路径
 
 - README 按项目名、中文定位、英文摘要、三项亮点、60 秒启动、安全架构、Campaign、真实演示、双岗位入口、可复现证据、限制和许可证组织。
-- M6-P2 前的详细 README 完整保存在 [`TECHNICAL_OVERVIEW.md`](TECHNICAL_OVERVIEW.md)，历史实验、停止记录和负结果未删除。
+- M6-P2 前的详细 README 完整保存在 [`TECHNICAL_OVERVIEW.md`](../architecture/TECHNICAL_OVERVIEW.md)，历史实验、停止记录和负结果未删除。
 - Agent 应用岗与游戏 AI 产品岗分别链接到 [`M5_PORTFOLIO_EVIDENCE.md`](M5_PORTFOLIO_EVIDENCE.md) 和对应 8 分钟演示脚本。
 - 首页中的 3 病例、9 MCP 工具、488 测试、三案 8 事件、CampaignEvent 1–3、P4d 5/5 / 费用及 M4.5 负指标均链接到冻结证据。
 
 ## 真实素材
 
-三张终端卡片来自实际本地离线 stdout：manual 三病例目录、Fake 旧案知识/灰灶历史反应、M5 验收摘要。原始 stdout 和验收 JSON 留在 Git 忽略目录；提交内容只有脱敏文本、SVG 和 SHA。完整身份见 [`assets/README.md`](assets/README.md)。
+三张终端卡片来自实际本地离线 stdout：manual 三病例目录、Fake 旧案知识/灰灶历史反应、M5 验收摘要。原始 stdout 和验收 JSON 留在 Git 忽略目录；提交内容只有脱敏文本、SVG 和 SHA。完整身份见 [`assets/README.md`](../portfolio/assets/README.md)。
 
 - 文本与 SVG 的 6 个提交哈希全部通过；
 - 5 个 SVG 均通过 XML 解析；

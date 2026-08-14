@@ -27,7 +27,7 @@ normal Python dependencies.
 | wheel | `>=0.45,<1` / `0.47.0` | MIT | <https://pypi.org/project/wheel/0.47.0/> |
 
 The exact build environment and artifact identities are recorded in
-`docs/M6_P1_DISTRIBUTION_VERIFICATION.md`.
+`docs/archive/M6_P1_DISTRIBUTION_VERIFICATION.md`.
 
 ## Optional local Embedding stack
 

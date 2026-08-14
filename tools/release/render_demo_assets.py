@@ -7,8 +7,8 @@ import html
 from pathlib import Path
 
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-ASSET_ROOT = REPO_ROOT / "docs" / "assets"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+ASSET_ROOT = REPO_ROOT / "docs" / "portfolio" / "assets"
 TRANSCRIPT_ROOT = ASSET_ROOT / "transcripts"
 CARDS = (
     ("01_case_catalog.txt", "demo-01-case-catalog.svg", "01 · 三病例目录 / no-key"),

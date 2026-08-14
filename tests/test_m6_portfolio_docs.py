@@ -50,7 +50,7 @@ def test_current_product_claims_have_evidence_links() -> None:
 
 def test_demo_assets_are_reproducible_and_private() -> None:
     completed = subprocess.run(
-        [sys.executable, "scripts/check_portfolio_docs.py"],
+        [sys.executable, "tools/release/check_portfolio_docs.py"],
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,
@@ -58,16 +58,16 @@ def test_demo_assets_are_reproducible_and_private() -> None:
     )
     assert completed.returncode == 0, completed.stderr
 
-    asset_readme = (REPO_ROOT / "docs" / "assets" / "README.md").read_text(
+    asset_readme = (REPO_ROOT / "docs" / "portfolio" / "assets" / "README.md").read_text(
         encoding="utf-8"
     )
-    for transcript in sorted((REPO_ROOT / "docs" / "assets" / "transcripts").glob("*.txt")):
+    for transcript in sorted((REPO_ROOT / "docs" / "portfolio" / "assets" / "transcripts").glob("*.txt")):
         digest = hashlib.sha256(transcript.read_bytes()).hexdigest().upper()
         assert digest in asset_readme
 
 
 def test_old_detailed_readme_remains_available_as_technical_history() -> None:
-    overview = (REPO_ROOT / "docs" / "TECHNICAL_OVERVIEW.md").read_text(
+    overview = (REPO_ROOT / "docs" / "architecture" / "TECHNICAL_OVERVIEW.md").read_text(
         encoding="utf-8"
     )
     assert "历史技术总览" in overview

@@ -28,7 +28,7 @@ from xuanyi_npc.memory.canonical import sha256_hex
 from xuanyi_npc.memory.local_bge import BGE_M3_VERIFIED_MANIFEST_SHA256
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "data" / "evaluation"
 INPUT_PATH = OUT / "m45_semantic_gold_inputs.json"
 EXPECTATION_PATH = OUT / "m45_semantic_gold_expectations.json"

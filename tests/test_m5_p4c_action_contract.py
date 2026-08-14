@@ -361,7 +361,7 @@ def test_contract_implementation_has_no_case_specific_branches() -> None:
 
 def test_p4b_history_report_and_optional_raw_result_keep_original_sha() -> None:
     report = (
-        ROOT / "docs/M5_P4B_DEEPSEEK_CAMPAIGN_PILOT_20260811.md"
+        ROOT / "docs/archive/M5_P4B_DEEPSEEK_CAMPAIGN_PILOT_20260811.md"
     ).read_text(encoding="utf-8")
     assert P4B_SHA256 in report
     raw = ROOT / "results/m5_p4b_campaign_20260811.json"

@@ -2,7 +2,7 @@
 
 > 状态：架构边界冻结（2026-08-11）
 >
-> 本文描述目标产品的权威边界与数据流，不表示所列模块都已实现。成熟度以 [`M5_PRODUCT_GAP_AUDIT.md`](M5_PRODUCT_GAP_AUDIT.md) 为准；配置枚举、Pydantic 空壳或规划文档都不能作为功能完成证据。
+> 本文描述目标产品的权威边界与数据流，不表示所列模块都已实现。成熟度以 [`M5_PRODUCT_GAP_AUDIT.md`](../archive/M5_PRODUCT_GAP_AUDIT.md) 为准；配置枚举、Pydantic 空壳或规划文档都不能作为功能完成证据。
 
 ## 总体原则
 
@@ -196,7 +196,7 @@ MCP 是应用服务的另一入口，不是规则捷径。Fake/DoctorAgent 自�
 
 ## Product Completion Plan v1 实现顺序
 
-M0～M6 继续作为不可改写的历史工程里程碑。新的产品实现主线以 [`PRODUCT_COMPLETION_PLAN_V1.md`](PRODUCT_COMPLETION_PLAN_V1.md) 为准：
+M0～M6 继续作为不可改写的历史工程里程碑。新的产品实现主线以 [`PRODUCT_COMPLETION_PLAN_V1.md`](../product/PRODUCT_COMPLETION_PLAN_V1.md) 为准：
 
 1. R1：长期状态与确定性成长底座（已完成）；
 2. R2：读取并解释 R1 状态的导师教学闭环（已完成）；

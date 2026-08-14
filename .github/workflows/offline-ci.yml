@@ -28,14 +28,14 @@ jobs:
       - name: Verify dependencies and tracked files
         run: |
           python -m pip check
-          python scripts/check_release_tracking.py
-          python scripts/audit_git_history.py
+          python tools/release/check_release_tracking.py
+          python tools/release/audit_git_history.py
       - name: Run complete offline suite
         run: python -m pytest
       - name: Build and audit wheel and sdist
         run: |
           python -m build
-          python scripts/audit_distribution.py --dist-dir dist
+          python tools/release/audit_distribution.py --dist-dir dist
       - name: Verify clean wheel installation outside the repository
         shell: pwsh
         run: |
