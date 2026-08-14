@@ -12,6 +12,14 @@ from .doctor import (
     FixedV0Curriculum,
 )
 from .fake_llm import ScriptedFakeLLM
+from .game_npc import (
+    GAME_NPC_M1_SYSTEM_PROMPT,
+    GameNPCAgent,
+    GameNPCAgentConfig,
+    GameNPCAgentInput,
+    GameNPCAgentInterface,
+    DeterministicCooperativeNPC,
+)
 from .gameplay_fake import (
     FakeReferenceScript,
     REFERENCE_FAKE_SCRIPTS,
@@ -115,6 +123,12 @@ __all__ = [
     "LLMRequest",
     "LLMResponse",
     "ScriptedFakeLLM",
+    "GAME_NPC_M1_SYSTEM_PROMPT",
+    "GameNPCAgent",
+    "GameNPCAgentConfig",
+    "GameNPCAgentInput",
+    "GameNPCAgentInterface",
+    "DeterministicCooperativeNPC",
     "FakeReferenceScript",
     "REFERENCE_FAKE_SCRIPTS",
     "build_reference_fake_agent",

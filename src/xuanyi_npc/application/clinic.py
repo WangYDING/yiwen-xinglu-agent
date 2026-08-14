@@ -5,7 +5,13 @@ from typing import Annotated, Literal
 
 from pydantic import ConfigDict, Field
 
-from xuanyi_npc.agents import DeterministicFakeMentor
+from xuanyi_npc.agents import DeterministicCooperativeNPC, DeterministicFakeMentor
+from xuanyi_npc.domain.cooperation import (
+    CooperativeTurnResult,
+    PendingActionConfirmation,
+    PlayerContribution,
+    PlayerContributionType,
+)
 from xuanyi_npc.domain.base import DomainModel, Identifier, NonEmptyText
 from xuanyi_npc.domain.cases import CaseActionType
 from xuanyi_npc.domain.permissions import PermissionLevel
@@ -29,6 +35,7 @@ from .case_mentor import (AbilityStatus, CaseDialogueStore, DeterministicCaseMen
 from .case_mentor import MentorInterventionPolicy
 from .case_mentor import MentorWorkingMemoryStore, update_working_memory, working_memory_view
 from .player_experience import classify_case_message, propose_investigation
+from .cooperative_runtime import CooperativeRuntime, CooperativeTurnInput
 
 
 class ClinicError(ValueError):
@@ -81,6 +88,18 @@ class ClinicActionInput(DomainModel):
     evidence_clue_ids: tuple[Identifier, ...] = ()
 
 
+class ClinicContributionInput(DomainModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
+    player_id: Identifier
+    case_id: Identifier
+    session_id: Identifier
+    operation_id: Identifier
+    text: NonEmptyText
+    contribution_type: PlayerContributionType = PlayerContributionType.SUGGESTION
+    responds_to_decision_id: Identifier | None = None
+    pending_confirmation_id: Identifier | None = None
+
+
 @dataclass
 class ClinicService:
     store: JsonStateStore
@@ -91,6 +110,7 @@ class ClinicService:
     session_id_factory: object | None = None
     mentor_runtime: ClinicMentorRuntime | None = None
     mentor_agent_factory: object | None = None
+    game_npc_agent: object | None = None
     legacy_auto_foundation: bool = False
 
     def __post_init__(self) -> None:
@@ -113,6 +133,8 @@ class ClinicService:
             else DeterministicCaseMentor())
         self.mentor_interventions=MentorInterventionPolicy()
         self.mentor_working_memory=MentorWorkingMemoryStore(self.store.root)
+        self.game_npc_agent = self.game_npc_agent or DeterministicCooperativeNPC()
+        self.cooperative_pending: dict[str, PendingActionConfirmation] = {}
 
     def create_player(self, display_name: str):
         result = self.base_service.create_player(CreatePlayerInput(display_name=display_name))
@@ -365,6 +387,37 @@ class ClinicService:
         result = self._service(player_id).resume_episode(ResumeEpisodeInput(player_id=player_id, case_id=case_id, session_id=session_id))
         if not result.ok:
             raise ClinicError(result.error_code or "case_resume_failed", result.message)
+        return result
+
+    def submit_player_contribution(self, request: ClinicContributionInput) -> CooperativeTurnResult:
+        pending = None
+        if request.pending_confirmation_id is not None:
+            pending = self.cooperative_pending.get(request.pending_confirmation_id)
+            if pending is None:
+                raise ClinicError("confirmation_unavailable", "该协商请求已失效，请依据最新病例状态重新讨论。")
+            if (pending.player_id, pending.case_id, pending.session_id) != (
+                request.player_id, request.case_id, request.session_id
+            ):
+                raise ClinicError("confirmation_ownership_mismatch", "该协商请求不属于当前玩家或病例。")
+        contribution = PlayerContribution(
+            contribution_id=request.operation_id,
+            player_id=request.player_id,
+            case_id=request.case_id,
+            session_id=request.session_id,
+            contribution_type=request.contribution_type,
+            public_text=request.text,
+            responds_to_decision_id=request.responds_to_decision_id,
+            created_at=self.clock.now(),
+        )
+        runtime = CooperativeRuntime(
+            service=self._service(request.player_id),
+            agent=self.game_npc_agent,
+        )
+        result = runtime.handle(CooperativeTurnInput(contribution=contribution, pending_action=pending))
+        if pending is not None:
+            self.cooperative_pending.pop(pending.confirmation_id, None)
+        if result.pending_action is not None:
+            self.cooperative_pending[result.pending_action.confirmation_id] = result.pending_action
         return result
 
     def submit_case_action(self, request: ClinicActionInput):

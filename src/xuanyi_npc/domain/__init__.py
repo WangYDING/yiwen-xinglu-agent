@@ -62,6 +62,21 @@ from .commands import (
     InvestigationCommand,
     SubmitDiagnosisCommand,
 )
+from .cooperation import (
+    AuthorityMode,
+    CooperativeTurnResult,
+    CooperativeTurnStatus,
+    GameNPCDecision,
+    GameNPCDecisionProposal,
+    NPCAuthorityView,
+    NPCCapability,
+    PendingActionConfirmation,
+    PlayerContribution,
+    PlayerContributionEvaluation,
+    PlayerContributionType,
+    SuggestionDisposition,
+)
+from .npc_authority import AuthorityDecision
 from .curriculum import (
     CurriculumPriorityRule,
     CurriculumSelectionPolicy,
@@ -257,4 +272,17 @@ __all__ = [
     "InheritanceDecision",
     "InheritanceDefinition",
     "R4AcceptanceContract",
+    "AuthorityDecision",
+    "AuthorityMode",
+    "CooperativeTurnResult",
+    "CooperativeTurnStatus",
+    "GameNPCDecision",
+    "GameNPCDecisionProposal",
+    "NPCAuthorityView",
+    "NPCCapability",
+    "PendingActionConfirmation",
+    "PlayerContribution",
+    "PlayerContributionEvaluation",
+    "PlayerContributionType",
+    "SuggestionDisposition",
 ]

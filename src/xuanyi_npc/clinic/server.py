@@ -16,7 +16,8 @@ from urllib.parse import parse_qs, urlencode, urlparse
 from pydantic import ValidationError
 
 from xuanyi_npc.agents import DeterministicFakeMentor
-from xuanyi_npc.application.clinic import ClinicActionInput, ClinicError, ClinicService
+from xuanyi_npc.application.clinic import ClinicActionInput, ClinicContributionInput, ClinicError, ClinicService
+from xuanyi_npc.domain.cooperation import PlayerContributionType
 from xuanyi_npc.application.clinic_mentor import ClinicMentorMode, ClinicMentorRuntime
 from xuanyi_npc.application.multicase import CaseCatalog, SystemEpisodeClock
 from xuanyi_npc.resources.runtime import materialized_clinic_resources
@@ -178,13 +179,25 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
             elif path == "/mentor/ask":
                 player_id=self._player_id(form)
                 location="/teaching?"+urlencode({"player_id":player_id,"mentor_message":mentor_reply(form.get("text",""))})
-            elif path == "/cases/natural":
+            elif path in {"/cases/natural", "/cases/cooperate"}:
                 player_id=self._player_id(form);case_id=form.get("case_id","");session_id=form.get("session_id","")
-                resumed=self.server.clinic_service.resume_case(player_id,case_id,session_id)
-                proposal=propose_investigation(form.get("text",""),resumed.observation.available_investigations)
-                if proposal.kind=="investigation":
-                    self.server.clinic_service.submit_case_action(ClinicActionInput(player_id=player_id,case_id=case_id,session_id=session_id,operation_id=token,action_type="investigation",selection_id=proposal.selection_id))
-                location="/cases?"+urlencode({"player_id":player_id,"case_id":case_id,"session_id":session_id,"notice":proposal.message})
+                result=self.server.clinic_service.submit_player_contribution(ClinicContributionInput(
+                    player_id=player_id,case_id=case_id,session_id=session_id,
+                    operation_id=token,text=form.get("text",""),
+                    contribution_type=PlayerContributionType(form.get("contribution_type","suggestion")),
+                ))
+                location="/cases?"+urlencode(self._cooperative_query(player_id,case_id,session_id,result))
+            elif path == "/cases/cooperate/respond":
+                player_id=self._player_id(form);case_id=form.get("case_id","");session_id=form.get("session_id","")
+                approved=form.get("response")=="approve"
+                result=self.server.clinic_service.submit_player_contribution(ClinicContributionInput(
+                    player_id=player_id,case_id=case_id,session_id=session_id,operation_id=token,
+                    text=("我批准这项行动，请你依据最新状态再次判断。" if approved else "我不同意这项行动，请提出其他方案。"),
+                    contribution_type=(PlayerContributionType.APPROVAL if approved else PlayerContributionType.REJECTION),
+                    responds_to_decision_id=form.get("decision_id") or None,
+                    pending_confirmation_id=form.get("confirmation_id") or None,
+                ))
+                location="/cases?"+urlencode(self._cooperative_query(player_id,case_id,session_id,result))
             elif path == "/cases/mentor":
                 player_id=self._player_id(form);case_id=form.get("case_id","");session_id=form.get("session_id","")
                 reply,_=self.server.clinic_service.mentor_case_message(player_id,case_id,session_id,form.get("text",""))
@@ -267,6 +280,22 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
             self._error(400, str(exc))
         except Exception:
             self._error(500, "操作未完成；已保留最后一次成功进度。")
+
+    @staticmethod
+    def _cooperative_query(player_id,case_id,session_id,result):
+        evaluation=result.decision.proposal.contribution_evaluation
+        values={"player_id":player_id,"case_id":case_id,"session_id":session_id,
+                "npc_reply":result.decision.proposal.action.dialogue,
+                "npc_action":result.decision.proposal.capability.value,
+                "environment_feedback":result.environment_message or ""}
+        if evaluation is not None:
+            values.update({"suggestion_disposition":evaluation.disposition.value,
+                           "suggestion_explanation":evaluation.explanation})
+        if result.pending_action is not None:
+            values.update({"confirmation_id":result.pending_action.confirmation_id,
+                           "decision_id":result.pending_action.decision_id,
+                           "authority_mode":result.pending_action.authority_mode.value})
+        return values
 
     def _nav(self, player_id):
         q = urlencode({"player_id": player_id})
@@ -353,13 +382,26 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
         chat=f'''<section class="chat"><p>当前交谈对象：<strong>{_esc(current)}</strong></p><div class="chat-log">{bubbles}</div><form class="composer" method="post" action="/cases/chat"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="case_id" value="{_esc(case_id)}"><input type="hidden" name="session_id" value="{_esc(session_id)}"><input type="hidden" name="operation_id" value="{self._token()}"><textarea name="message" rows="3" list="case-recipients" required placeholder="向当前人物说话，或输入 @师父 / @角色名"></textarea><datalist id="case-recipients">{options}</datalist><button>发送</button></form></section>'''
         chat=chat.replace('<textarea name="message" rows="3" list="case-recipients"','<input name="message" list="case-recipients"').replace('</textarea><datalist','><datalist')
         drawers=f'''<section class="drawers"><details class="card"><summary>调查提纲与进度</summary><ul>{stage_html}</ul></details><details class="card"><summary>已发现线索</summary><ul>{clues}</ul></details><details class="card"><summary>能力与技法</summary><ul>{ability_html}</ul></details><details class="card"><summary>病例参与者</summary><ul>{''.join(f'<li>{_esc(x.display_name)}</li>' for x in participants)}</ul></details><details class="card"><summary>辨证与处置</summary><p>达到规则要求后，下方将显示可提交入口。</p></details></section>'''
-        body=f'''{self._nav(player_id)}<h2>{_esc(observation.title)}</h2><p>{_esc(observation.synopsis)}</p>{chat}{drawers}'''
+        query=self._query();npc_reply=query.get("npc_reply","");disposition=query.get("suggestion_disposition","")
+        suggestion_explanation=query.get("suggestion_explanation","");npc_action=query.get("npc_action","")
+        environment_feedback=query.get("environment_feedback","");confirmation_id=query.get("confirmation_id","")
+        decision_id=query.get("decision_id","");authority_mode=query.get("authority_mode","")
+        cooperative_result=""
+        if npc_reply or disposition or environment_feedback:
+            cooperative_result=f'''<section class="card"><h3>NPC 协作结果</h3>{f'<p><strong>建议评价：</strong>{_esc(disposition)} · {_esc(suggestion_explanation)}</p>' if disposition else ''}{f'<p><strong>NPC 回应：</strong>{_esc(npc_reply)}</p>' if npc_reply else ''}{f'<p><strong>NPC 行动：</strong>{_esc(npc_action)}</p>' if npc_action else ''}{f'<p><strong>环境反馈：</strong>{_esc(environment_feedback)}</p>' if environment_feedback else ''}</section>'''
+        confirmation=""
+        if confirmation_id and decision_id:
+            label="同意诊断提议" if authority_mode=="proposal_only" else "确认高风险处置"
+            hidden=f'<input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="case_id" value="{_esc(case_id)}"><input type="hidden" name="session_id" value="{_esc(session_id)}"><input type="hidden" name="confirmation_id" value="{_esc(confirmation_id)}"><input type="hidden" name="decision_id" value="{_esc(decision_id)}">'
+            confirmation=f'''<section class="card notice"><h3>需要玩家协商</h3><p>该行动尚未执行。NPC 会在你回应后依据最新病例状态再次判断。</p><form method="post" action="/cases/cooperate/respond">{hidden}<input type="hidden" name="operation_id" value="{self._token()}"><input type="hidden" name="response" value="approve"><button>{label}</button></form><form method="post" action="/cases/cooperate/respond">{hidden}<input type="hidden" name="operation_id" value="{self._token()}"><input type="hidden" name="response" value="reject"><button>拒绝并要求替代方案</button></form></section>'''
+        cooperative_form=f'''<section class="card"><h3>与 NPC 协作</h3><form method="post" action="/cases/cooperate"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="case_id" value="{_esc(case_id)}"><input type="hidden" name="session_id" value="{_esc(session_id)}"><input type="hidden" name="operation_id" value="{self._token()}"><select name="contribution_type"><option value="suggestion">建议调查方向</option><option value="hypothesis">提出假设</option><option value="challenge">质疑 NPC</option><option value="evidence_interpretation">解释证据</option><option value="question">询问判断</option></select><textarea name="text" rows="3" required placeholder="表达你的假设或建议；NPC 会独立评价并决定具体行动。"></textarea><button>与 NPC 讨论并推进</button></form><small>你的输入是建议或判断，不会由页面直接转换为工具调用。</small></section>'''
+        body=f'''{self._nav(player_id)}<h2>{_esc(observation.title)}</h2><p>{_esc(observation.synopsis)}</p>{cooperative_form}{cooperative_result}{confirmation}{chat}{drawers}'''
         if observation.can_submit_diagnosis:
             evidence = ",".join(item.clue_id for item in observation.discovered_clues)
-            body += f'<section class="card"><h3>提交辨证</h3><form method="post" action="/cases/action"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="case_id" value="{_esc(case_id)}"><input type="hidden" name="session_id" value="{_esc(session_id)}"><input type="hidden" name="operation_id" value="{self._token()}"><input type="hidden" name="action_type" value="diagnosis"><input type="hidden" name="evidence_clue_ids" value="{_esc(evidence)}"><select name="selection_id">{diagnoses}</select><button>提交辨证</button></form></section>'
+            body += f'<details class="card"><summary>Manual / baseline：直接提交辨证</summary><form method="post" action="/cases/action"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="case_id" value="{_esc(case_id)}"><input type="hidden" name="session_id" value="{_esc(session_id)}"><input type="hidden" name="operation_id" value="{self._token()}"><input type="hidden" name="action_type" value="diagnosis"><input type="hidden" name="evidence_clue_ids" value="{_esc(evidence)}"><select name="selection_id">{diagnoses}</select><button>提交辨证</button></form></details>'
         treatments = "".join(f'<form method="post" action="/cases/action"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="case_id" value="{_esc(case_id)}"><input type="hidden" name="session_id" value="{_esc(session_id)}"><input type="hidden" name="operation_id" value="{self._token()}"><input type="hidden" name="action_type" value="treatment"><input type="hidden" name="selection_id" value="{_esc(item.treatment_id)}"><button>{_esc(item.public_description)}</button></form>' for item in observation.available_treatments)
         if treatments:
-            body += '<section class="card"><h3>可用处置</h3>' + treatments + '</section>'
+            body += '<details class="card"><summary>Manual / baseline：直接选择处置</summary>' + treatments + '</details>'
         self._send(200, _page("病例", body))
 
     def _exam(self, player_id):
