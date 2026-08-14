@@ -18,6 +18,7 @@ from xuanyi_npc.domain.apprenticeship import (
 )
 from xuanyi_npc.domain.campaign import CampaignState
 from xuanyi_npc.domain.cases import CaseSessionState
+from xuanyi_npc.domain.cooperative_planning import CooperativeAgentState
 from xuanyi_npc.domain.player import PlayerState
 from xuanyi_npc.domain.teaching import (
     TeachingEventReplayer,
@@ -51,6 +52,10 @@ class StateCorruptionError(StorageError):
     """Raised when stored JSON cannot be parsed as the expected model."""
 
 
+class StateConflictError(StorageError):
+    """Raised when a revision-checked state update is stale."""
+
+
 ModelT = TypeVar("ModelT", bound=BaseModel)
 _identifier_adapter = TypeAdapter(Identifier)
 
@@ -72,6 +77,74 @@ class JsonStateStore:
 
     def load_case_session(self, session_id: str) -> CaseSessionState:
         return self._read("case_sessions", session_id, CaseSessionState)
+
+    def save_cooperative_agent_state(
+        self,
+        state: CooperativeAgentState,
+        *,
+        expected_revision: int,
+    ) -> Path:
+        """Atomically persist one session-owned Agent state with optimistic revision."""
+
+        if expected_revision < 0:
+            raise StateConflictError("expected revision cannot be negative")
+        try:
+            session = self.load_case_session(state.session_id)
+        except StateNotFoundError as exc:
+            raise StateCorruptionError(
+                "cooperative Agent state requires an existing case session"
+            ) from exc
+        if (session.player_id, session.case_id) != (state.player_id, state.case_id):
+            raise StateCorruptionError(
+                "cooperative Agent state ownership does not match case session"
+            )
+        try:
+            existing = self.load_cooperative_agent_state(state.session_id)
+        except StateNotFoundError:
+            existing = None
+        if existing is None:
+            if expected_revision != 0 or state.revision != 1:
+                raise StateConflictError(
+                    "initial cooperative Agent state requires revision one"
+                )
+        else:
+            if (existing.player_id, existing.case_id, existing.session_id) != (
+                state.player_id,
+                state.case_id,
+                state.session_id,
+            ):
+                raise StateCorruptionError(
+                    "cooperative Agent state ownership cannot change"
+                )
+            if existing.revision != expected_revision:
+                raise StateConflictError("cooperative Agent state revision is stale")
+            if state.revision != existing.revision + 1:
+                raise StateConflictError(
+                    "cooperative Agent state revision must advance exactly once"
+                )
+        return self._write("cooperative_agents", state.session_id, state)
+
+    def load_cooperative_agent_state(
+        self,
+        session_id: str,
+        *,
+        player_id: str | None = None,
+        case_id: str | None = None,
+    ) -> CooperativeAgentState:
+        state = self._read(
+            "cooperative_agents",
+            session_id,
+            CooperativeAgentState,
+        )
+        if state.session_id != session_id:
+            raise StateCorruptionError(
+                "cooperative Agent state session does not match its file"
+            )
+        if player_id is not None and state.player_id != player_id:
+            raise StateCorruptionError("cooperative Agent state player mismatch")
+        if case_id is not None and state.case_id != case_id:
+            raise StateCorruptionError("cooperative Agent state case mismatch")
+        return state
 
     def save_campaign(self, state: CampaignState) -> Path:
         return self._write("campaigns", state.player_id, state)
