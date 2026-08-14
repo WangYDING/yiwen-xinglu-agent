@@ -82,14 +82,15 @@ from .semantic_memory_contracts import (
 
 
 ROOT = Path(__file__).resolve().parents[3]
-DEFAULT_INPUT = ROOT / "data" / "evaluation" / "m45_semantic_gold_inputs.json"
-DEFAULT_EXPECTATIONS = ROOT / "data" / "evaluation" / "m45_semantic_gold_expectations.json"
-DEFAULT_MANIFEST = ROOT / "data" / "evaluation" / "m45_semantic_gold_manifest.json"
+EXPERIMENT_DATA_ROOT = ROOT / "tools" / "experiments" / "data" / "evaluation"
+DEFAULT_INPUT = EXPERIMENT_DATA_ROOT / "m45_semantic_gold_inputs.json"
+DEFAULT_EXPECTATIONS = EXPERIMENT_DATA_ROOT / "m45_semantic_gold_expectations.json"
+DEFAULT_MANIFEST = EXPERIMENT_DATA_ROOT / "m45_semantic_gold_manifest.json"
 DEFAULT_EXPECTATIONS_V2 = (
-    ROOT / "data" / "evaluation" / "m45_semantic_gold_expectations_v2.json"
+    EXPERIMENT_DATA_ROOT / "m45_semantic_gold_expectations_v2.json"
 )
 DEFAULT_MANIFEST_V2 = (
-    ROOT / "data" / "evaluation" / "m45_semantic_gold_manifest_v2.json"
+    EXPERIMENT_DATA_ROOT / "m45_semantic_gold_manifest_v2.json"
 )
 DEFAULT_MODEL = ROOT / "runtime_models" / "bge-m3-142964af7e05"
 DEFAULT_MODEL_MANIFEST = ROOT / "config" / "model_manifests" / "bge_m3_142964af7e05_dense_fp32_verified.json"

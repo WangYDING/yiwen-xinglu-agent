@@ -22,7 +22,7 @@ from .dev_evaluator import DevEpisodeEvaluator
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
-DEFAULT_DEV_SUITE_PATH = REPOSITORY_ROOT / "data" / "evaluation" / "dev_scenarios.json"
+DEFAULT_DEV_SUITE_PATH = REPOSITORY_ROOT / "tools" / "experiments" / "data" / "evaluation" / "dev_scenarios.json"
 DEFAULT_CASE_PATH = Path(
     str(
         files("xuanyi_npc.resources")

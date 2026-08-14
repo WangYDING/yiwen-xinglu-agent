@@ -151,7 +151,7 @@ def test_manifest_split_is_five_calibration_and_ten_test() -> None:
 
 
 def test_model_and_result_directories_are_git_ignored() -> None:
-    root = DEFAULT_INPUT.parents[2]
+    root = Path(__file__).parents[1]
     ignore = (root / ".gitignore").read_text(encoding="utf-8")
     assert "runtime_models/" in ignore
     assert "results/" in ignore

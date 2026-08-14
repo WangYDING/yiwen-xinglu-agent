@@ -16,7 +16,7 @@ from xuanyi_npc.evaluation.memory_contracts import (
 from xuanyi_npc.memory.canonical import sha256_hex
 
 
-DATA_DIR = Path(__file__).parents[1] / "data" / "evaluation"
+DATA_DIR = Path(__file__).parents[1] / "tools" / "experiments" / "data" / "evaluation"
 INPUT_PATH = DATA_DIR / "memory_gold_inputs.json"
 EXPECTATION_PATH = DATA_DIR / "memory_gold_expectations.json"
 MANIFEST_PATH = DATA_DIR / "memory_gold_manifest.json"

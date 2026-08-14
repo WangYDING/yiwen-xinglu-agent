@@ -20,10 +20,10 @@ from .pilot_evaluator import PilotBehaviorEvaluator
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_PILOT_PROBE_PATH = (
-    REPOSITORY_ROOT / "data" / "evaluation" / "pilot_behavior_probes.json"
+    REPOSITORY_ROOT / "tools" / "experiments" / "data" / "evaluation" / "pilot_behavior_probes.json"
 )
 DEFAULT_SANITIZED_TRACE_PATH = (
-    REPOSITORY_ROOT / "data" / "evaluation" / "pilot_run_001_sanitized.json"
+    REPOSITORY_ROOT / "docs" / "archive" / "evidence" / "model_runs" / "pilot_run_001_sanitized.json"
 )
 
 

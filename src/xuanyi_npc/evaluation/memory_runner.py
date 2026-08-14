@@ -123,14 +123,15 @@ from .memory_contracts import (
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
+EXPERIMENT_DATA_ROOT = REPOSITORY_ROOT / "tools" / "experiments" / "data" / "evaluation"
 DEFAULT_MEMORY_GOLD_INPUT_PATH = (
-    REPOSITORY_ROOT / "data" / "evaluation" / "memory_gold_inputs.json"
+    EXPERIMENT_DATA_ROOT / "memory_gold_inputs.json"
 )
 DEFAULT_MEMORY_GOLD_EXPECTATION_PATH = (
-    REPOSITORY_ROOT / "data" / "evaluation" / "memory_gold_expectations.json"
+    EXPERIMENT_DATA_ROOT / "memory_gold_expectations.json"
 )
 DEFAULT_MEMORY_GOLD_MANIFEST_PATH = (
-    REPOSITORY_ROOT / "data" / "evaluation" / "memory_gold_manifest.json"
+    EXPERIMENT_DATA_ROOT / "memory_gold_manifest.json"
 )
 DEFAULT_MEMORY_CASE_PATH = Path(
     str(

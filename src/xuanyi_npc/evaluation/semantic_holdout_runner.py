@@ -107,10 +107,11 @@ from .semantic_holdout_contracts import (
 
 ROOT = Path(__file__).resolve().parents[3]
 GOLD_FREEZE_COMMIT = "98d08eef52bfb164f454bd50c08c0d3feab1bb26"
-DEFAULT_INPUT = ROOT / "data" / "evaluation" / "m45_semantic_holdout_inputs_v1.json"
-DEFAULT_GOLD = ROOT / "data" / "evaluation" / "m45_semantic_holdout_expectations_v1.json"
-DEFAULT_CONFIG = ROOT / "data" / "evaluation" / "m45_semantic_holdout_config_v1.json"
-DEFAULT_MANIFEST = ROOT / "data" / "evaluation" / "m45_semantic_holdout_manifest_v1.json"
+EXPERIMENT_DATA_ROOT = ROOT / "tools" / "experiments" / "data" / "evaluation"
+DEFAULT_INPUT = EXPERIMENT_DATA_ROOT / "m45_semantic_holdout_inputs_v1.json"
+DEFAULT_GOLD = EXPERIMENT_DATA_ROOT / "m45_semantic_holdout_expectations_v1.json"
+DEFAULT_CONFIG = EXPERIMENT_DATA_ROOT / "m45_semantic_holdout_config_v1.json"
+DEFAULT_MANIFEST = EXPERIMENT_DATA_ROOT / "m45_semantic_holdout_manifest_v1.json"
 DEFAULT_MODEL = ROOT / "runtime_models" / "bge-m3-142964af7e05"
 DEFAULT_MODEL_MANIFEST = ROOT / "config" / "model_manifests" / "bge_m3_142964af7e05_dense_fp32_verified.json"
 DEFAULT_DEPENDENCY_LOCK = ROOT / "requirements" / "local-embedding-cu126-win-py312.txt"

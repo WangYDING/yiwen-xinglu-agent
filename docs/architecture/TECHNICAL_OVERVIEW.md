@@ -117,8 +117,9 @@ src/xuanyi_npc/mcp_server/ 官方 MCP v2 的进程内工具契约与 Server fact
 src/xuanyi_npc/memory/   M4 公开来源、投影、生命周期与 Embedding 契约
 src/xuanyi_npc/storage/  JSON 状态与 SQLite 权威记忆存储
 src/xuanyi_npc/resources/ wheel/source 共用的病例、Campaign 与最小运行数据
-tools/experiments/data/evaluation/         P0 dev、真实行为探针、脱敏轨迹与 M4 合成记忆 Gold
-tools/experiments/data/pilot/              不进入核心 wheel 的历史 Pilot 配置快照
+tools/experiments/data/evaluation/         P0 dev、行为探针、Gold、Holdout 与离线评测输入
+tools/experiments/data/pilot_snapshots/    不进入核心 wheel 的历史 Pilot 配置快照
+docs/archive/evidence/model_runs/          脱敏真实运行结果与离线回放证据
 docs/                    架构决策记录
 tests/                   自动化测试
 ```
@@ -140,7 +141,7 @@ python -m pytest
 实测，不能据此宣称已经兼容。Windows 3.12 的核心依赖解析快照见
 `requirements/core-win-py312.txt`；它不包含可选的 Torch/CUDA/BGE。
 
-从本地构建产物安装时，无需定位源码仓库中的 `data/`：三个病例、Campaign
+从本地构建产物安装时，无需定位源码仓库中的实验数据目录：三个病例、Campaign
 规则和最小运行配置均由 wheel 的版本化包资源提供。
 
 ```powershell

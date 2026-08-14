@@ -60,6 +60,8 @@
 
 - [发布工具](../tools/release/)
 - [历史实验工具和数据](../tools/experiments/)
-- [正式产品数据位置说明](../data/README.md)
+- [实验数据与历史证据迁移索引](archive/evidence/README.md)
+
+正式产品资源的唯一真源是 `src/xuanyi_npc/resources/`；实验输入和历史证据不进入产品分发包。
 
 `.venv/`、`runtime_models/`、`runtime_data/` 和 `results/` 仅保留在本机并由 Git 忽略。

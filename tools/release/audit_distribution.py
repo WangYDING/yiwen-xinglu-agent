@@ -68,7 +68,15 @@ def _is_forbidden(name: str) -> bool:
         return True
     if path.suffix.lower() in FORBIDDEN_SUFFIXES:
         return True
-    return "data/evaluation/" in name.lower()
+    normalized = name.lower().replace("\\", "/")
+    return any(
+        forbidden in normalized
+        for forbidden in (
+            "data/evaluation/",
+            "tools/experiments/data/",
+            "docs/archive/evidence/",
+        )
+    )
 
 
 def _audit_names(names: list[str]) -> None:

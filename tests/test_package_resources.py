@@ -46,8 +46,7 @@ def test_runtime_resource_allowlist_rejects_experiments_and_traversal() -> None:
 
 
 def test_package_resource_tree_is_the_single_runtime_authority() -> None:
-    assert tuple((ROOT / "data" / "cases").glob("*.json")) == ()
-    assert tuple((ROOT / "data" / "campaign").glob("*.json")) == ()
+    assert not (ROOT / "data").exists()
     assert tuple(sorted(path.name for path in (PACKAGE_RESOURCES / "cases").glob("*.json"))) == tuple(
         sorted(CASE_RESOURCE_NAMES)
     )

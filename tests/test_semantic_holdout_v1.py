@@ -26,7 +26,7 @@ from xuanyi_npc.evaluation.semantic_holdout_contracts import (
 
 
 ROOT = Path(__file__).resolve().parents[1]
-DATA = ROOT / "data" / "evaluation"
+DATA = ROOT / "tools" / "experiments" / "data" / "evaluation"
 INPUT = DATA / "m45_semantic_holdout_inputs_v1.json"
 GOLD = DATA / "m45_semantic_holdout_expectations_v1.json"
 CONFIG = DATA / "m45_semantic_holdout_config_v1.json"
