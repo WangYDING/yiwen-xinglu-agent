@@ -8,6 +8,7 @@ from .action_contract import (
     build_safe_action_feedback,
 )
 from .goal_plan_policy import GoalPlanPolicy, GoalPlanPolicyError
+from .plan_evaluator import DeterministicPlanEvaluator, PlanEvaluationTransition
 from .diagnosis_readiness import (
     DiagnosisReadinessDecision,
     DiagnosisReadinessPolicy,
@@ -130,6 +131,8 @@ __all__ = [
     "PublicActionContractValidator",
     "GoalPlanPolicy",
     "GoalPlanPolicyError",
+    "DeterministicPlanEvaluator",
+    "PlanEvaluationTransition",
     "PublicInvestigationCall",
     "SafeActionRecoveryFeedback",
     "build_safe_action_feedback",

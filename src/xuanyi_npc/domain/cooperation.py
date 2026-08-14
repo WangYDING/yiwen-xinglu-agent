@@ -110,6 +110,10 @@ class GameNPCDecision(DomainModel):
     used_fallback: StrictBool
     repair_kind: str | None = None
     usages: tuple[object, ...] = ()
+    goal_id: Identifier | None = None
+    plan_id: Identifier | None = None
+    plan_step_id: Identifier | None = None
+    planning_intent: Identifier | None = None
 
 
 class PendingActionConfirmation(DomainModel):
@@ -156,3 +160,11 @@ class CooperativeTurnResult(DomainModel):
     environment_message: NonEmptyText | None = None
     event_sequences: tuple[Annotated[StrictInt, Field(ge=1)], ...] = ()
     error_code: Identifier | None = None
+    current_goal_description: NonEmptyText | None = None
+    plan_public_summary: tuple[NonEmptyText, ...] = ()
+    current_step_summary: NonEmptyText | None = None
+    goal_changed: StrictBool = False
+    plan_changed: StrictBool = False
+    plan_evaluation_outcome: str | None = None
+    public_plan_change_reason: NonEmptyText | None = None
+    agent_state_revision: Annotated[StrictInt, Field(ge=1)] | None = None

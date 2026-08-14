@@ -7,8 +7,10 @@ from xuanyi_npc.domain.cases import CaseSessionStatus
 from xuanyi_npc.domain.cooperation import NPCAuthorityView, NPCCapability
 from xuanyi_npc.domain.cooperative_planning import (
     AgentGoalState,
+    AgentGoalStatus,
     AgentGoalType,
     AgentPlan,
+    AgentPlanStatus,
     GOAL_PLANNABLE_TOOLS,
     INVESTIGATION_TOOLS,
 )
@@ -36,6 +38,12 @@ class GoalPlanPolicy:
         authority_view: NPCAuthorityView,
     ) -> None:
         goal_type = self._goal_type(proposal, current_goal)
+        if (
+            current_goal is not None
+            and current_goal.status is not AgentGoalStatus.ACTIVE
+            and proposal.goal_update.update not in {GoalUpdateKind.REPLACE, GoalUpdateKind.ABANDON}
+        ):
+            raise GoalPlanPolicyError("a terminal or blocked goal cannot be kept")
         self._validate_goal_phase(proposal, goal_type, observation)
         self._validate_goal_references(proposal, observation)
         self._validate_plan_operation(proposal, current_plan)
@@ -106,8 +114,10 @@ class GoalPlanPolicy:
             raise GoalPlanPolicyError("blocked or abandoned goal requires abandoning its plan")
         if goal_update is GoalUpdateKind.REPLACE and current_plan is not None and update is not PlanUpdateKind.REVISE:
             raise GoalPlanPolicyError("replacing a goal requires revising its existing plan")
-        if update is PlanUpdateKind.KEEP and current_plan is None:
-            raise GoalPlanPolicyError("cannot keep a missing plan")
+        if update is PlanUpdateKind.KEEP and (
+            current_plan is None or current_plan.status is not AgentPlanStatus.ACTIVE
+        ):
+            raise GoalPlanPolicyError("can only keep an active current plan")
         if update is PlanUpdateKind.CREATE and current_plan is not None:
             raise GoalPlanPolicyError("cannot create over an existing plan")
         if update is PlanUpdateKind.REVISE and current_plan is None:
