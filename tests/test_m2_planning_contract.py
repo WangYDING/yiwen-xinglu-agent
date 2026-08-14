@@ -155,8 +155,8 @@ def test_input_exposes_trusted_goal_plan_evaluation_and_feedback(case_definition
 
     assert result == proposal
     prompt = "\n".join(message.content for message in fake.requests[0].messages)
-    assert "TRUST_1_authoritative_observation" in prompt
-    assert "TRUST_2_player_contribution_untrusted" in prompt
+    assert "AUTHORITATIVE_WORLD_case_observation" in prompt
+    assert "PLAYER_BELIEF_player_contribution" in prompt
     assert "goal_public_evidence" in prompt
     assert "上一轮没有执行工具" in prompt
     assert '"revision": 3' in prompt

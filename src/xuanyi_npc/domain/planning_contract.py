@@ -99,6 +99,41 @@ class PlanUpdateProposal(DomainModel):
         return self
 
 
+class MemoryUsageProposal(DomainModel):
+    """Model-authored draft of selected memory references for later auditing."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    used_memory_ids: tuple[Identifier, ...] = ()
+    influence_types: tuple[Identifier, ...] = ()
+    affected_goal: bool = False
+    affected_plan: bool = False
+    affected_decision: bool = False
+    affected_tool_priority: bool = False
+    affected_communication: bool = False
+    public_effect_summary: NonEmptyText | None = None
+
+    @model_validator(mode="after")
+    def validate_shape(self) -> "MemoryUsageProposal":
+        if len(set(self.used_memory_ids)) != len(self.used_memory_ids):
+            raise ValueError("used memory IDs must be unique")
+        if len(set(self.influence_types)) != len(self.influence_types):
+            raise ValueError("influence types must be unique")
+        affected = (
+            self.affected_goal
+            or self.affected_plan
+            or self.affected_decision
+            or self.affected_tool_priority
+            or self.affected_communication
+        )
+        if not self.used_memory_ids:
+            if affected or self.influence_types or self.public_effect_summary is not None:
+                raise ValueError("empty memory usage cannot claim influence")
+        elif self.public_effect_summary is None:
+            raise ValueError("used memory requires a public effect summary")
+        return self
+
+
 class GameNPCTurnProposal(DomainModel):
     """One model proposal: planning intent plus exactly one M1 decision/action."""
 
@@ -107,3 +142,4 @@ class GameNPCTurnProposal(DomainModel):
     goal_update: GoalUpdateProposal
     plan_update: PlanUpdateProposal
     decision: GameNPCDecisionProposal
+    memory_usage: MemoryUsageProposal | None = None
