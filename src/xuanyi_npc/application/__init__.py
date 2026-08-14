@@ -7,6 +7,7 @@ from .action_contract import (
     SafeActionRecoveryFeedback,
     build_safe_action_feedback,
 )
+from .goal_plan_policy import GoalPlanPolicy, GoalPlanPolicyError
 from .diagnosis_readiness import (
     DiagnosisReadinessDecision,
     DiagnosisReadinessPolicy,
@@ -127,6 +128,8 @@ __all__ = [
     "ApprenticeshipView",
     "PublicActionContractError",
     "PublicActionContractValidator",
+    "GoalPlanPolicy",
+    "GoalPlanPolicyError",
     "PublicInvestigationCall",
     "SafeActionRecoveryFeedback",
     "build_safe_action_feedback",

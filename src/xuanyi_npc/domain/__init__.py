@@ -95,6 +95,16 @@ from .cooperation import (
     PlayerContributionType,
     SuggestionDisposition,
 )
+from .planning_contract import (
+    GameNPCTurnProposal,
+    GoalDraft,
+    GoalUpdateKind,
+    GoalUpdateProposal,
+    PlanDraft,
+    PlanStepDraft,
+    PlanUpdateKind,
+    PlanUpdateProposal,
+)
 from .npc_authority import AuthorityDecision
 from .curriculum import (
     CurriculumPriorityRule,
@@ -305,6 +315,14 @@ __all__ = [
     "PlayerContributionEvaluation",
     "PlayerContributionType",
     "SuggestionDisposition",
+    "GameNPCTurnProposal",
+    "GoalDraft",
+    "GoalUpdateKind",
+    "GoalUpdateProposal",
+    "PlanDraft",
+    "PlanStepDraft",
+    "PlanUpdateKind",
+    "PlanUpdateProposal",
     "AgentGoalState",
     "AgentGoalStatus",
     "AgentGoalType",
