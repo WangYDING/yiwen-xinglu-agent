@@ -204,11 +204,14 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
                 location="/cases?"+urlencode({"player_id":player_id,"case_id":case_id,"session_id":session_id,"mentor_notice":reply.message})
             elif path == "/cases/chat":
                 player_id=self._player_id(form);case_id=form.get("case_id","");session_id=form.get("session_id","")
-                self.server.clinic_service.case_chat_message(player_id,case_id,session_id,token,form.get("message", ""))
-                location="/cases?"+urlencode({"player_id":player_id,"case_id":case_id,"session_id":session_id})
+                manual=form.get("interaction_mode")=="manual"
+                self.server.clinic_service.case_chat_message(player_id,case_id,session_id,token,form.get("message", ""),allow_mentor=manual)
+                values={"player_id":player_id,"case_id":case_id,"session_id":session_id}
+                if manual: values["mode"]="manual"
+                location="/cases?"+urlencode(values)
             elif path == "/cases/start":
                 player_id = self._player_id(form)
-                result = self.server.clinic_service.start_case(player_id, form.get("case_id", ""))
+                result = self.server.clinic_service.start_case(player_id, form.get("case_id", ""), cooperative=True)
                 location = "/cases?" + urlencode({"player_id": player_id, "case_id": result.case_id, "session_id": result.session_id})
             elif path == "/cases/action":
                 request = ClinicActionInput(
@@ -287,6 +290,10 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
         values={"player_id":player_id,"case_id":case_id,"session_id":session_id,
                 "npc_reply":result.decision.proposal.action.dialogue,
                 "npc_action":result.decision.proposal.capability.value,
+                "npc_tool_public":result.selected_public_target or "",
+                "npc_rationale":result.public_rationale,
+                "runtime_kind":result.runtime_kind.value,
+                "debug_tool_name":result.selected_tool.value if result.selected_tool is not None else "",
                 "environment_feedback":result.environment_message or ""}
         if evaluation is not None:
             values.update({"suggestion_disposition":evaluation.disposition.value,
@@ -375,26 +382,29 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
         mentor_notice=self._query().get("mentor_notice","")
         embedded=f'''<p><strong>本案学习目标：</strong>{_esc(guide.learning_goal)}</p><div class="case-workspace"><section class="card"><h3>病例专属调查提纲</h3><ul>{stage_html}</ul></section><section class="card"><h3>病例人物对话与调查</h3><p>在下方自然语言调查框中说明交谈对象、问题或检查目标。</p></section><aside><section class="card mentor"><h3>病例内请教师父</h3>{mentor_history}{f'<p class="notice">{_esc(mentor_notice)}</p>' if mentor_notice else ''}<form method="post" action="/cases/mentor"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="case_id" value="{_esc(case_id)}"><input type="hidden" name="session_id" value="{_esc(session_id)}"><input type="hidden" name="operation_id" value="{self._token()}"><textarea name="text" rows="3" required placeholder="请教师父调查方法或证据整理"></textarea><button>请教师父指点</button></form></section><section class="card"><h3>当前能力和行动限制</h3><ul>{ability_html}</ul><small>服务端会在每次行动时重新校验。</small></section></aside></div>'''
         body=body.replace(f'<h2>{_esc(observation.title)}</h2>',f'<h2>{_esc(observation.title)}</h2>'+embedded)
+        manual_mode=self._query().get("mode")=="manual"
         participants=case_participants(case_id);names={x.participant_id:x.display_name for x in participants}|{"player":"你","mentor":"师父"}
         bubbles="".join(f'<article class="bubble {_esc(msg.message_type)}"><strong>{_esc(names.get(msg.speaker_id,"系统"))}</strong>{"<span class=\"private-mark\"> · 师徒传音</span>" if msg.message_type=="mentor_private" else ""}<p>{_esc(msg.public_text)}</p></article>' for msg in dialogue.recent_messages) or '<p class="notice">尚未开始交谈。默认接收者为当前求医者；输入 @ 可切换人物或师父。</p>'
-        options='<option value="@师父 "></option>'+''.join(f'<option value="@{_esc(x.display_name)} "></option>' for x in participants)
+        options=('<option value="@师父 "></option>' if manual_mode else '')+''.join(f'<option value="@{_esc(x.display_name)} "></option>' for x in participants)
         current=names.get(dialogue.current_target,"请选择")
-        chat=f'''<section class="chat"><p>当前交谈对象：<strong>{_esc(current)}</strong></p><div class="chat-log">{bubbles}</div><form class="composer" method="post" action="/cases/chat"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="case_id" value="{_esc(case_id)}"><input type="hidden" name="session_id" value="{_esc(session_id)}"><input type="hidden" name="operation_id" value="{self._token()}"><textarea name="message" rows="3" list="case-recipients" required placeholder="向当前人物说话，或输入 @师父 / @角色名"></textarea><datalist id="case-recipients">{options}</datalist><button>发送</button></form></section>'''
+        chat=f'''<section class="chat"><p>当前交谈对象：<strong>{_esc(current)}</strong></p><div class="chat-log">{bubbles}</div><form class="composer" method="post" action="/cases/chat"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="case_id" value="{_esc(case_id)}"><input type="hidden" name="session_id" value="{_esc(session_id)}"><input type="hidden" name="interaction_mode" value="{'manual' if manual_mode else 'cooperative'}"><input type="hidden" name="operation_id" value="{self._token()}"><textarea name="message" rows="3" list="case-recipients" required placeholder="{'向角色说话，或输入 @师父' if manual_mode else '向病例角色说话；NPC 协作请使用上方协作框'}"></textarea><datalist id="case-recipients">{options}</datalist><button>发送</button></form></section>'''
         chat=chat.replace('<textarea name="message" rows="3" list="case-recipients"','<input name="message" list="case-recipients"').replace('</textarea><datalist','><datalist')
         drawers=f'''<section class="drawers"><details class="card"><summary>调查提纲与进度</summary><ul>{stage_html}</ul></details><details class="card"><summary>已发现线索</summary><ul>{clues}</ul></details><details class="card"><summary>能力与技法</summary><ul>{ability_html}</ul></details><details class="card"><summary>病例参与者</summary><ul>{''.join(f'<li>{_esc(x.display_name)}</li>' for x in participants)}</ul></details><details class="card"><summary>辨证与处置</summary><p>达到规则要求后，下方将显示可提交入口。</p></details></section>'''
         query=self._query();npc_reply=query.get("npc_reply","");disposition=query.get("suggestion_disposition","")
         suggestion_explanation=query.get("suggestion_explanation","");npc_action=query.get("npc_action","")
         environment_feedback=query.get("environment_feedback","");confirmation_id=query.get("confirmation_id","")
         decision_id=query.get("decision_id","");authority_mode=query.get("authority_mode","")
+        npc_tool_public=query.get("npc_tool_public","");npc_rationale=query.get("npc_rationale","")
+        runtime_kind=query.get("runtime_kind","");debug_tool_name=query.get("debug_tool_name","")
         cooperative_result=""
         if npc_reply or disposition or environment_feedback:
-            cooperative_result=f'''<section class="card"><h3>NPC 协作结果</h3>{f'<p><strong>建议评价：</strong>{_esc(disposition)} · {_esc(suggestion_explanation)}</p>' if disposition else ''}{f'<p><strong>NPC 回应：</strong>{_esc(npc_reply)}</p>' if npc_reply else ''}{f'<p><strong>NPC 行动：</strong>{_esc(npc_action)}</p>' if npc_action else ''}{f'<p><strong>环境反馈：</strong>{_esc(environment_feedback)}</p>' if environment_feedback else ''}</section>'''
+            cooperative_result=f'''<section class="card"><h3>NPC 协作结果</h3>{f'<p><strong>建议评价：</strong>{_esc(disposition)} · {_esc(suggestion_explanation)}</p>' if disposition else ''}{f'<p><strong>NPC 回应：</strong>{_esc(npc_reply)}</p>' if npc_reply else ''}{f'<p><strong>采取行动：</strong>{_esc(npc_tool_public)}</p>' if npc_tool_public else ''}{f'<p><strong>行动依据：</strong>{_esc(npc_rationale)}</p>' if npc_rationale else ''}{f'<p><strong>环境反馈：</strong>{_esc(environment_feedback)}</p>' if environment_feedback else ''}<details><summary>开发信息</summary><p>runtime：{_esc(runtime_kind or 'unknown')}</p><p>capability：{_esc(npc_action)}</p><p>raw tool：{_esc(debug_tool_name or 'none')}</p></details></section>'''
         confirmation=""
         if confirmation_id and decision_id:
             label="同意诊断提议" if authority_mode=="proposal_only" else "确认高风险处置"
             hidden=f'<input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="case_id" value="{_esc(case_id)}"><input type="hidden" name="session_id" value="{_esc(session_id)}"><input type="hidden" name="confirmation_id" value="{_esc(confirmation_id)}"><input type="hidden" name="decision_id" value="{_esc(decision_id)}">'
             confirmation=f'''<section class="card notice"><h3>需要玩家协商</h3><p>该行动尚未执行。NPC 会在你回应后依据最新病例状态再次判断。</p><form method="post" action="/cases/cooperate/respond">{hidden}<input type="hidden" name="operation_id" value="{self._token()}"><input type="hidden" name="response" value="approve"><button>{label}</button></form><form method="post" action="/cases/cooperate/respond">{hidden}<input type="hidden" name="operation_id" value="{self._token()}"><input type="hidden" name="response" value="reject"><button>拒绝并要求替代方案</button></form></section>'''
-        cooperative_form=f'''<section class="card"><h3>与 NPC 协作</h3><form method="post" action="/cases/cooperate"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="case_id" value="{_esc(case_id)}"><input type="hidden" name="session_id" value="{_esc(session_id)}"><input type="hidden" name="operation_id" value="{self._token()}"><select name="contribution_type"><option value="suggestion">建议调查方向</option><option value="hypothesis">提出假设</option><option value="challenge">质疑 NPC</option><option value="evidence_interpretation">解释证据</option><option value="question">询问判断</option></select><textarea name="text" rows="3" required placeholder="表达你的假设或建议；NPC 会独立评价并决定具体行动。"></textarea><button>与 NPC 讨论并推进</button></form><small>你的输入是建议或判断，不会由页面直接转换为工具调用。</small></section>'''
+        cooperative_form=(f'''<section class="card"><h3>与 NPC 协作</h3><form method="post" action="/cases/cooperate"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="case_id" value="{_esc(case_id)}"><input type="hidden" name="session_id" value="{_esc(session_id)}"><input type="hidden" name="operation_id" value="{self._token()}"><select name="contribution_type"><option value="suggestion">建议调查方向</option><option value="hypothesis">提出假设</option><option value="challenge">质疑 NPC</option><option value="evidence_interpretation">解释证据</option><option value="question">询问判断</option></select><textarea name="text" rows="3" required placeholder="表达你的假设或建议；NPC 会独立评价并决定具体行动。"></textarea><button>与 NPC 讨论并推进</button></form><small>你的输入是建议或判断，不会由页面直接转换为工具调用。cooperative 模式不启用独立师父 Agent。</small><p><a href="/cases?{urlencode({"player_id":player_id,"case_id":case_id,"session_id":session_id,"mode":"manual"})}">进入 legacy manual / teaching 模式</a></p></section>''' if not manual_mode else f'<section class="card"><h3>Manual / teaching 模式</h3><p>当前保留旧师父教学与手动行动入口。</p><a href="/cases?{urlencode({"player_id":player_id,"case_id":case_id,"session_id":session_id})}">返回 cooperative 模式</a></section>')
         body=f'''{self._nav(player_id)}<h2>{_esc(observation.title)}</h2><p>{_esc(observation.synopsis)}</p>{cooperative_form}{cooperative_result}{confirmation}{chat}{drawers}'''
         if observation.can_submit_diagnosis:
             evidence = ",".join(item.clue_id for item in observation.discovered_clues)

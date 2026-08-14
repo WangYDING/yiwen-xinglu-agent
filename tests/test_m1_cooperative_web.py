@@ -9,6 +9,7 @@ from xuanyi_npc.domain import AgentAction, AgentActionType, CaseActionType, Tool
 from xuanyi_npc.domain.cooperation import (
     GameNPCDecision,
     GameNPCDecisionProposal,
+    AgentRuntimeKind,
     NPCCapability,
     PlayerContributionEvaluation,
     SuggestionDisposition,
@@ -28,6 +29,7 @@ TOOL_BY_ACTION = {
 
 class CooperativeWebAgent:
     config = object()
+    runtime_kind = AgentRuntimeKind.TEST_DOUBLE
 
     def __init__(self, *, force_treatment: str | None = None, force_diagnosis: str | None = None) -> None:
         self.force_treatment = force_treatment
@@ -129,6 +131,8 @@ def test_web_natural_language_reaches_agent_and_npc_can_reject_and_choose_tool(t
         assert "建议评价" in page and "reject" in page
         assert "玩家建议不是命令" in page
         assert "NPC 回应" in page and "环境反馈" in page
+        assert "采取行动" in page and "行动依据" in page
+        assert "runtime：test_double" in page and "raw tool：" in page
     finally:
         stop(server, thread)
 
@@ -269,5 +273,26 @@ def test_case_page_marks_direct_action_route_as_manual_baseline(tmp_path):
         _, _, page = request(server.server_address[1], "GET", f"/cases?player_id={player}&case_id={opened.case_id}&session_id={opened.session_id}")
         assert 'action="/cases/cooperate"' in page
         assert "不会由页面直接转换为工具调用" in page
+        assert "cooperative 模式不启用独立师父 Agent" in page
+        assert "legacy manual / teaching 模式" in page
     finally:
         stop(server, thread)
+
+
+def test_cooperative_mode_suppresses_independent_mentor_but_manual_keeps_it(tmp_path):
+    clinic = build_clinic(tmp_path)
+    player = clinic.create_player("主体边界玩家").player_summary.player_id
+    cooperative = clinic.start_case(player, "old_paper_umbrella", cooperative=True)
+    dialogue = clinic.case_dialogues.load(cooperative.session_id, player, cooperative.case_id)
+    assert not any(item.message_type == "mentor_private" for item in dialogue.recent_messages)
+
+    response, _ = clinic.case_chat_message(
+        player, cooperative.case_id, cooperative.session_id,
+        "op_coop_mentor_block", "@师父 请提示", allow_mentor=False,
+    )
+    assert response.speaker_id == "system"
+    assert "独立师父介入仅在" in response.public_text
+
+    manual = clinic.start_case(player, "gray_hearth_inn", cooperative=False)
+    manual_dialogue = clinic.case_dialogues.load(manual.session_id, player, manual.case_id)
+    assert any(item.message_type == "mentor_private" for item in manual_dialogue.recent_messages)

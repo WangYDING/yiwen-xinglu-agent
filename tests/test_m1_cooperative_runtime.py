@@ -5,6 +5,7 @@ from xuanyi_npc.application.cooperative_runtime import CooperativeRuntime, Coope
 from xuanyi_npc.application.multicase import CreatePlayerInput, StartEpisodeInput
 from xuanyi_npc.domain import AgentAction, AgentActionType, CaseActionType, ToolCallRequest, ToolName
 from xuanyi_npc.domain.cooperation import (
+    AgentRuntimeKind,
     CooperativeTurnStatus,
     GameNPCDecision,
     GameNPCDecisionProposal,
@@ -19,6 +20,7 @@ from xuanyi_npc.evaluation.m5_p4b_runner import build_service
 
 class StubAgent:
     config = object()
+    runtime_kind = AgentRuntimeKind.TEST_DOUBLE
 
     def __init__(self, action: AgentAction) -> None:
         self.action = action
@@ -106,6 +108,10 @@ def test_runtime_executes_one_npc_selected_low_risk_tool(tmp_path: Path) -> None
 
     assert result.status is CooperativeTurnStatus.ACTION_EXECUTED
     assert result.event_sequences == (1,)
+    assert result.runtime_kind is AgentRuntimeKind.TEST_DOUBLE
+    assert result.selected_tool is tool
+    assert result.selected_public_target == option.public_description
+    assert result.public_rationale == "执行一个可逆调查。"
     assert service.state_store.load_case_session(opened.session_id).revision == 1
     assert agent.inputs[0].player_contribution.public_text.startswith("我建议")
 

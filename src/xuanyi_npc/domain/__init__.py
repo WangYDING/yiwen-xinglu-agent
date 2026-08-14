@@ -64,6 +64,7 @@ from .commands import (
 )
 from .cooperation import (
     AuthorityMode,
+    AgentRuntimeKind,
     CooperativeTurnResult,
     CooperativeTurnStatus,
     GameNPCDecision,
@@ -274,6 +275,7 @@ __all__ = [
     "R4AcceptanceContract",
     "AuthorityDecision",
     "AuthorityMode",
+    "AgentRuntimeKind",
     "CooperativeTurnResult",
     "CooperativeTurnStatus",
     "GameNPCDecision",

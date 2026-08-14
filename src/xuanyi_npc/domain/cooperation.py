@@ -134,13 +134,24 @@ class CooperativeTurnStatus(str, Enum):
     ACTION_REJECTED = "action_rejected"
 
 
+class AgentRuntimeKind(str, Enum):
+    REAL_LLM = "real_llm"
+    DETERMINISTIC_FALLBACK = "deterministic_fallback"
+    TEST_DOUBLE = "test_double"
+    UNKNOWN = "unknown"
+
+
 class CooperativeTurnResult(DomainModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     turn_id: Identifier
     status: CooperativeTurnStatus
     decision: GameNPCDecision
+    runtime_kind: AgentRuntimeKind
     authority_mode: AuthorityMode | None = None
+    selected_tool: ToolName | None = None
+    selected_public_target: NonEmptyText | None = None
+    public_rationale: NonEmptyText
     pending_action: PendingActionConfirmation | None = None
     environment_message: NonEmptyText | None = None
     event_sequences: tuple[Annotated[StrictInt, Field(ge=1)], ...] = ()

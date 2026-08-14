@@ -15,6 +15,7 @@ from xuanyi_npc.domain import AgentActionType
 from xuanyi_npc.domain.base import DomainModel
 from xuanyi_npc.domain.cooperation import (
     AuthorityMode,
+    AgentRuntimeKind,
     CooperativeTurnResult,
     CooperativeTurnStatus,
     PendingActionConfirmation,
@@ -81,8 +82,19 @@ class CooperativeRuntime:
         decision = self.agent.decide(agent_input)
         decision = self._resolve_contract(agent_input, decision, public.observation)
         action = decision.proposal.action
+        runtime_kind = getattr(self.agent, "runtime_kind", AgentRuntimeKind.UNKNOWN)
+        selected_tool = action.tool_call.name if action.tool_call is not None else None
+        selected_public_target = self._public_target(action, public.observation)
+        common = {
+            "turn_id": agent_input.turn_id,
+            "decision": decision,
+            "runtime_kind": runtime_kind,
+            "selected_tool": selected_tool,
+            "selected_public_target": selected_public_target,
+            "public_rationale": decision.proposal.explanation,
+        }
         if action.action_type is AgentActionType.RESPOND:
-            return CooperativeTurnResult(turn_id=agent_input.turn_id, status=CooperativeTurnStatus.RESPONDED, decision=decision, authority_mode=AuthorityMode.AUTONOMOUS)
+            return CooperativeTurnResult(**common, status=CooperativeTurnStatus.RESPONDED, authority_mode=AuthorityMode.AUTONOMOUS)
 
         confirmed_id = None
         authority_decision_id = None
@@ -103,9 +115,9 @@ class CooperativeRuntime:
                 case_revision=session.revision,
             )
             status = CooperativeTurnStatus.PROPOSAL_PENDING if authority.mode is AuthorityMode.PROPOSAL_ONLY else CooperativeTurnStatus.CONFIRMATION_REQUIRED
-            return CooperativeTurnResult(turn_id=agent_input.turn_id, status=status, decision=decision, authority_mode=authority.mode, pending_action=pending_action)
+            return CooperativeTurnResult(**common, status=status, authority_mode=authority.mode, pending_action=pending_action)
         if authority.mode is AuthorityMode.FORBIDDEN:
-            return CooperativeTurnResult(turn_id=agent_input.turn_id, status=CooperativeTurnStatus.ACTION_REJECTED, decision=decision, authority_mode=authority.mode, error_code=authority.reason_code)
+            return CooperativeTurnResult(**common, status=CooperativeTurnStatus.ACTION_REJECTED, authority_mode=authority.mode, error_code=authority.reason_code)
 
         receipt = self.service.submit_action_with_receipt(SubmitActionInput(
             player_id=contribution.player_id,
@@ -115,8 +127,24 @@ class CooperativeRuntime:
         ))
         result = receipt.result
         if not result.ok:
-            return CooperativeTurnResult(turn_id=agent_input.turn_id, status=CooperativeTurnStatus.ACTION_REJECTED, decision=decision, authority_mode=authority.mode, environment_message=result.message, error_code=result.error_code)
-        return CooperativeTurnResult(turn_id=agent_input.turn_id, status=CooperativeTurnStatus.ACTION_EXECUTED, decision=decision, authority_mode=authority.mode, environment_message=result.message, event_sequences=result.event_sequences)
+            return CooperativeTurnResult(**common, status=CooperativeTurnStatus.ACTION_REJECTED, authority_mode=authority.mode, environment_message=result.message, error_code=result.error_code)
+        return CooperativeTurnResult(**common, status=CooperativeTurnStatus.ACTION_EXECUTED, authority_mode=authority.mode, environment_message=result.message, event_sequences=result.event_sequences)
+
+    @staticmethod
+    def _public_target(action, observation):
+        if action.tool_call is None:
+            return None
+        arguments = action.tool_call.arguments
+        if "investigation_id" in arguments:
+            target = next((item for item in observation.available_investigations if item.investigation_id == arguments["investigation_id"]), None)
+            return target.public_description if target is not None else None
+        if "diagnosis_id" in arguments:
+            target = next((item for item in observation.diagnosis_candidates if item.diagnosis_id == arguments["diagnosis_id"]), None)
+            return target.public_description if target is not None else None
+        if "treatment_id" in arguments:
+            target = next((item for item in observation.available_treatments if item.treatment_id == arguments["treatment_id"]), None)
+            return target.public_description if target is not None else None
+        return None
 
     def _resolve_contract(self, agent_input, decision, observation):
         try:

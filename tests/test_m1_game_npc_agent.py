@@ -13,6 +13,7 @@ from xuanyi_npc.domain import (
 )
 from xuanyi_npc.domain.cooperation import (
     GameNPCDecisionProposal,
+    AgentRuntimeKind,
     NPCCapability,
     PlayerContribution,
     PlayerContributionEvaluation,
@@ -83,6 +84,7 @@ def test_game_npc_evaluates_player_but_selects_its_own_tool(case_definition, qua
     assert "player_contribution_untrusted" in prompt
     assert "直接治疗吧" in prompt
     assert "不是命令" in prompt
+    assert GameNPCAgent.runtime_kind is AgentRuntimeKind.REAL_LLM
 
 
 def test_game_npc_invalid_output_uses_shared_bounded_fallback(case_definition, qualified_player_state) -> None:
@@ -95,4 +97,3 @@ def test_game_npc_invalid_output_uses_shared_bounded_fallback(case_definition, q
     assert decision.proposal.action.action_type is AgentActionType.RESPOND
     assert len(fake.requests) == 2
     assert fake.remaining_responses == 1
-

@@ -17,6 +17,7 @@ from xuanyi_npc.domain.cooperation import (
     PlayerContribution,
     PlayerContributionEvaluation,
     SuggestionDisposition,
+    AgentRuntimeKind,
 )
 from xuanyi_npc.evaluation import AgentRepairKind
 
@@ -60,6 +61,8 @@ class GameNPCAgentInterface(Protocol):
 
 
 class GameNPCAgent:
+    runtime_kind = AgentRuntimeKind.REAL_LLM
+
     def __init__(self, adapter: LLMAdapter, config: GameNPCAgentConfig | None = None) -> None:
         self.adapter = adapter
         self.config = config or GameNPCAgentConfig()
@@ -162,6 +165,7 @@ class DeterministicCooperativeNPC:
     """Offline M1 implementation used when no model-backed NPC is configured."""
 
     config = GameNPCAgentConfig()
+    runtime_kind = AgentRuntimeKind.DETERMINISTIC_FALLBACK
 
     def decide(self, value: GameNPCAgentInput) -> GameNPCDecision:
         contribution = value.player_contribution

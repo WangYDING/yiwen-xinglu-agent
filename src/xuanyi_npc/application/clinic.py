@@ -234,12 +234,13 @@ class ClinicService:
             recent_public_history=history,
         )
 
-    def start_case(self, player_id: str, case_id: str):
+    def start_case(self, player_id: str, case_id: str, *, cooperative: bool = False):
         result = self._service(player_id).start_episode(StartEpisodeInput(player_id=player_id, case_id=case_id))
         if not result.ok:
             raise ClinicError(result.error_code or "case_start_failed", result.message)
         self.teaching_service(player_id).create(CreateTeachingSessionInput(player_id=player_id,case_session_id=result.session_id))
-        self.mentor_intervention(player_id,case_id,result.session_id,"case_started",event_key="started")
+        if not cooperative:
+            self.mentor_intervention(player_id,case_id,result.session_id,"case_started",event_key="started")
         return result
 
     def case_experience(self, player_id: str, case_id: str, session_id: str):
@@ -258,7 +259,7 @@ class ClinicService:
         abilities=tuple(AbilityStatus(ability_id=x["ability_id"],name=x["name"],proficiency=x["proficiency"],level=x["level"],unlocked=x["unlocked"],executable=x["unlocked"],reason=("" if x["unlocked"] else "尚未掌握")) for x in self.home(player_id).abilities)
         return resumed,guide,tuple(stages),current,dialogue,abilities
 
-    def case_chat_message(self,player_id:str,case_id:str,session_id:str,operation_id:str,raw_message:str):
+    def case_chat_message(self,player_id:str,case_id:str,session_id:str,operation_id:str,raw_message:str,*,allow_mentor:bool=True):
         resumed,guide,stages,current,dialogue,abilities=self.case_experience(player_id,case_id,session_id)
         participants=case_participants(case_id)
         classification=classify_case_message(raw_message,dialogue.current_target,participants)
@@ -273,6 +274,8 @@ class ClinicService:
         elif classification.intent in {"diagnosis_statement","treatment_statement"}:
             label="辨证" if classification.intent=="diagnosis_statement" else "处置"
             response=ChatMessage(speaker_id="system",recipient_id="player",message_type="system",public_text=f"已识别为{label}陈述。请在“辨证与处置”抽屉中核对系统理解并确认；本条消息没有直接执行。")
+        elif classification.intent=="mentor_message" and not allow_mentor:
+            response=ChatMessage(speaker_id="system",recipient_id="player",message_type="system",public_text="协作模式由同一位 NPC 负责行动与解释；独立师父介入仅在 manual / teaching 模式开放。")
         elif classification.intent=="mentor_message":
             decision=self.mentor_interventions.decide("player_mentioned_mentor",dialogue)
             reply,_=self.mentor_case_message(player_id,case_id,session_id,text,trigger_type="player_mentioned_mentor",allowed_actions=decision.rule.allowed_action_types)
@@ -340,7 +343,7 @@ class ClinicService:
         updated=dialogue.model_copy(update={"recent_messages":(*dialogue.recent_messages,player_msg,response)[-16:],"revision":dialogue.revision+1})
         self.case_dialogues.save(updated)
         self._update_working_memory(player_id,case_id,session_id,(player_msg,response),recipient,updated.off_track_count,memory_proposal)
-        if updated.off_track_count>=2:self.mentor_intervention(player_id,case_id,session_id,"repeated_off_topic",event_key=str(updated.off_track_count))
+        if allow_mentor and updated.off_track_count>=2:self.mentor_intervention(player_id,case_id,session_id,"repeated_off_topic",event_key=str(updated.off_track_count))
         return response,self.case_dialogues.load(session_id,player_id,case_id)
 
     def mentor_case_message(self,player_id:str,case_id:str,session_id:str,message:str,trigger_type="player_mentioned_mentor",allowed_actions=("speak","ask_reflection")):
