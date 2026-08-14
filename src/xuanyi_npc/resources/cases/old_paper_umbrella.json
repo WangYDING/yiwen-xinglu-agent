@@ -107,7 +107,7 @@
       "public_description": "观察旧纸伞与书生之间是否存在异常炁息联系。",
       "reveals_clue_ids": ["vow_knot_trace"],
       "required_skill_id": "observe_qi",
-      "minimum_skill_level": 20,
+      "minimum_skill_level":   20,
       "required_clue_ids": ["umbrella_night_water"]
     },
     {
@@ -127,7 +127,7 @@
       "public_description": "根据已经发现的物证，继续询问书生是否隐瞒过承诺。",
       "reveals_clue_ids": ["broken_promise"],
       "required_skill_id": "ask_cause",
-      "minimum_skill_level": 10,
+      "minimum_skill_level":  20,
       "required_clue_ids": ["hidden_wooden_token"]
     }
   ],

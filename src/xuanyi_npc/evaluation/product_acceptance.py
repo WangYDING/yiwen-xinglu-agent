@@ -35,7 +35,11 @@ def action(tool,args,index):
 class Harness:
     def __init__(self,root,resources):
         self.clinic=ClinicService(store=JsonStateStore(root),base_catalog=CaseCatalog(resources.case_dir),campaign_path=resources.campaign_rules,clock=Clock(),player_id_factory=Ids("player_offline"),session_id_factory=Ids("session_offline"))
-    def player(self,name): return self.clinic.create_player(name).player_summary.player_id
+    def player(self,name):
+        player=self.clinic.create_player(name).player_summary.player_id
+        for exercise in self.clinic.base_service.progression_policy.config.foundation_exercises:
+            self.clinic.complete_foundation_exercise(player,exercise.exercise_id,exercise.required_action_id)
+        return player
     def complete(self,p,case_id,diagnosis_correct=True,outcome=TreatmentOutcome.RESOLVED,use_inheritance=False):
         service=self.clinic._service(p); case=service.case_catalog.get(case_id); started=service.start_episode(StartEpisodeInput(player_id=p,case_id=case_id)); teaching=self.clinic.teaching_service(p); taught=teaching.create(CreateTeachingSessionInput(player_id=p,case_session_id=started.session_id))
         investigations=list(case.investigations)

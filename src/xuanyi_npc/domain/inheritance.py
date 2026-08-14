@@ -48,7 +48,7 @@ class InheritanceDefinition(InheritanceModel):
     required_lessons: tuple[Identifier, ...] = Field(min_length=3, max_length=3)
     required_knowledge_ids: tuple[Identifier, ...] = Field(min_length=2, max_length=2)
     required_exam: Literal["foundational_xuanyi_exam_v1"]
-    required_abilities: tuple[AbilityRequirement, ...] = Field(min_length=3, max_length=3)
+    required_abilities: tuple[AbilityRequirement, ...] = Field(min_length=4, max_length=4)
     required_relationship: tuple[RelationshipRequirement, ...] = Field(min_length=2, max_length=2)
     blocking_improvement_areas: tuple[AbilityId, ...] = Field(min_length=2)
     granted_content: GrantedContent
@@ -57,7 +57,7 @@ class InheritanceDefinition(InheritanceModel):
 
     @model_validator(mode="after")
     def validate_requirements(self) -> "InheritanceDefinition":
-        if len({item.ability_id for item in self.required_abilities}) != 3:
+        if len({item.ability_id for item in self.required_abilities}) != 4:
             raise ValueError("inheritance ability requirements must be unique")
         if len({item.dimension for item in self.required_relationship}) != 2:
             raise ValueError("inheritance relationship requirements must be unique")

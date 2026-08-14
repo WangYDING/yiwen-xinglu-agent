@@ -112,6 +112,8 @@ def create_and_start(
     created = service.create_player(CreatePlayerInput(display_name=name))
     assert created.ok is True
     assert created.player_id is not None
+    for exercise in service.progression_policy.config.foundation_exercises:
+        assert service.complete_foundation_exercise(created.player_id,exercise.exercise_id,exercise.required_action_id).ok
     started = service.start_episode(
         StartEpisodeInput(
             player_id=created.player_id,

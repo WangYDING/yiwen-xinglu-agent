@@ -10,7 +10,7 @@ from xuanyi_npc.domain import (
 )
 
 
-def test_initial_state_has_six_frozen_abilities_and_replays() -> None:
+def test_initial_state_has_seven_locked_unlearned_abilities_and_replays() -> None:
     policy = ProgressionPolicy.load_default()
     state = policy.initialize(
         "player_domain_r1",
@@ -18,7 +18,9 @@ def test_initial_state_has_six_frozen_abilities_and_replays() -> None:
     )
 
     assert set(state.abilities) == set(AbilityId)
-    assert {item.proficiency for item in state.abilities.values()} == {20}
+    assert len(state.abilities)==7
+    assert {item.proficiency for item in state.abilities.values()} == {0}
+    assert not any(item.unlocked for item in state.abilities.values())
     assert state.relationship.model_dump() == {
         "affinity": 10,
         "trust": 10,

@@ -90,6 +90,7 @@ def create_service(root: Path, catalog: CaseCatalog):
         session_id_factory=FixedSessionIds(),
         clock=FixedClock(),
         campaign_rules=CampaignRuleSet.load(CAMPAIGN_RULES, catalog),
+        legacy_auto_foundation=True,
     )
 
 

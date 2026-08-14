@@ -497,6 +497,7 @@ def build_service(state_dir: Path) -> MultiCaseEpisodeService:
         player_id_factory=FixedPilotPlayerIds(),
         session_id_factory=SequentialPilotSessionIds(),
         campaign_rules=rules,
+        legacy_auto_foundation=True,
     )
 
 
@@ -511,6 +512,9 @@ def prepare_deterministic_history(
     if not player.ok or player.player_id is None:
         raise RuntimeError("failed to create isolated pilot player")
     player_id = player.player_id
+    for exercise in service.progression_policy.config.foundation_exercises:
+        completed=service.complete_foundation_exercise(player_id,exercise.exercise_id,exercise.required_action_id)
+        if not completed.ok: raise RuntimeError("failed to complete deterministic foundation exercise")
     opened = service.start_episode(
         StartEpisodeInput(player_id=player_id, case_id="old_paper_umbrella")
     )

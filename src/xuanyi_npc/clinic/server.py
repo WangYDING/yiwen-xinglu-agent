@@ -23,6 +23,8 @@ from xuanyi_npc.resources.runtime import materialized_clinic_resources
 from xuanyi_npc.resources.runtime import read_runtime_text
 from xuanyi_npc.storage import JsonStateStore
 from xuanyi_npc.application.public_presentation import PUBLIC_PRESENTATION
+from xuanyi_npc.application.player_experience import mentor_reply, propose_investigation
+from xuanyi_npc.application.case_mentor import case_participants
 
 
 STYLE = """
@@ -30,9 +32,18 @@ STYLE = """
 *{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.55 system-ui,sans-serif}
 header,main{max-width:980px;margin:auto;padding:1rem}header{border-bottom:1px solid var(--line)}
 h1,h2{font-family:serif;color:#294f40}nav a,a{color:var(--jade)}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem}
-.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:1rem;margin:.7rem 0}
-button{background:var(--jade);color:white;border:0;border-radius:6px;padding:.55rem .9rem}input,select{max-width:100%;padding:.45rem;border:1px solid var(--line)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:1rem;margin:.7rem 0}.case-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem}.mentor{border-left:5px solid var(--jade)}
+button{background:var(--jade);color:white;border:0;border-radius:6px;padding:.55rem .9rem}input,select,textarea{max-width:100%;width:100%;padding:.45rem;border:1px solid var(--line)}
 .notice{border-left:4px solid #9a7338;padding:.6rem;background:#fff8dc}.error{color:#8b2d2d}small{color:#58665f}
+.case-workspace{display:grid;grid-template-columns:minmax(220px,1fr) minmax(300px,1.4fr) minmax(240px,1fr);gap:1rem;align-items:start}.progress-done{color:var(--jade)}
+.chat{max-width:820px;height:min(60vh,560px);min-height:400px;margin:1rem auto;display:flex;flex-direction:column;overflow:hidden;border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,.42)}
+.chat>p{margin:.55rem .8rem .25rem}.chat-log{flex:1;min-height:0;overflow-y:auto;padding:.25rem .75rem .45rem;scrollbar-gutter:stable}
+.bubble{width:fit-content;max-width:70%;padding:.38rem .72rem;border-radius:12px;margin:.28rem 0;background:#fff;border:1px solid var(--line);overflow-wrap:anywhere}
+.bubble strong{font-size:.82rem}.bubble p{margin:.12rem 0 0;line-height:1.42}.bubble.player{margin-left:auto;background:#dff2e8}.bubble.mentor_private{margin-right:auto;border-left:4px solid #7656a8;background:#f2ecff}.bubble.case_character{margin-right:auto}
+.bubble.system,.bubble.clue,.bubble.rejection{width:auto;max-width:70%;margin:.3rem auto;padding:.3rem .65rem;text-align:center;border-radius:8px;background:#fff5d7}.bubble.rejection{background:#fff0eb}
+.composer{position:sticky;z-index:2;bottom:0;display:flex;gap:.5rem;align-items:center;margin:0;padding:.55rem .75rem;background:var(--paper);border-top:1px solid var(--line);box-shadow:0 -5px 14px rgba(38,32,22,.06)}.composer input[name=message]{flex:1;min-width:0;margin:0}.composer button{width:auto;flex:0 0 auto;margin:0;white-space:nowrap}.drawers{max-width:900px;margin:auto}.private-mark{color:#7656a8;font-size:.78rem}
+@media(max-width:640px){.chat{height:55dvh;min-height:390px;margin:.55rem -.35rem;border-radius:12px}.chat-log{padding:.2rem .45rem .35rem}.bubble{max-width:72%;padding:.32rem .6rem;margin:.22rem 0}.bubble.system,.bubble.clue,.bubble.rejection{max-width:72%;margin:.24rem auto}.composer{padding:.45rem}.composer button{padding:.65rem .8rem}}
+@media(max-width:700px){.case-grid,.case-workspace{grid-template-columns:1fr}header,main{padding:.75rem}.card{overflow-wrap:anywhere}}
 """
 
 
@@ -117,6 +128,10 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
                 self._start()
             elif parsed.path == "/clinic":
                 self._home(self._player_id(query))
+            elif parsed.path == "/welcome":
+                self._welcome(self._player_id(query))
+            elif parsed.path == "/foundation":
+                self._foundation(self._player_id(query))
             elif parsed.path == "/cases":
                 self._cases(self._player_id(query), query.get("case_id"), query.get("session_id"))
             elif parsed.path == "/teaching":
@@ -152,7 +167,32 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
                 return
             if path == "/players":
                 view = self.server.clinic_service.create_player(form.get("display_name", ""))
-                location = "/clinic?" + urlencode({"player_id": view.player_summary.player_id})
+                location = "/welcome?" + urlencode({"player_id": view.player_summary.player_id})
+            elif path == "/welcome/complete":
+                player_id = self._player_id(form)
+                location = "/foundation?" + urlencode({"player_id": player_id})
+            elif path == "/foundation/complete":
+                player_id=self._player_id(form)
+                self.server.clinic_service.complete_foundation_exercise(player_id,form.get("exercise_id",""),form.get("action_id",""))
+                location="/foundation?"+urlencode({"player_id":player_id})
+            elif path == "/mentor/ask":
+                player_id=self._player_id(form)
+                location="/teaching?"+urlencode({"player_id":player_id,"mentor_message":mentor_reply(form.get("text",""))})
+            elif path == "/cases/natural":
+                player_id=self._player_id(form);case_id=form.get("case_id","");session_id=form.get("session_id","")
+                resumed=self.server.clinic_service.resume_case(player_id,case_id,session_id)
+                proposal=propose_investigation(form.get("text",""),resumed.observation.available_investigations)
+                if proposal.kind=="investigation":
+                    self.server.clinic_service.submit_case_action(ClinicActionInput(player_id=player_id,case_id=case_id,session_id=session_id,operation_id=token,action_type="investigation",selection_id=proposal.selection_id))
+                location="/cases?"+urlencode({"player_id":player_id,"case_id":case_id,"session_id":session_id,"notice":proposal.message})
+            elif path == "/cases/mentor":
+                player_id=self._player_id(form);case_id=form.get("case_id","");session_id=form.get("session_id","")
+                reply,_=self.server.clinic_service.mentor_case_message(player_id,case_id,session_id,form.get("text",""))
+                location="/cases?"+urlencode({"player_id":player_id,"case_id":case_id,"session_id":session_id,"mentor_notice":reply.message})
+            elif path == "/cases/chat":
+                player_id=self._player_id(form);case_id=form.get("case_id","");session_id=form.get("session_id","")
+                self.server.clinic_service.case_chat_message(player_id,case_id,session_id,token,form.get("message", ""))
+                location="/cases?"+urlencode({"player_id":player_id,"case_id":case_id,"session_id":session_id})
             elif path == "/cases/start":
                 player_id = self._player_id(form)
                 result = self.server.clinic_service.start_case(player_id, form.get("case_id", ""))
@@ -163,6 +203,12 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
                     operation_id=token, action_type=form.get("action_type", ""), selection_id=form.get("selection_id", ""),
                     evidence_clue_ids=tuple(item for item in form.get("evidence_clue_ids", "").split(",") if item),
                 )
+                if request.action_type=="treatment":
+                    session=self.server.clinic_service.store.load_case_session(request.session_id)
+                    pending,_=self.server.clinic_service.mentor_intervention(request.player_id,request.case_id,request.session_id,"risky_treatment_pending",event_key=f"{request.selection_id}_{session.revision}")
+                    if pending is not None:
+                        location="/cases?"+urlencode({"player_id":request.player_id,"case_id":request.case_id,"session_id":request.session_id,"notice":"师父已提醒风险；请阅读传音后再次确认。"})
+                        self.server.operation_results[token]=location;self._redirect(location);return
                 result = self.server.clinic_service.submit_case_action(request)
                 location = "/cases?" + urlencode({"player_id": request.player_id, "case_id": request.case_id, "session_id": request.session_id})
             elif path == "/inheritance/request":
@@ -226,6 +272,14 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
         q = urlencode({"player_id": player_id})
         return f'<nav><a href="/clinic?{q}">医馆主页</a> · <a href="/teaching?{q}">导师教学</a> · <a href="/cases?{q}">病例</a> · <a href="/exam?{q}">考试</a> · <a href="/inheritance?{q}">传承</a> · <a href="/assessment?{q}">师评</a></nav>'
 
+    def _welcome(self, player_id):
+        player=self.server.clinic_service.home(player_id).player_summary
+        mentor=self.server.clinic_service.mentor_status
+        runtime=(f'<section class="card"><h3>导师运行</h3><p>模式：真实DeepSeek</p><p>已用费用：{_esc(mentor["used_cost"])} CNY</p><form method="post" action="/mentor/explain"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="request_id" value="initial_lesson_hint_1"><input type="hidden" name="operation_id" value="{self._token()}"><button>请导师说明初课与提示</button></form></section>' if mentor["mode"]=="deepseek" else '')
+        body=f'''<h2>首次入馆</h2><section class="card"><h3>系统旁白</h3><p>你是玄医馆新收的弟子。这里收治的并非寻常病痛，而是人与契、物、炁息交缠所成的异象。你需要亲自询问、查验、辨明因果，再决定如何处置。</p></section><section class="card mentor"><h3>师父</h3><p>你来了。医馆今日已有数案候诊。先别急着下结论，记住：问清来由，核对证据，再谈施治。</p></section><form method="post" action="/welcome/complete"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="operation_id" value="{self._token()}"><button>记下教诲，前往选案</button></form>'''
+        body=f'<p>入馆弟子：{_esc(player.display_name)}</p>'+runtime+body
+        self._send(200,_page("首次入馆",body))
+
     def _start(self):
         players = self.server.clinic_service.list_players()
         restored = "".join(f'<li><a href="/clinic?player_id={_esc(item.player_id)}">{_esc(item.display_name)}</a></li>' for item in players) or "<li>尚无弟子存档</li>"
@@ -234,7 +288,7 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
 
     def _home(self, player_id):
         view = self.server.clinic_service.home(player_id)
-        ability = "".join(f"<li>{_esc(item['name'])}：{item['proficiency']}</li>" for item in view.abilities)
+        ability = "".join(f"<li><strong>{_esc(item['name'])}</strong>：{item['proficiency']} · {_esc(item['level_name'])} · {'已解锁' if item['unlocked'] else '未习得'}<br><small>{_esc(item['level_description'])}</small></li>" for item in view.abilities)
         cases = "".join(f"<li>{_esc(item.title)}：{_esc(PUBLIC_PRESENTATION.name('case_status', item.status, fallback='状态已更新'))}</li>" for item in view.visible_cases)
         mentor = self.server.clinic_service.mentor_status
         runtime = ""
@@ -245,26 +299,61 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
         permissions = "、".join(PUBLIC_PRESENTATION.name("permission", item, fallback="已开放内容") for item in view.permissions)
         exam_status = PUBLIC_PRESENTATION.name("exam_status", view.exam_status, fallback="考试状态已更新")
         inheritance_status = PUBLIC_PRESENTATION.name("inheritance_status", view.inheritance_status, fallback="传承状态已更新")
-        body = f'''{self._nav(player_id)}<h2>{_esc(view.player_summary.display_name)}的医馆</h2>{runtime}<div class="grid"><section class="card"><h3>导师与课程</h3><p>{_esc(view.mentor_summary)}</p><p>阶段：{_esc(stage)}</p><p>当前建议：{_esc(recommendation)}</p></section><section class="card"><h3>六项能力</h3><ul>{ability}</ul></section><section class="card"><h3>关系</h3><p>亲近 {_esc(view.relationship['affinity'])} · 信任 {_esc(view.relationship['trust'])} · 认可 {_esc(view.relationship['recognition'])}</p></section><section class="card"><h3>六病例</h3><ul>{cases}</ul></section><section class="card"><h3>考试与传承</h3><p>考试：{_esc(exam_status)}</p><p>传承：{_esc(inheritance_status)}</p><p>权限：{_esc(permissions)}</p></section></div>'''
+        body = f'''{self._nav(player_id)}<h2>{_esc(view.player_summary.display_name)}的医馆</h2>{runtime}<div class="grid"><section class="card"><h3>导师与课程</h3><p>{_esc(view.mentor_summary)}</p><p>阶段：{_esc(stage)}</p><p>当前建议：{_esc(recommendation)}</p><p><a href="/foundation?player_id={_esc(player_id)}">入门教学</a></p></section><section class="card"><h3>七项能力</h3><ul>{ability}</ul></section><section class="card"><h3>关系</h3><p>亲近 {_esc(view.relationship['affinity'])} · 信任 {_esc(view.relationship['trust'])} · 认可 {_esc(view.relationship['recognition'])}</p></section><section class="card"><h3>六病例</h3><ul>{cases}</ul></section><section class="card"><h3>考试与传承</h3><p>考试：{_esc(exam_status)}</p><p>传承：{_esc(inheritance_status)}</p><p>权限：{_esc(permissions)}</p></section></div>'''
         self._send(200, _page("医馆", body))
+
+    def _foundation(self,player_id):
+        state=self.server.clinic_service.store.load_apprenticeship(player_id)
+        policy=self.server.clinic_service.base_service.progression_policy
+        cards=[]
+        prior_complete=True
+        for item in policy.config.foundation_exercises:
+            ability=state.abilities[item.ability_id]
+            if ability.unlocked:
+                action='<strong>已完成 · 基础熟练度 '+str(ability.proficiency)+'</strong>'
+            elif not prior_complete:
+                action='<button disabled>请先完成上一项练习</button>'
+            else:
+                action=f'<form method="post" action="/foundation/complete"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="exercise_id" value="{_esc(item.exercise_id)}"><input type="hidden" name="action_id" value="{_esc(item.required_action_id)}"><input type="hidden" name="operation_id" value="{self._token()}"><button>完成结构化练习</button></form>'
+            cards.append(f'<section class="card"><h3>{_esc(item.title)}</h3><p>{_esc(item.public_goal)}</p>{action}</section>')
+            prior_complete=prior_complete and ability.unlocked
+        done=all(x.unlocked for x in state.abilities.values())
+        tail=(f'<p><a href="/cases?player_id={_esc(player_id)}">七项入门完成，前往选案</a></p>' if done else '<p>练习结果由规则验证；导师说明不会直接解锁能力。</p>')
+        self._send(200,_page("入门教学",self._nav(player_id)+'<h2>七项能力入门</h2><div class="grid">'+''.join(cards)+'</div>'+tail))
 
     def _cases(self, player_id, case_id=None, session_id=None):
         service = self.server.clinic_service._service(player_id)
         if not case_id:
             view = self.server.clinic_service.home(player_id)
-            cards = "".join(f'<section class="card"><h3>{_esc(item.title)}</h3><p>{_esc(item.synopsis)}</p><form method="post" action="/cases/start"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="case_id" value="{_esc(item.case_id)}"><input type="hidden" name="operation_id" value="{self._token()}"><button>开始或恢复</button></form></section>' for item in view.visible_cases)
-            self._send(200, _page("病例", self._nav(player_id) + '<h2>可见病例</h2><div class="grid">' + cards + "</div>"))
+            labels={"not_started":"未开始","active":"调查中","completed":"已完成"}
+            cards = "".join(f'<section class="card"><h3>{_esc(item.title)}</h3><p>{_esc(item.synopsis)}</p><p><strong>难度：</strong>异象案</p><p class="status">状态：{_esc(labels.get(item.status,item.status))}</p>{"<p class=\"recommended\">师父推荐</p>" if item.recommended else ""}<form method="post" action="/cases/start"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="case_id" value="{_esc(item.case_id)}"><input type="hidden" name="operation_id" value="{self._token()}"><button>{"继续调查" if item.status=="active" else "接案"}</button></form></section>' for item in view.visible_cases)
+            self._send(200, _page("六案大厅", self._nav(player_id) + '<h2>六病例选案大厅</h2><p>推荐仅供参考，六案均可选择。</p><div class="case-grid">' + cards + "</div>"))
             return
         if not session_id:
             raise ClinicError("session_required", "缺少病例进度。")
-        result = self.server.clinic_service.resume_case(player_id, case_id, session_id)
+        result,guide,guide_stages,current_stage,dialogue,abilities = self.server.clinic_service.case_experience(player_id, case_id, session_id)
         observation = result.observation
         if observation is None:
             raise ClinicError("case_unavailable", "病例公开状态不可用。")
         clues = "".join(f"<li>{_esc(item.description)}</li>" for item in observation.discovered_clues) or "<li>尚未发现</li>"
         actions = "".join(f'<form method="post" action="/cases/action"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="case_id" value="{_esc(case_id)}"><input type="hidden" name="session_id" value="{_esc(session_id)}"><input type="hidden" name="operation_id" value="{self._token()}"><input type="hidden" name="action_type" value="investigation"><input type="hidden" name="selection_id" value="{_esc(item.investigation_id)}"><button>{_esc(item.public_description)}</button></form>' for item in observation.available_investigations)
         diagnoses = "".join(f'<option value="{_esc(item.diagnosis_id)}">{_esc(item.public_description)}</option>' for item in observation.diagnosis_candidates)
-        body = f'''{self._nav(player_id)}<h2>{_esc(observation.title)}</h2><p>{_esc(observation.synopsis)}</p><section class="card"><h3>已发现线索</h3><ul>{clues}</ul></section><section class="card"><h3>可用调查</h3>{actions or '<p>暂无</p>'}</section>'''
+        notice=self._query().get("notice","")
+        body = f'''{self._nav(player_id)}<h2>{_esc(observation.title)}</h2><p>{_esc(observation.synopsis)}</p>{f'<p class="notice">{_esc(notice)}</p>' if notice else ''}<section class="card"><h3>自然语言调查</h3><form method="post" action="/cases/natural"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="case_id" value="{_esc(case_id)}"><input type="hidden" name="session_id" value="{_esc(session_id)}"><input type="hidden" name="operation_id" value="{self._token()}"><textarea name="text" rows="3" required placeholder="例如：询问乘客虚弱出现的先后顺序"></textarea><button>执行调查提案</button></form><small>文本先转换为行动提案，病例规则会再次校验能力、熟练度与前置证据。</small></section><section class="card"><h3>线索簿</h3><ul>{clues}</ul></section><details class="card"><summary>无障碍／模型不可用时的降级调查入口</summary>{actions or '<p>暂无</p>'}</details>'''
+        stage_html="".join(f'<li class="{"progress-done" if done else ""}">{"✓" if done else "○"} {_esc(stage.title)}<p>{_esc(stage.public_purpose)}</p><small>参考问法（不会自动执行）：{_esc("；".join(stage.suggested_questions))}</small></li>' for stage,done in guide_stages)
+        mentor_history="".join(f'<p><strong>{"你" if turn.role=="player" else "师父"}：</strong>{_esc(turn.text)}</p>' for turn in dialogue.recent_mentor_turns)
+        ability_html="".join(f'<li>{_esc(item.name)} · {item.proficiency} · {"可用" if item.executable else _esc(item.reason)}</li>' for item in abilities)
+        mentor_notice=self._query().get("mentor_notice","")
+        embedded=f'''<p><strong>本案学习目标：</strong>{_esc(guide.learning_goal)}</p><div class="case-workspace"><section class="card"><h3>病例专属调查提纲</h3><ul>{stage_html}</ul></section><section class="card"><h3>病例人物对话与调查</h3><p>在下方自然语言调查框中说明交谈对象、问题或检查目标。</p></section><aside><section class="card mentor"><h3>病例内请教师父</h3>{mentor_history}{f'<p class="notice">{_esc(mentor_notice)}</p>' if mentor_notice else ''}<form method="post" action="/cases/mentor"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="case_id" value="{_esc(case_id)}"><input type="hidden" name="session_id" value="{_esc(session_id)}"><input type="hidden" name="operation_id" value="{self._token()}"><textarea name="text" rows="3" required placeholder="请教师父调查方法或证据整理"></textarea><button>请教师父指点</button></form></section><section class="card"><h3>当前能力和行动限制</h3><ul>{ability_html}</ul><small>服务端会在每次行动时重新校验。</small></section></aside></div>'''
+        body=body.replace(f'<h2>{_esc(observation.title)}</h2>',f'<h2>{_esc(observation.title)}</h2>'+embedded)
+        participants=case_participants(case_id);names={x.participant_id:x.display_name for x in participants}|{"player":"你","mentor":"师父"}
+        bubbles="".join(f'<article class="bubble {_esc(msg.message_type)}"><strong>{_esc(names.get(msg.speaker_id,"系统"))}</strong>{"<span class=\"private-mark\"> · 师徒传音</span>" if msg.message_type=="mentor_private" else ""}<p>{_esc(msg.public_text)}</p></article>' for msg in dialogue.recent_messages) or '<p class="notice">尚未开始交谈。默认接收者为当前求医者；输入 @ 可切换人物或师父。</p>'
+        options='<option value="@师父 "></option>'+''.join(f'<option value="@{_esc(x.display_name)} "></option>' for x in participants)
+        current=names.get(dialogue.current_target,"请选择")
+        chat=f'''<section class="chat"><p>当前交谈对象：<strong>{_esc(current)}</strong></p><div class="chat-log">{bubbles}</div><form class="composer" method="post" action="/cases/chat"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="case_id" value="{_esc(case_id)}"><input type="hidden" name="session_id" value="{_esc(session_id)}"><input type="hidden" name="operation_id" value="{self._token()}"><textarea name="message" rows="3" list="case-recipients" required placeholder="向当前人物说话，或输入 @师父 / @角色名"></textarea><datalist id="case-recipients">{options}</datalist><button>发送</button></form></section>'''
+        chat=chat.replace('<textarea name="message" rows="3" list="case-recipients"','<input name="message" list="case-recipients"').replace('</textarea><datalist','><datalist')
+        drawers=f'''<section class="drawers"><details class="card"><summary>调查提纲与进度</summary><ul>{stage_html}</ul></details><details class="card"><summary>已发现线索</summary><ul>{clues}</ul></details><details class="card"><summary>能力与技法</summary><ul>{ability_html}</ul></details><details class="card"><summary>病例参与者</summary><ul>{''.join(f'<li>{_esc(x.display_name)}</li>' for x in participants)}</ul></details><details class="card"><summary>辨证与处置</summary><p>达到规则要求后，下方将显示可提交入口。</p></details></section>'''
+        body=f'''{self._nav(player_id)}<h2>{_esc(observation.title)}</h2><p>{_esc(observation.synopsis)}</p>{chat}{drawers}'''
         if observation.can_submit_diagnosis:
             evidence = ",".join(item.clue_id for item in observation.discovered_clues)
             body += f'<section class="card"><h3>提交辨证</h3><form method="post" action="/cases/action"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="case_id" value="{_esc(case_id)}"><input type="hidden" name="session_id" value="{_esc(session_id)}"><input type="hidden" name="operation_id" value="{self._token()}"><input type="hidden" name="action_type" value="diagnosis"><input type="hidden" name="evidence_clue_ids" value="{_esc(evidence)}"><select name="selection_id">{diagnoses}</select><button>提交辨证</button></form></section>'
@@ -302,7 +391,7 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
         plan = teaching.plan_service.ensure(player_id)
         query=self._query();message=query.get("mentor_message","");notice=query.get("mentor_notice","")
         rendered=(f'<p class="notice">{_esc(notice)}</p>' if notice else '')+(f'<section class="card"><h3>导师说明</h3><p>{_esc(message)}</p></section>' if message else '')
-        body = self._nav(player_id) + '<h2>导师教学</h2><p>课程、提示与师评均来自固定公开契约。</p>'+rendered
+        body = self._nav(player_id) + f'''<h2>请教师父</h2><section class="card mentor"><form method="post" action="/mentor/ask"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="operation_id" value="{self._token()}"><textarea name="text" rows="3" required placeholder="询问玩法、能力、当前建议或调查原则"></textarea><button>请教</button></form></section><p>师父不会泄露隐藏线索、正确辨证或处置，也不会替你执行行动。</p>'''+rendered
         real_mode = self.server.clinic_service.mentor_status["mode"] == "deepseek"
         if real_mode:
             body += f'<form method="post" action="/mentor/explain"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="request_id" value="initial_lesson_hint_1"><input type="hidden" name="operation_id" value="{self._token()}"><button>请导师说明初课与提示</button></form>'

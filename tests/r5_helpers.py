@@ -16,6 +16,7 @@ def build_six_case_service(tmp_path):
         state_store=store, case_catalog=catalog,
         campaign_rules=CampaignRuleSet.load(root / "campaign" / "cross_episode_rules_v2.json", catalog),
         player_id_factory=FixedPlayerIds(), session_id_factory=FixedSessionIds(), clock=FixedClock(),
+        legacy_auto_foundation=True,
     )
     return service, store
 

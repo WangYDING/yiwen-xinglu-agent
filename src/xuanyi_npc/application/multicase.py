@@ -22,6 +22,7 @@ from pydantic import (
 from xuanyi_npc.domain import (
     AgentAction,
     AgentActionType,
+    AbilityId,
     CampaignState,
     CaseDefinition,
     CaseEvent,
@@ -440,6 +441,7 @@ class MultiCaseEpisodeService:
         context_filter: AgentContextFilter | None = None,
         campaign_rules: CampaignRuleSet | None = None,
         progression_policy: ProgressionPolicy | None = None,
+        legacy_auto_foundation: bool = False,
     ) -> None:
         self.state_store = state_store
         self.case_catalog = case_catalog
@@ -458,6 +460,7 @@ class MultiCaseEpisodeService:
             self.campaign_rules,
         )
         self.progression_policy = progression_policy or ProgressionPolicy.load_default()
+        self.legacy_auto_foundation = legacy_auto_foundation
         self.apprenticeship_coordinator = ApprenticeshipCoordinator(
             state_store,
             case_catalog,
@@ -478,6 +481,10 @@ class MultiCaseEpisodeService:
                 player.player_id,
                 self.clock.now(),
             )
+            if self.legacy_auto_foundation:
+                for exercise in self.progression_policy.config.foundation_exercises:
+                    apprenticeship=self.complete_foundation_exercise(player.player_id,exercise.exercise_id,exercise.required_action_id).apprenticeship_view
+                apprenticeship=self.state_store.load_apprenticeship(player.player_id)
             return MultiCaseServiceResult(
                 ok=True,
                 message="玩家已创建。",
@@ -846,6 +853,16 @@ class MultiCaseEpisodeService:
             apprenticeship_status=ApprenticeshipProjectionStatus.READY,
         )
 
+    def complete_foundation_exercise(self,player_id:str,exercise_id:str,action_id:str)->MultiCaseServiceResult:
+        """Apply a deterministic exercise result; text and mentor output are never inputs."""
+        player_or_error=self._load_player(player_id)
+        if isinstance(player_or_error,MultiCaseServiceResult):return player_or_error
+        try:
+            result=self.apprenticeship_coordinator.complete_foundation_exercise(player_id,exercise_id,action_id,self.clock.now())
+            return MultiCaseServiceResult(ok=True,message="入门练习已经由规则确认。",player_id=player_id,player_revision=player_or_error.revision,apprenticeship_view=self.progression_policy.view(result.state),apprenticeship_status=ApprenticeshipProjectionStatus.READY)
+        except ProgressionSourceError:
+            return self._error("apprenticeship_source_invalid",player=player_or_error)
+
     def list_completed_cases(
         self,
         request: CampaignPlayerInput,
@@ -987,7 +1004,11 @@ class MultiCaseEpisodeService:
 
     def _load_player(self, player_id: str) -> PlayerState | MultiCaseServiceResult:
         try:
-            return self.state_store.load_player(player_id)
+            player=self.state_store.load_player(player_id)
+            apprenticeship=self.state_store.load_apprenticeship(player_id)
+            mapping={"observe_form":AbilityId.OBSERVE_FORM,"ask_cause":AbilityId.ASK_CAUSE,"inspect_object":AbilityId.INSPECT_EVIDENCE,"inspect_evidence":AbilityId.INSPECT_EVIDENCE,"observe_qi":AbilityId.OBSERVE_QI,"reason_diagnosis":AbilityId.REASON_DIAGNOSIS,"apply_treatment":AbilityId.APPLY_TREATMENT,"ethical_practice":AbilityId.ETHICAL_PRACTICE}
+            skills={key:value.model_copy(update={"proficiency":apprenticeship.abilities[ability].proficiency,"unlocked":apprenticeship.abilities[ability].unlocked}) for key,value in player.skills.items() for ability in (mapping[key],)}
+            return player.model_copy(update={"skills":skills})
         except StateNotFoundError:
             return self._error("player_not_found", player_id=player_id)
         except StateCorruptionError:
@@ -1381,23 +1402,26 @@ class MultiCaseEpisodeService:
             display_name=display_name,
             skills={
                 "observe_form": SkillState(
-                    skill_id="observe_form", proficiency=30, unlocked=True
+                    skill_id="observe_form", proficiency=0, unlocked=False
                 ),
                 "ask_cause": SkillState(
-                    skill_id="ask_cause", proficiency=30, unlocked=True
+                    skill_id="ask_cause", proficiency=0, unlocked=False
                 ),
-                "inspect_object": SkillState(
-                    skill_id="inspect_object",
-                    proficiency=30,
-                    unlocked=True,
+                "inspect_evidence": SkillState(
+                    skill_id="inspect_evidence",
+                    proficiency=0,
+                    unlocked=False,
                     prerequisite_ids={"observe_form"},
                 ),
                 "observe_qi": SkillState(
                     skill_id="observe_qi",
-                    proficiency=25,
-                    unlocked=True,
-                    prerequisite_ids={"observe_form", "inspect_object"},
+                    proficiency=0,
+                    unlocked=False,
+                    prerequisite_ids={"observe_form", "inspect_evidence"},
                 ),
+                "reason_diagnosis":SkillState(skill_id="reason_diagnosis",proficiency=0,unlocked=False),
+                "apply_treatment":SkillState(skill_id="apply_treatment",proficiency=0,unlocked=False),
+                "ethical_practice":SkillState(skill_id="ethical_practice",proficiency=0,unlocked=False),
             },
             relationship=RelationshipState(),
         )

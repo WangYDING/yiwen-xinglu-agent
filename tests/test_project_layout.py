@@ -96,6 +96,37 @@ def test_experimental_data_and_archived_evidence_are_forbidden_from_distribution
     assert _is_forbidden("xuanyi_npc-0.1.0/docs/archive/evidence/model_runs/run.json")
 
 
+def test_experimental_runners_have_an_explicit_non_product_boundary():
+    experiments = ROOT / "tools" / "experiments"
+    runners = experiments / "runners"
+    assert not list(experiments.glob("*.py"))
+    assert {path.name for path in experiments.iterdir() if path.is_dir()} == {
+        "data",
+        "model_manifests",
+        "runners",
+    }
+    assert len(list(runners.glob("*.py"))) == 6
+
+    runner_sources = "\n".join(
+        path.read_text(encoding="utf-8") for path in runners.glob("*.py")
+    ).replace("\\", "/")
+    assert '"tools" / "experiments" / "data"' in runner_sources
+    assert '"tools" / "experiments" / "model_manifests"' not in runner_sources
+    assert 'ROOT / "data"' not in runner_sources
+
+    package_sources = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in (ROOT / "src" / "xuanyi_npc").rglob("*.py")
+    ).replace("\\", "/")
+    assert "tools.experiments" not in package_sources
+    assert "tools/experiments/runners" not in package_sources
+
+    pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    manifest = (ROOT / "MANIFEST.in").read_text(encoding="utf-8")
+    assert 'where = ["src"]' in pyproject
+    assert "recursive-include tools" not in manifest
+
+
 def test_migrated_data_bytes_keep_their_prefreeze_sha256():
     for relative, expected in MIGRATED_SHA256.items():
         assert hashlib.sha256((ROOT / relative).read_bytes()).hexdigest() == expected

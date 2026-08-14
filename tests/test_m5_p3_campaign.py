@@ -241,6 +241,8 @@ def complete(
 def create_player(service: MultiCaseEpisodeService, name: str = "巡案学徒") -> str:
     result = service.create_player(CreatePlayerInput(display_name=name))
     assert result.ok and result.player_id
+    for exercise in service.progression_policy.config.foundation_exercises:
+        assert service.complete_foundation_exercise(result.player_id,exercise.exercise_id,exercise.required_action_id).ok
     return result.player_id
 
 

@@ -274,7 +274,9 @@ class AgentContextFilter:
             discovered_clues=clues,
             available_investigations=investigations,
             diagnosis_candidates=diagnosis_candidates,
-            can_submit_diagnosis=is_active,
+            can_submit_diagnosis=(
+                is_active and session.submitted_diagnosis_id is None
+            ),
             submitted_diagnosis_id=session.submitted_diagnosis_id,
             available_treatments=treatments,
         )
@@ -288,6 +290,13 @@ class AgentContextFilter:
         if skill_id is None:
             return True
         skill = player.skills.get(skill_id)
+        # Case data historically called the public 验物 ability
+        # ``inspect_object``.  AbilityState v2 uses the unified public id
+        # ``inspect_evidence``; read projections must apply the same alias as
+        # the authoritative engine so stale case definitions cannot disagree
+        # with execution.
+        if skill is None and skill_id == "inspect_object":
+            skill = player.skills.get("inspect_evidence")
         return bool(
             skill is not None
             and skill.unlocked

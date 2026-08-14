@@ -47,13 +47,9 @@ def test_wrong_diagnosis_records_improvement_without_diagnosis_reward(tmp_path) 
     )
     assert len(diagnosis) == 1
     assert diagnosis[0].polarity is EvidencePolarity.NEEDS_IMPROVEMENT
-    # One accepted qi observation may demonstrate reasoning, but the wrong final
-    # diagnosis itself contributes no positive growth.
-    reason_change = next(
-        item for item in result.ability_changes
-        if item.ability_id is AbilityId.REASON_DIAGNOSIS
-    )
-    assert reason_change.delta == 1
+    # 观炁已是独立能力；错误正式辨证不得借观炁行动获得辨证成长。
+    assert not any(item.ability_id is AbilityId.REASON_DIAGNOSIS for item in result.ability_changes)
+    assert next(item for item in result.ability_changes if item.ability_id is AbilityId.OBSERVE_QI).delta == 1
     assert state.relationship.affinity == 10
     assert state.relationship.trust == 10
     assert state.relationship.recognition == 11

@@ -58,8 +58,11 @@ class CaseEngine:
         if isinstance(command, InvestigationCommand):
             return self._investigate(case, player, session, command)
         if isinstance(command, SubmitDiagnosisCommand):
+            if "reason_diagnosis" in player.skills:self._validate_skill(player,"reason_diagnosis",0)
             return self._submit_diagnosis(case, session, command)
         if isinstance(command, ExecuteTreatmentCommand):
+            if "apply_treatment" in player.skills:self._validate_skill(player,"apply_treatment",0)
+            if "ethical_practice" in player.skills:self._validate_skill(player,"ethical_practice",0)
             return self._execute_treatment(case, session, command)
         raise UnknownCommandError("the command type is not supported")
 
@@ -178,6 +181,7 @@ class CaseEngine:
         if required_skill_id is None:
             return
         skill = player.skills.get(required_skill_id)
+        if skill is None and required_skill_id=="inspect_object":skill=player.skills.get("inspect_evidence")
         if skill is None or not skill.unlocked:
             raise SkillLockedError(f"required skill is locked: {required_skill_id}")
         if skill.proficiency < minimum_skill_level:

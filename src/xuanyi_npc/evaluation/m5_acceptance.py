@@ -222,6 +222,7 @@ def _service(
         player_id_factory=_Ids(player_ids) if player_ids else None,
         session_id_factory=_Ids(session_ids) if session_ids else None,
         clock=_Clock(),
+        legacy_auto_foundation=True,
     )
 
 
@@ -484,6 +485,8 @@ def _run_shadow_variant(
         session_ids=("session_shadow",),
     )
     created = service.create_player(CreatePlayerInput(display_name="旁路验收学徒"))
+    for exercise in service.progression_policy.config.foundation_exercises:
+        service.complete_foundation_exercise(created.player_id,exercise.exercise_id,exercise.required_action_id)
     opened = service.start_episode(
         StartEpisodeInput(player_id=created.player_id or "", case_id="old_paper_umbrella")
     )
@@ -639,6 +642,9 @@ def run_acceptance(
     )
     primary = service.create_player(CreatePlayerInput(display_name="纵向验收甲"))
     secondary = service.create_player(CreatePlayerInput(display_name="纵向验收乙"))
+    for created_player in (primary,secondary):
+        for exercise in service.progression_policy.config.foundation_exercises:
+            service.complete_foundation_exercise(created_player.player_id,exercise.exercise_id,exercise.required_action_id)
     if not primary.ok or not secondary.ok or not primary.player_id or not secondary.player_id:
         raise AcceptanceError("could not create isolated acceptance players")
 

@@ -17,6 +17,8 @@ from xuanyi_npc.domain.apprenticeship import (
     AbilityId,
     AbilityLevel,
     AbilityProgressed,
+    AbilityUnlocked,
+    AbilityFoundationGranted,
     AbilityState,
     ApprenticeshipEventReplayer,
     ApprenticeshipInitialized,
@@ -71,6 +73,8 @@ class ProgressionModel(DomainModel):
 class AbilityLevelRule(ProgressionModel):
     level: AbilityLevel
     minimum_proficiency: Annotated[StrictInt, Field(ge=0, le=100)]
+    public_name: NonEmptyText|None=None
+    public_description: NonEmptyText|None=None
 
 
 class AbilityRule(ProgressionModel):
@@ -78,6 +82,15 @@ class AbilityRule(ProgressionModel):
     display_name: NonEmptyText
     initial_proficiency: Annotated[StrictInt, Field(ge=0, le=100)]
     unlocked: StrictBool
+
+
+class FoundationExerciseRule(ProgressionModel):
+    exercise_id: Identifier
+    ability_id: AbilityId
+    title: NonEmptyText
+    public_goal: NonEmptyText
+    required_action_id: Identifier
+    foundation_proficiency: Annotated[StrictInt, Field(ge=1, le=24)] = 10
 
 
 class RelationshipRule(ProgressionModel):
@@ -105,9 +118,13 @@ class ProgressionConfig(ProgressionModel):
     teaching_stage: TeachingStage
     ability_levels: tuple[AbilityLevelRule, ...]
     abilities: tuple[AbilityRule, ...]
+    foundation_exercises: tuple[FoundationExerciseRule, ...]
+    exam_minimum_level: AbilityLevel
+    exam_required_abilities: tuple[AbilityId,...]
+    exam_minimum_competent_count: Annotated[StrictInt,Field(ge=0,le=7)]
     initial_relationship: RelationshipState
     maximum_positive_growth_per_ability_per_episode: Annotated[
-        StrictInt, Field(ge=1, le=2)
+        StrictInt, Field(ge=1, le=10)
     ]
     investigation_action_ability_map: dict[CaseActionType, AbilityId]
     relationship_rules: tuple[RelationshipRule, ...]
@@ -119,12 +136,18 @@ class ProgressionConfig(ProgressionModel):
         if self.state_schema_version != APPRENTICESHIP_SCHEMA_VERSION:
             raise ValueError("unsupported apprenticeship schema version")
         if {item.ability_id for item in self.abilities} != set(AbilityId):
-            raise ValueError("progression policy must define exactly six abilities")
+            raise ValueError("progression policy must define exactly seven abilities")
+        if {item.ability_id for item in self.foundation_exercises} != set(AbilityId):
+            raise ValueError("foundation teaching must define one exercise per ability")
+        if len({item.exercise_id for item in self.foundation_exercises}) != len(AbilityId):
+            raise ValueError("foundation exercise ids must be unique")
         thresholds = [item.minimum_proficiency for item in self.ability_levels]
         if thresholds != sorted(set(thresholds)) or not thresholds or thresholds[0] != 0:
             raise ValueError("ability level thresholds must be unique and start at zero")
-        if {item.level for item in self.ability_levels} != set(AbilityLevel):
-            raise ValueError("progression policy must define all ability levels")
+        public_levels=set(AbilityLevel)-{AbilityLevel.APPRENTICE}
+        legacy_levels={AbilityLevel.NOVICE,AbilityLevel.APPRENTICE,AbilityLevel.COMPETENT,AbilityLevel.ADVANCED,AbilityLevel.MASTERED}
+        if frozenset(item.level for item in self.ability_levels) not in {frozenset(public_levels),frozenset(legacy_levels)}:
+            raise ValueError("progression policy must define the versioned public ability levels")
         expected_actions = {
             CaseActionType.OBSERVE_PATIENT,
             CaseActionType.QUESTION_PATIENT,
@@ -142,7 +165,7 @@ class AbilityChangeView(ProgressionModel):
     display_name: NonEmptyText
     proficiency_before: Annotated[StrictInt, Field(ge=0, le=100)]
     proficiency_after: Annotated[StrictInt, Field(ge=0, le=100)]
-    delta: Annotated[StrictInt, Field(ge=1, le=2)]
+    delta: Annotated[StrictInt, Field(ge=1, le=10)]
     public_description: NonEmptyText
 
 
@@ -186,6 +209,7 @@ class ProgressionPolicy:
     def __init__(self, config: ProgressionConfig) -> None:
         self.config = config
         self._abilities = {item.ability_id: item for item in config.abilities}
+        self._exercises = {item.exercise_id: item for item in config.foundation_exercises}
 
     @classmethod
     def load_default(cls) -> "ProgressionPolicy":
@@ -208,6 +232,9 @@ class ProgressionPolicy:
         )
         return applicable[-1].level
 
+    def level_rule_for(self,proficiency:int)->AbilityLevelRule:
+        return tuple(item for item in self.config.ability_levels if item.minimum_proficiency<=proficiency)[-1]
+
     def initialize(self, player_id: str, occurred_at: datetime) -> ApprenticeshipState:
         abilities = tuple(
             AbilityState(
@@ -227,6 +254,24 @@ class ProgressionPolicy:
             initial_relationship=self.config.initial_relationship,
         )
         return ApprenticeshipEventReplayer().replay((event,))
+
+    def complete_foundation_exercise(self,state:ApprenticeshipState,exercise_id:str,action_id:str,occurred_at:datetime)->ProgressionProjectionResult:
+        rule=self._exercises.get(exercise_id)
+        if rule is None or action_id!=rule.required_action_id:
+            raise ProgressionSourceError("foundation exercise result was not accepted")
+        ordered=tuple(item.ability_id for item in self.config.foundation_exercises)
+        position=ordered.index(rule.ability_id)
+        if any(not state.abilities[item].unlocked for item in ordered[:position]):
+            raise ProgressionSourceError("foundation exercises must be completed in order")
+        ability=state.abilities[rule.ability_id]
+        prior=tuple(x for x in state.events if isinstance(x,AbilityFoundationGranted) and x.source_exercise_id==exercise_id)
+        if prior:return ProgressionProjectionResult(state=state,changed=False)
+        events=list(state.events)
+        events.append(AbilityUnlocked(sequence=len(events)+1,player_id=state.player_id,occurred_at=occurred_at,ability_id=rule.ability_id,source_exercise_id=exercise_id,public_description=f"完成“{rule.title}”，已习得{self.display_name(rule.ability_id)}。"))
+        source_event_id="foundation_"+hashlib.sha256(f"{state.player_id}|{exercise_id}".encode()).hexdigest()[:24]
+        events.append(AbilityFoundationGranted(sequence=len(events)+1,player_id=state.player_id,occurred_at=occurred_at,ability_id=rule.ability_id,proficiency_before=ability.proficiency,proficiency_after=rule.foundation_proficiency,source_exercise_id=exercise_id,source_event_id=source_event_id,public_description=f"规则确认入门练习完成，{self.display_name(rule.ability_id)}获得{rule.foundation_proficiency}点基础熟练度。"))
+        updated=ApprenticeshipEventReplayer().replay(tuple(events))
+        return ProgressionProjectionResult(state=updated,changed=True,event_sequences=(len(events)-1,len(events)))
 
     def view(self, state: ApprenticeshipState) -> ApprenticeshipView:
         latest_reason = None
@@ -328,7 +373,7 @@ class ProgressionProjector:
                 self.policy.config.maximum_positive_growth_per_ability_per_episode,
                 100 - working.abilities[ability_id].proficiency,
             )
-            if delta <= 0:
+            if delta <= 0 or not working.abilities[ability_id].unlocked:
                 continue
             before = working.abilities[ability_id]
             after_value = before.proficiency + delta
@@ -661,6 +706,12 @@ class ApprenticeshipCoordinator:
             if persist:
                 self.store.save_apprenticeship(state)
             return state
+
+    def complete_foundation_exercise(self,player_id:str,exercise_id:str,action_id:str,occurred_at:datetime)->ProgressionProjectionResult:
+        state=self.store.load_apprenticeship(player_id)
+        result=self.policy.complete_foundation_exercise(state,exercise_id,action_id,occurred_at)
+        if result.changed:self.store.save_apprenticeship(result.state)
+        return result
 
     def project_completed(
         self,

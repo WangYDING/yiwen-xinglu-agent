@@ -29,7 +29,7 @@ from xuanyi_npc.evaluation.semantic_holdout_contracts import (
 from xuanyi_npc.evaluation.memory_contracts import SyntheticMemorySource
 
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 DATA = ROOT / "tools" / "experiments" / "data" / "evaluation"
 INPUT_PATH = DATA / "m45_semantic_holdout_inputs_v1.json"
 EXPECTATION_PATH = DATA / "m45_semantic_holdout_expectations_v1.json"

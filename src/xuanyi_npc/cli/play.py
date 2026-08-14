@@ -141,6 +141,9 @@ def create_play_service(config: PlayConfig) -> MultiCaseEpisodeService:
         state_store=JsonStateStore(config.state_dir),
         case_catalog=catalog,
         campaign_rules=rules,
+        # The legacy numbered CLI has no foundation-practice screens; keep its
+        # historical scripted journeys viable. The web clinic uses explicit exercises.
+        legacy_auto_foundation=True,
     )
 
 

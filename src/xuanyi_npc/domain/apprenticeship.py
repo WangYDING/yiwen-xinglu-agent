@@ -13,8 +13,8 @@ from .player import TeachingStage
 from .relationship import RelationshipState
 
 
-APPRENTICESHIP_SCHEMA_VERSION = "apprenticeship_state_v1"
-PROGRESSION_POLICY_VERSION = "apprenticeship_progression_v1"
+APPRENTICESHIP_SCHEMA_VERSION = "apprenticeship_state_v2"
+PROGRESSION_POLICY_VERSION = "apprenticeship_progression_v2"
 
 
 def _aware(value: datetime, name: str) -> None:
@@ -30,16 +30,21 @@ class AbilityId(str, Enum):
     OBSERVE_FORM = "observe_form"
     ASK_CAUSE = "ask_cause"
     INSPECT_EVIDENCE = "inspect_evidence"
+    OBSERVE_QI = "observe_qi"
     REASON_DIAGNOSIS = "reason_diagnosis"
     APPLY_TREATMENT = "apply_treatment"
     ETHICAL_PRACTICE = "ethical_practice"
 
 
 class AbilityLevel(str, Enum):
+    UNLEARNED = "unlearned"
+    INTRODUCED = "introduced"
     NOVICE = "novice"
+    # Kept only to deserialize v1 event streams during migration.
     APPRENTICE = "apprentice"
     COMPETENT = "competent"
     ADVANCED = "advanced"
+    EXPERT = "expert"
     MASTERED = "mastered"
 
 
@@ -74,7 +79,7 @@ class AbilityEvidence(ApprenticeshipModel):
     player_id: Identifier
     ability_id: AbilityId
     polarity: EvidencePolarity
-    strength: Annotated[StrictInt, Field(ge=1, le=2)]
+    strength: Annotated[StrictInt, Field(ge=1, le=5)]
     public_reason_code: Identifier
     public_description: NonEmptyText
     source_case_id: Identifier
@@ -108,8 +113,8 @@ class ApprenticeshipEventBase(ApprenticeshipModel):
 
 class ApprenticeshipInitialized(ApprenticeshipEventBase):
     event_type: Literal["apprenticeship_initialized"] = "apprenticeship_initialized"
-    schema_version: Literal["apprenticeship_state_v1"] = APPRENTICESHIP_SCHEMA_VERSION
-    progression_version: Literal["apprenticeship_progression_v1"] = (
+    schema_version: Literal["apprenticeship_state_v1","apprenticeship_state_v2"] = APPRENTICESHIP_SCHEMA_VERSION
+    progression_version: Literal["apprenticeship_progression_v1","apprenticeship_progression_v2"] = (
         PROGRESSION_POLICY_VERSION
     )
     teaching_stage: TeachingStage
@@ -142,7 +147,7 @@ class AbilityEvidenceRecorded(ApprenticeshipEventBase):
 class AbilityProgressed(ApprenticeshipEventBase):
     event_type: Literal["ability_progressed"] = "ability_progressed"
     ability_id: AbilityId
-    delta: Annotated[StrictInt, Field(ge=1, le=2)]
+    delta: Annotated[StrictInt, Field(ge=1, le=10)]
     proficiency_before: Annotated[StrictInt, Field(ge=0, le=100)]
     proficiency_after: Annotated[StrictInt, Field(ge=0, le=100)]
     level_before: AbilityLevel
@@ -156,6 +161,39 @@ class AbilityProgressed(ApprenticeshipEventBase):
         if self.proficiency_after - self.proficiency_before != self.delta:
             raise ValueError("ability progression values do not match delta")
         return self
+
+
+class AbilityUnlocked(ApprenticeshipEventBase):
+    event_type: Literal["ability_unlocked"] = "ability_unlocked"
+    ability_id: AbilityId
+    source_exercise_id: Identifier
+    public_description: NonEmptyText
+
+
+class AbilityFoundationGranted(ApprenticeshipEventBase):
+    event_type: Literal["ability_foundation_granted"] = "ability_foundation_granted"
+    ability_id: AbilityId
+    proficiency_before: Annotated[StrictInt, Field(ge=0, le=100)]
+    proficiency_after: Annotated[StrictInt, Field(ge=1, le=100)]
+    source_exercise_id: Identifier
+    source_event_id: Identifier
+    public_description: NonEmptyText
+
+    @model_validator(mode="after")
+    def validate_foundation(self) -> "AbilityFoundationGranted":
+        if self.proficiency_after <= self.proficiency_before:
+            raise ValueError("foundation grant must increase proficiency")
+        return self
+
+
+class AbilitySchemaMigrated(ApprenticeshipEventBase):
+    event_type: Literal["ability_schema_migrated"] = "ability_schema_migrated"
+    from_schema_version: NonEmptyText
+    added_ability_id: AbilityId
+    migrated_proficiency: Annotated[StrictInt, Field(ge=0,le=100)]=0
+    migrated_unlocked: StrictBool=False
+    trusted_source_event_ids: tuple[Identifier,...]=()
+    public_description: NonEmptyText
 
 
 class RelationshipChanged(ApprenticeshipEventBase):
@@ -201,6 +239,9 @@ ApprenticeshipEvent: TypeAlias = Annotated[
     ApprenticeshipInitialized
     | AbilityEvidenceRecorded
     | AbilityProgressed
+    | AbilityUnlocked
+    | AbilityFoundationGranted
+    | AbilitySchemaMigrated
     | RelationshipChanged
     | EpisodeGrowthApplied,
     Field(discriminator="event_type"),
@@ -208,8 +249,8 @@ ApprenticeshipEvent: TypeAlias = Annotated[
 
 
 class ApprenticeshipState(ApprenticeshipModel):
-    schema_version: Literal["apprenticeship_state_v1"] = APPRENTICESHIP_SCHEMA_VERSION
-    progression_version: Literal["apprenticeship_progression_v1"] = (
+    schema_version: Literal["apprenticeship_state_v1","apprenticeship_state_v2"] = APPRENTICESHIP_SCHEMA_VERSION
+    progression_version: Literal["apprenticeship_progression_v1","apprenticeship_progression_v2"] = (
         PROGRESSION_POLICY_VERSION
     )
     player_id: Identifier
@@ -227,7 +268,7 @@ class ApprenticeshipState(ApprenticeshipModel):
     def validate_aggregate(self) -> "ApprenticeshipState":
         expected_abilities = set(AbilityId)
         if set(self.abilities) != expected_abilities:
-            raise ValueError("apprenticeship must contain exactly six abilities")
+            raise ValueError("apprenticeship must contain exactly seven abilities")
         for key, ability in self.abilities.items():
             if key != ability.ability_id:
                 raise ValueError("ability map key does not match ability_id")
@@ -306,6 +347,24 @@ class ApprenticeshipEventReplayer:
                         "level": event.level_after,
                     }
                 )
+            elif isinstance(event, AbilityUnlocked):
+                ability = abilities[event.ability_id]
+                if ability.unlocked:
+                    raise ApprenticeshipReplayError("ability may only be unlocked once")
+                abilities[event.ability_id] = ability.model_copy(update={"unlocked": True})
+            elif isinstance(event, AbilityFoundationGranted):
+                ability = abilities[event.ability_id]
+                if not ability.unlocked or ability.proficiency != event.proficiency_before:
+                    raise ApprenticeshipReplayError("ability foundation source mismatch")
+                abilities[event.ability_id] = ability.model_copy(update={
+                    "proficiency": event.proficiency_after,
+                    "level": AbilityLevel.NOVICE,
+                })
+            elif isinstance(event, AbilitySchemaMigrated):
+                if event.added_ability_id not in abilities:
+                    raise ApprenticeshipReplayError("migration ability is missing from initialized schema")
+                ability=abilities[event.added_ability_id]
+                abilities[event.added_ability_id]=ability.model_copy(update={"proficiency":event.migrated_proficiency,"unlocked":event.migrated_unlocked,"level":(AbilityLevel.NOVICE if event.migrated_proficiency>=10 else AbilityLevel.INTRODUCED if event.migrated_proficiency else AbilityLevel.UNLEARNED)})
             elif isinstance(event, RelationshipChanged):
                 current = getattr(relationship, event.dimension.value)
                 if current != event.value_before:

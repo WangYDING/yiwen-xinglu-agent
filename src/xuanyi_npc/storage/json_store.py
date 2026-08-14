@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import json
 import tempfile
 from pathlib import Path
 from typing import TypeVar
@@ -85,13 +86,30 @@ class JsonStateStore:
         return self._write("apprenticeships", state.player_id, state)
 
     def load_apprenticeship(self, player_id: str) -> ApprenticeshipState:
-        state = self._read("apprenticeships", player_id, ApprenticeshipState)
+        source=self._path("apprenticeships",player_id)
+        try: raw=json.loads(source.read_text(encoding="utf-8"))
+        except FileNotFoundError as exc: raise StateNotFoundError("apprenticeships state does not exist") from exc
+        except (OSError,ValueError) as exc: raise StateCorruptionError("apprenticeships state is invalid") from exc
+        migrated=False
+        if "observe_qi" not in raw.get("abilities",{}):
+            initial=raw["events"][0];initial["initial_abilities"].append({"ability_id":"observe_qi","proficiency":0,"level":"unlearned","evidence_count":0,"latest_evidence_at":None,"unlocked":False})
+            initial["schema_version"]="apprenticeship_state_v2";initial["progression_version"]="apprenticeship_progression_v2";raw["schema_version"]="apprenticeship_state_v2";raw["progression_version"]="apprenticeship_progression_v2"
+            try:
+                player=self.load_player(player_id);legacy=player.skills.get("observe_qi")
+                value=legacy.proficiency if legacy and legacy.unlocked else 0;unlocked=bool(legacy and legacy.unlocked)
+            except (StateNotFoundError,StateCorruptionError): value=0;unlocked=False
+            sources=["legacy_player_skill_observe_qi",*(f"legacy_session_{x}" for x in raw.get("completed_source_sessions",[]))] if unlocked else []
+            event={"event_type":"ability_schema_migrated","sequence":len(raw["events"])+1,"player_id":player_id,"occurred_at":raw["updated_at"],"from_schema_version":"six_ability_v1","added_ability_id":"observe_qi","migrated_proficiency":value,"migrated_unlocked":unlocked,"trusted_source_event_ids":sources,"public_description":"依据旧版玩家技能与已提交病例回执迁移观炁状态；未读取聊天内容。"}
+            raw["events"].append(event);raw["abilities"]["observe_qi"]={"ability_id":"observe_qi","proficiency":value,"level":("novice" if value>=10 else "introduced" if value else "unlearned"),"evidence_count":0,"latest_evidence_at":None,"unlocked":unlocked};raw["revision"]=len(raw["events"]);migrated=True
+        try: state=ApprenticeshipState.model_validate(raw)
+        except (ValidationError,ValueError) as exc: raise StateCorruptionError("apprenticeships state is invalid") from exc
         try:
             replayed = ApprenticeshipEventReplayer().replay(state.events)
         except ApprenticeshipReplayError as exc:
             raise StateCorruptionError("apprenticeship event stream is invalid") from exc
         if replayed != state:
             raise StateCorruptionError("apprenticeship snapshot does not match replay")
+        if migrated:self.save_apprenticeship(state)
         return state
 
     def save_teaching_session(self, state: TeachingSessionState) -> Path:
@@ -181,7 +199,9 @@ class JsonStateStore:
         return self._list("campaigns", CampaignState, "player_id")
 
     def list_apprenticeships(self) -> tuple[ApprenticeshipState, ...]:
-        values = self._list("apprenticeships", ApprenticeshipState, "player_id")
+        directory=self.root/"apprenticeships"
+        if not directory.exists():return ()
+        values=tuple(self.load_apprenticeship(path.stem) for path in sorted(directory.glob("*.json"),key=lambda item:item.name))
         for value in values:
             try:
                 replayed = ApprenticeshipEventReplayer().replay(value.events)

@@ -5,6 +5,7 @@
     {"entity_type":"ability","internal_id":"observe_form","public_name":"察形","public_short_description":"观察形态与外在表现"},
     {"entity_type":"ability","internal_id":"ask_cause","public_name":"问因","public_short_description":"通过询问核对缘由与经过"},
     {"entity_type":"ability","internal_id":"inspect_evidence","public_name":"验物","public_short_description":"检查物证并区分可靠证据"},
+    {"entity_type":"ability","internal_id":"observe_qi","public_name":"观炁","public_short_description":"在证据前置满足后观察炁息方向"},
     {"entity_type":"ability","internal_id":"reason_diagnosis","public_name":"辨证","public_short_description":"综合证据、排除诱饵并提出可验证判断"},
     {"entity_type":"ability","internal_id":"apply_treatment","public_name":"施治","public_short_description":"选择与判断相符且边界清楚的处置"},
     {"entity_type":"ability","internal_id":"ethical_practice","public_name":"守则","public_short_description":"避免伤及无辜并承担处置后果"},

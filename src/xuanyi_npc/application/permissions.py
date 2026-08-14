@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from pydantic import ConfigDict
 
 from xuanyi_npc.domain.apprenticeship import AbilityId, EvidencePolarity
+from xuanyi_npc.application.progression import ProgressionPolicy
 from xuanyi_npc.domain.base import DomainModel, Identifier, NonEmptyText
 from xuanyi_npc.domain.exams import ExamEligibilityPolicy
 from xuanyi_npc.domain.permissions import (
@@ -129,6 +130,11 @@ class PermissionCoordinator:
             and latest[ability].polarity is EvidencePolarity.NEEDS_IMPROVEMENT
             for ability in self.eligibility_policy.unresolved_serious_abilities
         )
+        progression=ProgressionPolicy.load_default();config=progression.config
+        minimum=next(x.minimum_proficiency for x in config.ability_levels if x.level is config.exam_minimum_level)
+        competent=next(x.minimum_proficiency for x in config.ability_levels if x.level.value=="competent")
+        eligible=eligible and all(apprenticeship.abilities[x].unlocked and apprenticeship.abilities[x].proficiency>=minimum for x in config.exam_required_abilities)
+        eligible=eligible and sum(apprenticeship.abilities[x].proficiency>=competent for x in config.exam_required_abilities)>=config.exam_minimum_competent_count
         if eligible and state.teaching_stage is R4TeachingStage.APPRENTICE:
             state = self._append(state, TeachingStageAdvanced(
                 sequence=state.revision + 1, player_id=player_id, occurred_at=self.clock.now(),

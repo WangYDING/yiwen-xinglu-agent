@@ -253,6 +253,7 @@ def build_service(tmp_path: Path) -> tuple[MultiCaseEpisodeService, JsonStateSto
             "session_gray", "session_moon", "session_old"
         ),
         clock=FixedClock(),
+        legacy_auto_foundation=True,
     )
     return service, store
 
@@ -780,7 +781,7 @@ def test_one_player_can_keep_independent_sessions_and_completion_is_isolated(
     assert moon_final.revision == 0
     assert moon_path.read_bytes() == moon_before
     assert player.handled_case_ids == frozenset()
-    assert player.revision == 0
+    assert player.revision == 0  # legacy execution skills are projections, not a second writable authority
 
 
 def test_cli_lists_all_three_cases_without_hidden_truth(tmp_path: Path) -> None:

@@ -17,7 +17,7 @@ def build_clinic(tmp_path):
     return ClinicService(
         store=JsonStateStore(tmp_path), base_catalog=CaseCatalog(ROOT / "cases"),
         campaign_path=ROOT / "campaign" / "cross_episode_rules_v2.json",
-        clock=FixedClock(), player_id_factory=FixedPlayerIds(), session_id_factory=FixedSessionIds(),
+        clock=FixedClock(), player_id_factory=FixedPlayerIds(), session_id_factory=FixedSessionIds(), legacy_auto_foundation=True,
     )
 
 

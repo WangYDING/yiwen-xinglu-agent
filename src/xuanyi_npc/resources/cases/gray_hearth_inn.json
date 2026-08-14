@@ -1,7 +1,7 @@
 {
   "case_id": "gray_hearth_inn",
   "title": "灰灶客栈与无火炊烟",
-  "synopsis": "山路客栈的灶火时明时灭，无火时仍有冷烟逆行，掌勺人也开始听见灶膛里的叩响。",
+  "synopsis": "灰灶客栈的掌勺人沈禾说，数日前店主修整后厨旧灶；此后灶火时明时灭，无火时仍有冷烟逆行，沈禾也开始听见灶膛里的叩响。",
   "difficulty": 2,
   "patient": {
     "patient_id": "cook_shen",
@@ -107,7 +107,7 @@
       "public_description": "沿灶砖原位刻线核对契槽、铜片和拆装痕迹。",
       "reveals_clue_ids": ["token_slot_scrape"],
       "required_skill_id": "inspect_object",
-      "minimum_skill_level": 10,
+      "minimum_skill_level":  20,
       "required_clue_ids": ["hearth_seal_shifted"]
     },
     {
@@ -117,7 +117,7 @@
       "public_description": "观察灶契与烟道之间的冷炁走向，判断它是否主动追逐活人。",
       "reveals_clue_ids": ["smoke_current_turns_back"],
       "required_skill_id": "observe_qi",
-      "minimum_skill_level": 20,
+      "minimum_skill_level":   20,
       "required_clue_ids": ["hearth_seal_shifted"]
     },
     {
@@ -127,7 +127,7 @@
       "public_description": "查看烟道检修口、补泥接缝和灰痕最终折返的位置。",
       "reveals_clue_ids": ["misplaced_stove_token", "blocked_flue_joint"],
       "required_skill_id": "inspect_object",
-      "minimum_skill_level": 20,
+      "minimum_skill_level":   20,
       "required_clue_ids": ["token_slot_scrape", "smoke_current_turns_back"]
     }
   ],
