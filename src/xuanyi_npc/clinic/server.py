@@ -18,11 +18,18 @@ from pydantic import ValidationError
 from xuanyi_npc.agents import DeterministicFakeMentor
 from xuanyi_npc.application.clinic import ClinicActionInput, ClinicContributionInput, ClinicError, ClinicService
 from xuanyi_npc.domain.cooperation import PlayerContributionType
+from xuanyi_npc.domain.cooperative_planning import (
+    AgentGoalStatus,
+    AgentGoalType,
+    AgentPlanStatus,
+    PlanEvaluationOutcome,
+    PlanStepStatus,
+)
 from xuanyi_npc.application.clinic_mentor import ClinicMentorMode, ClinicMentorRuntime
 from xuanyi_npc.application.multicase import CaseCatalog, SystemEpisodeClock
 from xuanyi_npc.resources.runtime import materialized_clinic_resources
 from xuanyi_npc.resources.runtime import read_runtime_text
-from xuanyi_npc.storage import JsonStateStore
+from xuanyi_npc.storage import JsonStateStore, StateNotFoundError
 from xuanyi_npc.application.public_presentation import PUBLIC_PRESENTATION
 from xuanyi_npc.application.player_experience import mentor_reply, propose_investigation
 from xuanyi_npc.application.case_mentor import case_participants
@@ -55,6 +62,35 @@ def _esc(value: object) -> str:
 def _page(title: str, body: str) -> bytes:
     document = f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{_esc(title)} · 问道医途</title><style>{STYLE}</style></head><body><header><h1>问道医途 · 玄医馆</h1><p class="notice">全部病案与玄术均为架空游戏内容，不构成现实医疗建议。</p></header><main>{body}</main></body></html>"""
     return document.encode("utf-8")
+
+
+GOAL_TYPE_LABELS = {
+    AgentGoalType.RESOLVE_CASE: "完成病例",
+    AgentGoalType.GATHER_EVIDENCE: "收集证据",
+    AgentGoalType.VALIDATE_HYPOTHESIS: "验证判断",
+    AgentGoalType.FORM_DIAGNOSIS: "形成辨证",
+    AgentGoalType.SELECT_TREATMENT: "选择处置",
+    AgentGoalType.DISCUSS_RISK: "协商风险",
+}
+GOAL_STATUS_LABELS = {
+    AgentGoalStatus.ACTIVE: "进行中",
+    AgentGoalStatus.COMPLETED: "已完成",
+    AgentGoalStatus.BLOCKED: "暂时受阻",
+    AgentGoalStatus.ABANDONED: "已结束",
+}
+PLAN_STEP_LABELS = {
+    PlanStepStatus.COMPLETED: ("✓", "已完成"),
+    PlanStepStatus.ACTIVE: ("→", "当前"),
+    PlanStepStatus.PENDING: ("○", "待进行"),
+    PlanStepStatus.OBSOLETE: ("↷", "已调整"),
+    PlanStepStatus.BLOCKED: ("!", "暂不可执行"),
+}
+PLAN_EVALUATION_LABELS = {
+    PlanEvaluationOutcome.KEEP_PLAN: "继续计划",
+    PlanEvaluationOutcome.REVISE_PLAN: "计划调整",
+    PlanEvaluationOutcome.COMPLETE_GOAL: "目标完成",
+    PlanEvaluationOutcome.ABANDON_PLAN: "计划结束",
+}
 
 
 def build_clinic_service(state_dir: Path, resources, mentor_runtime=None) -> ClinicService:
@@ -294,7 +330,12 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
                 "npc_rationale":result.public_rationale,
                 "runtime_kind":result.runtime_kind.value,
                 "debug_tool_name":result.selected_tool.value if result.selected_tool is not None else "",
-                "environment_feedback":result.environment_message or ""}
+                "environment_feedback":result.environment_message or "",
+                "contribution_id":result.turn_id,
+                "goal_changed":"1" if result.goal_changed else "",
+                "plan_changed":"1" if result.plan_changed else "",
+                "plan_evaluation_outcome":result.plan_evaluation_outcome or "",
+                "plan_change_reason":result.public_plan_change_reason or ""}
         if evaluation is not None:
             values.update({"suggestion_disposition":evaluation.disposition.value,
                            "suggestion_explanation":evaluation.explanation})
@@ -396,6 +437,39 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
         decision_id=query.get("decision_id","");authority_mode=query.get("authority_mode","")
         npc_tool_public=query.get("npc_tool_public","");npc_rationale=query.get("npc_rationale","")
         runtime_kind=query.get("runtime_kind","");debug_tool_name=query.get("debug_tool_name","")
+        goal_changed=query.get("goal_changed","")=="1";plan_changed=query.get("plan_changed","")=="1"
+        contribution_id=query.get("contribution_id","")
+        planning_card=""
+        if not manual_mode:
+            try:
+                agent_state=self.server.clinic_service.store.load_cooperative_agent_state(
+                    session_id,player_id=player_id,case_id=case_id
+                )
+            except StateNotFoundError:
+                agent_state=None
+            if agent_state is not None:
+                goal=agent_state.current_goal;plan=agent_state.current_plan
+                goal_type=GOAL_TYPE_LABELS[goal.goal_type];goal_status=GOAL_STATUS_LABELS[goal.status]
+                plan_items="";current_step="";plan_debug="<p>plan：none</p>"
+                if plan is not None:
+                    for step in plan.steps:
+                        icon,label=PLAN_STEP_LABELS[step.status]
+                        plan_items+=f'<li class="plan-step plan-{_esc(step.status.value)}"><strong>{_esc(icon)} {_esc(label)}：</strong>{_esc(step.public_summary)}</li>'
+                        if step.status is PlanStepStatus.ACTIVE:
+                            current_step=step.public_summary
+                    plan_debug=f'<p>plan ID：{_esc(plan.plan_id)}</p><p>plan revision：{plan.revision}</p><p>current step ID：{_esc(plan.steps[plan.current_step_index].step_id)}</p>'
+                evaluation=agent_state.last_plan_evaluation
+                evaluation_html="";evaluation_debug="<p>evaluation：none</p>"
+                if evaluation is not None:
+                    evaluation_label=PLAN_EVALUATION_LABELS[evaluation.outcome]
+                    if evaluation.outcome is PlanEvaluationOutcome.COMPLETE_GOAL:
+                        evaluation_html='<p class="notice"><strong>当前目标已完成。</strong></p>'
+                    else:
+                        evaluation_html=f'<p><strong>计划状态：</strong>{_esc(evaluation_label)}</p><p><strong>原因：</strong>{_esc(evaluation.public_summary)}</p>'
+                    evaluation_debug=f'<p>evaluation outcome：{_esc(evaluation.outcome.value)}</p><p>evaluation reason：{_esc(evaluation.reason_code.value)}</p><p>observation revision：{evaluation.observation_revision_after}</p>'
+                player_changed=(goal_changed and goal.source_contribution_id==contribution_id) or (plan_changed and plan is not None and plan.source_contribution_id==contribution_id)
+                changed_html='<p class="notice">NPC 根据你的建议调整了调查计划。</p>' if player_changed else ''
+                planning_card=f'''<section class="card npc-thinking"><h3>NPC 当前思路</h3><p><strong>当前目标：</strong>{_esc(goal.public_description)}</p><p><strong>方向：</strong>{_esc(goal_type)} · <strong>状态：</strong>{_esc(goal_status)}</p>{f'<h4>当前计划</h4><ul>{plan_items}</ul>' if plan_items else '<p>当前计划尚待形成。</p>'}{f'<p class="notice"><strong>NPC 当前准备：</strong>{_esc(current_step)}</p>' if current_step else ''}{changed_html}{evaluation_html}<details><summary>开发信息</summary><p>goal ID：{_esc(goal.goal_id)}</p><p>goal revision：{goal.revision}</p>{plan_debug}{evaluation_debug}<p>runtime：{_esc(runtime_kind or 'unknown')}</p></details></section>'''
         cooperative_result=""
         if npc_reply or disposition or environment_feedback:
             cooperative_result=f'''<section class="card"><h3>NPC 协作结果</h3>{f'<p><strong>建议评价：</strong>{_esc(disposition)} · {_esc(suggestion_explanation)}</p>' if disposition else ''}{f'<p><strong>NPC 回应：</strong>{_esc(npc_reply)}</p>' if npc_reply else ''}{f'<p><strong>采取行动：</strong>{_esc(npc_tool_public)}</p>' if npc_tool_public else ''}{f'<p><strong>行动依据：</strong>{_esc(npc_rationale)}</p>' if npc_rationale else ''}{f'<p><strong>环境反馈：</strong>{_esc(environment_feedback)}</p>' if environment_feedback else ''}<details><summary>开发信息</summary><p>runtime：{_esc(runtime_kind or 'unknown')}</p><p>capability：{_esc(npc_action)}</p><p>raw tool：{_esc(debug_tool_name or 'none')}</p></details></section>'''
@@ -405,7 +479,7 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
             hidden=f'<input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="case_id" value="{_esc(case_id)}"><input type="hidden" name="session_id" value="{_esc(session_id)}"><input type="hidden" name="confirmation_id" value="{_esc(confirmation_id)}"><input type="hidden" name="decision_id" value="{_esc(decision_id)}">'
             confirmation=f'''<section class="card notice"><h3>需要玩家协商</h3><p>该行动尚未执行。NPC 会在你回应后依据最新病例状态再次判断。</p><form method="post" action="/cases/cooperate/respond">{hidden}<input type="hidden" name="operation_id" value="{self._token()}"><input type="hidden" name="response" value="approve"><button>{label}</button></form><form method="post" action="/cases/cooperate/respond">{hidden}<input type="hidden" name="operation_id" value="{self._token()}"><input type="hidden" name="response" value="reject"><button>拒绝并要求替代方案</button></form></section>'''
         cooperative_form=(f'''<section class="card"><h3>与 NPC 协作</h3><form method="post" action="/cases/cooperate"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="case_id" value="{_esc(case_id)}"><input type="hidden" name="session_id" value="{_esc(session_id)}"><input type="hidden" name="operation_id" value="{self._token()}"><select name="contribution_type"><option value="suggestion">建议调查方向</option><option value="hypothesis">提出假设</option><option value="challenge">质疑 NPC</option><option value="evidence_interpretation">解释证据</option><option value="question">询问判断</option></select><textarea name="text" rows="3" required placeholder="表达你的假设或建议；NPC 会独立评价并决定具体行动。"></textarea><button>与 NPC 讨论并推进</button></form><small>你的输入是建议或判断，不会由页面直接转换为工具调用。cooperative 模式不启用独立师父 Agent。</small><p><a href="/cases?{urlencode({"player_id":player_id,"case_id":case_id,"session_id":session_id,"mode":"manual"})}">进入 legacy manual / teaching 模式</a></p></section>''' if not manual_mode else f'<section class="card"><h3>Manual / teaching 模式</h3><p>当前保留旧师父教学与手动行动入口。</p><a href="/cases?{urlencode({"player_id":player_id,"case_id":case_id,"session_id":session_id})}">返回 cooperative 模式</a></section>')
-        body=f'''{self._nav(player_id)}<h2>{_esc(observation.title)}</h2><p>{_esc(observation.synopsis)}</p>{cooperative_form}{cooperative_result}{confirmation}{chat}{drawers}'''
+        body=f'''{self._nav(player_id)}<h2>{_esc(observation.title)}</h2><p>{_esc(observation.synopsis)}</p>{cooperative_form}{planning_card}{cooperative_result}{confirmation}{chat}{drawers}'''
         if observation.can_submit_diagnosis:
             evidence = ",".join(item.clue_id for item in observation.discovered_clues)
             body += f'<details class="card"><summary>Manual / baseline：直接提交辨证</summary><form method="post" action="/cases/action"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="case_id" value="{_esc(case_id)}"><input type="hidden" name="session_id" value="{_esc(session_id)}"><input type="hidden" name="operation_id" value="{self._token()}"><input type="hidden" name="action_type" value="diagnosis"><input type="hidden" name="evidence_clue_ids" value="{_esc(evidence)}"><select name="selection_id">{diagnoses}</select><button>提交辨证</button></form></details>'
