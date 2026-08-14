@@ -80,6 +80,11 @@ from .cooperative_planning import (
     PlanStepIntent,
     PlanStepStatus,
 )
+from .cooperative_memory import (
+    AgentMemoryContext,
+    AgentMemoryItem,
+    AgentMemorySourceType,
+)
 from .cooperation import (
     AuthorityMode,
     AgentRuntimeKind,
@@ -339,4 +344,7 @@ __all__ = [
     "PlanStep",
     "PlanStepIntent",
     "PlanStepStatus",
+    "AgentMemoryContext",
+    "AgentMemoryItem",
+    "AgentMemorySourceType",
 ]

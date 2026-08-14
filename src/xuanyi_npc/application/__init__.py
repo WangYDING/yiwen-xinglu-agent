@@ -8,6 +8,16 @@ from .action_contract import (
     build_safe_action_feedback,
 )
 from .goal_plan_policy import GoalPlanPolicy, GoalPlanPolicyError
+from .game_npc_memory import (
+    GAME_NPC_MEMORY_PROJECTION_VERSION,
+    GAME_NPC_MEMORY_QUERY_TEMPLATE_VERSION,
+    GameNPCMemoryError,
+    GameNPCMemoryProjectionPolicy,
+    GameNPCMemoryQuery,
+    GameNPCMemoryQueryBuilder,
+    GameNPCMemoryRetrievalConfig,
+    GameNPCMemoryRetrievalService,
+)
 from .plan_evaluator import DeterministicPlanEvaluator, PlanEvaluationTransition
 from .diagnosis_readiness import (
     DiagnosisReadinessDecision,
@@ -131,6 +141,14 @@ __all__ = [
     "PublicActionContractValidator",
     "GoalPlanPolicy",
     "GoalPlanPolicyError",
+    "GAME_NPC_MEMORY_PROJECTION_VERSION",
+    "GAME_NPC_MEMORY_QUERY_TEMPLATE_VERSION",
+    "GameNPCMemoryError",
+    "GameNPCMemoryProjectionPolicy",
+    "GameNPCMemoryQuery",
+    "GameNPCMemoryQueryBuilder",
+    "GameNPCMemoryRetrievalConfig",
+    "GameNPCMemoryRetrievalService",
     "DeterministicPlanEvaluator",
     "PlanEvaluationTransition",
     "PublicInvestigationCall",
