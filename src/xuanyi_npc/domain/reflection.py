@@ -293,6 +293,6 @@ class ReflectionProposal(DomainModel):
 
     @model_validator(mode="after")
     def validate_proposal(self) -> "ReflectionProposal":
-        if not self.findings and not self.reusable_lesson_candidates:
-            raise ValueError("reflection proposal must contain at least one finding or reusable lesson")
+        # Empty is the safe deterministic result after bounded generation fails.
+        # It asserts no experience and cannot become a memory candidate.
         return self

@@ -262,12 +262,13 @@ def test_reflection_proposal_has_no_tool_repository_or_authority_override_fields
             )
 
 
-def test_reflection_proposal_requires_content() -> None:
-    with pytest.raises(ValidationError, match="at least one"):
-        ReflectionProposal(
-            proposal_id="proposal_alpha",
-            trigger_id=_trigger().trigger_id,
-            findings=(),
-            reusable_lesson_candidates=(),
-            overall_confidence=ReflectionConfidence.LOW,
-        )
+def test_reflection_proposal_allows_empty_safe_fallback() -> None:
+    proposal = ReflectionProposal(
+        proposal_id="proposal_alpha",
+        trigger_id=_trigger().trigger_id,
+        findings=(),
+        reusable_lesson_candidates=(),
+        overall_confidence=ReflectionConfidence.LOW,
+    )
+    assert proposal.findings == ()
+    assert proposal.reusable_lesson_candidates == ()

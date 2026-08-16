@@ -19,6 +19,16 @@ from .game_npc_memory import (
     GameNPCMemoryRetrievalService,
 )
 from .plan_evaluator import DeterministicPlanEvaluator, PlanEvaluationTransition
+from .reflection import (
+    PublicAssessmentEvidence,
+    PublicObservationDeltaEvidence,
+    PublicOutcomeEvidence,
+    ReflectionEvidenceBuilder,
+    ReflectionGenerationResult,
+    ReflectionProposalGenerator,
+    ReflectionProposalValidationError,
+    ReflectionProposalValidator,
+)
 from .diagnosis_readiness import (
     DiagnosisReadinessDecision,
     DiagnosisReadinessPolicy,
@@ -151,6 +161,14 @@ __all__ = [
     "GameNPCMemoryRetrievalService",
     "DeterministicPlanEvaluator",
     "PlanEvaluationTransition",
+    "PublicAssessmentEvidence",
+    "PublicObservationDeltaEvidence",
+    "PublicOutcomeEvidence",
+    "ReflectionEvidenceBuilder",
+    "ReflectionGenerationResult",
+    "ReflectionProposalGenerator",
+    "ReflectionProposalValidationError",
+    "ReflectionProposalValidator",
     "PublicInvestigationCall",
     "SafeActionRecoveryFeedback",
     "build_safe_action_feedback",
