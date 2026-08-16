@@ -37,6 +37,14 @@ from .memory_contracts import (
     MemoryGoldSuiteExpectation,
     MemoryGoldSuiteInput,
 )
+from .cooperative_memory import (
+    CooperativeMemoryABResult,
+    CooperativeMemoryBehaviorSnapshot,
+    MemoryBehaviorChangeType,
+    MemoryEvaluationSummary,
+    compare_memory_pair,
+    summarize_memory_traces,
+)
 
 __all__ = [
     "AgentRepairKind",
@@ -66,4 +74,10 @@ __all__ = [
     "MemoryGoldManifest",
     "MemoryGoldSuiteExpectation",
     "MemoryGoldSuiteInput",
+    "CooperativeMemoryABResult",
+    "CooperativeMemoryBehaviorSnapshot",
+    "MemoryBehaviorChangeType",
+    "MemoryEvaluationSummary",
+    "compare_memory_pair",
+    "summarize_memory_traces",
 ]

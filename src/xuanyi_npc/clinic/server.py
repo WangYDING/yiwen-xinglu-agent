@@ -323,6 +323,7 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
     @staticmethod
     def _cooperative_query(player_id,case_id,session_id,result):
         evaluation=result.decision.proposal.contribution_evaluation
+        trace=result.memory_usage_trace
         values={"player_id":player_id,"case_id":case_id,"session_id":session_id,
                 "npc_reply":result.decision.proposal.action.dialogue,
                 "npc_action":result.decision.proposal.capability.value,
@@ -335,7 +336,21 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
                 "goal_changed":"1" if result.goal_changed else "",
                 "plan_changed":"1" if result.plan_changed else "",
                 "plan_evaluation_outcome":result.plan_evaluation_outcome or "",
-                "plan_change_reason":result.public_plan_change_reason or ""}
+                "plan_change_reason":result.public_plan_change_reason or "",
+                "memory_retrieval_status":result.memory_retrieval_status.value if result.memory_retrieval_status is not None else "",
+                "memory_retrieval_id":result.memory_retrieval_id or "",
+                "memory_selected_count":str(result.selected_memory_count),
+                "memory_public_effect":result.public_memory_effect_summary or ""}
+        if trace is not None:
+            values.update({
+                "memory_candidate_ids":",".join(trace.candidate_memory_ids),
+                "memory_selected_ids":",".join(trace.selected_memory_ids),
+                "memory_declared_used_ids":",".join(trace.declared_used_memory_ids),
+                "memory_accepted_used_ids":",".join(trace.accepted_used_memory_ids),
+                "memory_rejected_ids":",".join(trace.rejected_memory_ids),
+                "memory_attribution_status":trace.attribution_status.value,
+                "memory_influence_types":",".join(trace.influence_types),
+            })
         if evaluation is not None:
             values.update({"suggestion_disposition":evaluation.disposition.value,
                            "suggestion_explanation":evaluation.explanation})
@@ -439,6 +454,22 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
         runtime_kind=query.get("runtime_kind","");debug_tool_name=query.get("debug_tool_name","")
         goal_changed=query.get("goal_changed","")=="1";plan_changed=query.get("plan_changed","")=="1"
         contribution_id=query.get("contribution_id","")
+        memory_public_effect=query.get("memory_public_effect","")
+        memory_accepted_ids=query.get("memory_accepted_used_ids","")
+        memory_effect_html=(f'<p class="notice"><strong>过往经验：</strong>{_esc(memory_public_effect)}</p>' if memory_public_effect and memory_accepted_ids else "")
+        memory_debug_html=(
+            f'<p>memory retrieval status：{_esc(query.get("memory_retrieval_status","") or "none")}</p>'
+            f'<p>retrieval ID：{_esc(query.get("memory_retrieval_id","") or "none")}</p>'
+            f'<p>candidate count：{len([x for x in query.get("memory_candidate_ids","").split(",") if x])}</p>'
+            f'<p>selected count：{_esc(query.get("memory_selected_count","0"))}</p>'
+            f'<p>candidate memory IDs：{_esc(query.get("memory_candidate_ids",""))}</p>'
+            f'<p>selected memory IDs：{_esc(query.get("memory_selected_ids",""))}</p>'
+            f'<p>declared used memory IDs：{_esc(query.get("memory_declared_used_ids",""))}</p>'
+            f'<p>accepted used memory IDs：{_esc(query.get("memory_accepted_used_ids",""))}</p>'
+            f'<p>rejected memory IDs：{_esc(query.get("memory_rejected_ids",""))}</p>'
+            f'<p>attribution status：{_esc(query.get("memory_attribution_status",""))}</p>'
+            f'<p>influence types：{_esc(query.get("memory_influence_types",""))}</p>'
+        )
         planning_card=""
         if not manual_mode:
             try:
@@ -469,10 +500,11 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
                     evaluation_debug=f'<p>evaluation outcome：{_esc(evaluation.outcome.value)}</p><p>evaluation reason：{_esc(evaluation.reason_code.value)}</p><p>observation revision：{evaluation.observation_revision_after}</p>'
                 player_changed=(goal_changed and goal.source_contribution_id==contribution_id) or (plan_changed and plan is not None and plan.source_contribution_id==contribution_id)
                 changed_html='<p class="notice">NPC 根据你的建议调整了调查计划。</p>' if player_changed else ''
-                planning_card=f'''<section class="card npc-thinking"><h3>NPC 当前思路</h3><p><strong>当前目标：</strong>{_esc(goal.public_description)}</p><p><strong>方向：</strong>{_esc(goal_type)} · <strong>状态：</strong>{_esc(goal_status)}</p>{f'<h4>当前计划</h4><ul>{plan_items}</ul>' if plan_items else '<p>当前计划尚待形成。</p>'}{f'<p class="notice"><strong>NPC 当前准备：</strong>{_esc(current_step)}</p>' if current_step else ''}{changed_html}{evaluation_html}<details><summary>开发信息</summary><p>goal ID：{_esc(goal.goal_id)}</p><p>goal revision：{goal.revision}</p>{plan_debug}{evaluation_debug}<p>runtime：{_esc(runtime_kind or 'unknown')}</p></details></section>'''
+                memory_plan_html='<p class="notice">NPC 根据过往经验调整了调查计划。</p>' if memory_public_effect and memory_accepted_ids and plan_changed else ''
+                planning_card=f'''<section class="card npc-thinking"><h3>NPC 当前思路</h3><p><strong>当前目标：</strong>{_esc(goal.public_description)}</p><p><strong>方向：</strong>{_esc(goal_type)} · <strong>状态：</strong>{_esc(goal_status)}</p>{f'<h4>当前计划</h4><ul>{plan_items}</ul>' if plan_items else '<p>当前计划尚待形成。</p>'}{f'<p class="notice"><strong>NPC 当前准备：</strong>{_esc(current_step)}</p>' if current_step else ''}{changed_html}{memory_plan_html}{evaluation_html}<details><summary>开发信息</summary><p>goal ID：{_esc(goal.goal_id)}</p><p>goal revision：{goal.revision}</p>{plan_debug}{evaluation_debug}<p>runtime：{_esc(runtime_kind or 'unknown')}</p>{memory_debug_html}</details></section>'''
         cooperative_result=""
         if npc_reply or disposition or environment_feedback:
-            cooperative_result=f'''<section class="card"><h3>NPC 协作结果</h3>{f'<p><strong>建议评价：</strong>{_esc(disposition)} · {_esc(suggestion_explanation)}</p>' if disposition else ''}{f'<p><strong>NPC 回应：</strong>{_esc(npc_reply)}</p>' if npc_reply else ''}{f'<p><strong>采取行动：</strong>{_esc(npc_tool_public)}</p>' if npc_tool_public else ''}{f'<p><strong>行动依据：</strong>{_esc(npc_rationale)}</p>' if npc_rationale else ''}{f'<p><strong>环境反馈：</strong>{_esc(environment_feedback)}</p>' if environment_feedback else ''}<details><summary>开发信息</summary><p>runtime：{_esc(runtime_kind or 'unknown')}</p><p>capability：{_esc(npc_action)}</p><p>raw tool：{_esc(debug_tool_name or 'none')}</p></details></section>'''
+            cooperative_result=f'''<section class="card"><h3>NPC 协作结果</h3>{f'<p><strong>建议评价：</strong>{_esc(disposition)} · {_esc(suggestion_explanation)}</p>' if disposition else ''}{f'<p><strong>NPC 回应：</strong>{_esc(npc_reply)}</p>' if npc_reply else ''}{memory_effect_html}{f'<p><strong>采取行动：</strong>{_esc(npc_tool_public)}</p>' if npc_tool_public else ''}{f'<p><strong>行动依据：</strong>{_esc(npc_rationale)}</p>' if npc_rationale else ''}{f'<p><strong>环境反馈：</strong>{_esc(environment_feedback)}</p>' if environment_feedback else ''}<details><summary>开发信息</summary><p>runtime：{_esc(runtime_kind or 'unknown')}</p><p>capability：{_esc(npc_action)}</p><p>raw tool：{_esc(debug_tool_name or 'none')}</p>{memory_debug_html}</details></section>'''
         confirmation=""
         if confirmation_id and decision_id:
             label="同意诊断提议" if authority_mode=="proposal_only" else "确认高风险处置"
