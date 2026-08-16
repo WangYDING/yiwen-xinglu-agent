@@ -114,6 +114,22 @@ from .planning_contract import (
     PlanUpdateKind,
     PlanUpdateProposal,
 )
+from .reflection import (
+    ApplicabilityScope,
+    ApplicabilityScopeType,
+    EvidenceRef,
+    EvidenceRefType,
+    ReflectionConfidence,
+    ReflectionEvidenceBundle,
+    ReflectionFinding,
+    ReflectionFindingType,
+    ReflectionProposal,
+    ReflectionTrigger,
+    ReflectionTriggerType,
+    ReusableLessonProposal,
+    ReusableLessonType,
+    stable_reflection_trigger_id,
+)
 from .npc_authority import AuthorityDecision
 from .curriculum import (
     CurriculumPriorityRule,
@@ -355,4 +371,18 @@ __all__ = [
     "MemoryRetrievalStatus",
     "MemoryUsageAttributionStatus",
     "MemoryUsageTrace",
+    "ApplicabilityScope",
+    "ApplicabilityScopeType",
+    "EvidenceRef",
+    "EvidenceRefType",
+    "ReflectionConfidence",
+    "ReflectionEvidenceBundle",
+    "ReflectionFinding",
+    "ReflectionFindingType",
+    "ReflectionProposal",
+    "ReflectionTrigger",
+    "ReflectionTriggerType",
+    "ReusableLessonProposal",
+    "ReusableLessonType",
+    "stable_reflection_trigger_id",
 ]
