@@ -84,6 +84,9 @@ from .cooperative_memory import (
     AgentMemoryContext,
     AgentMemoryItem,
     AgentMemorySourceType,
+    MemoryRetrievalStatus,
+    MemoryUsageAttributionStatus,
+    MemoryUsageTrace,
 )
 from .cooperation import (
     AuthorityMode,
@@ -349,4 +352,7 @@ __all__ = [
     "AgentMemoryContext",
     "AgentMemoryItem",
     "AgentMemorySourceType",
+    "MemoryRetrievalStatus",
+    "MemoryUsageAttributionStatus",
+    "MemoryUsageTrace",
 ]

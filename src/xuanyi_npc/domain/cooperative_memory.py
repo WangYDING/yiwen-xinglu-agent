@@ -83,3 +83,54 @@ class AgentMemoryContext(DomainModel):
         if len(set(self.candidate_memory_ids)) != len(self.candidate_memory_ids):
             raise ValueError("candidate memory IDs must be unique")
         return self
+
+
+class MemoryRetrievalStatus(str, Enum):
+    SUCCESS = "success"
+    EMPTY = "empty"
+    UNAVAILABLE = "unavailable"
+    DEGRADED = "degraded"
+    FAILED_SAFE = "failed_safe"
+
+
+class MemoryUsageAttributionStatus(str, Enum):
+    ACCEPTED = "accepted"
+    DECLARED_ONLY = "declared_only"
+    REJECTED = "rejected"
+    AMBIGUOUS = "ambiguous"
+
+
+class MemoryUsageTrace(DomainModel):
+    """Auditable external attribution, not a claim about model internals."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
+
+    retrieval_id: Identifier | None = None
+    retrieval_status: MemoryRetrievalStatus
+    candidate_memory_ids: tuple[Identifier, ...] = ()
+    selected_memory_ids: tuple[Identifier, ...] = ()
+    declared_used_memory_ids: tuple[Identifier, ...] = ()
+    accepted_used_memory_ids: tuple[Identifier, ...] = ()
+    rejected_memory_ids: tuple[Identifier, ...] = ()
+    influence_types: tuple[Identifier, ...] = ()
+    attribution_status: MemoryUsageAttributionStatus
+    goal_changed: bool = False
+    plan_changed: bool = False
+    decision_influenced: bool = False
+    tool_priority_influenced: bool = False
+    communication_influenced: bool = False
+    public_effect_summary: NonEmptyText | None = None
+    error_code: Identifier | None = None
+
+    @model_validator(mode="after")
+    def validate_trace(self) -> "MemoryUsageTrace":
+        selected = set(self.selected_memory_ids)
+        if any(memory_id not in selected for memory_id in self.declared_used_memory_ids):
+            raise ValueError("declared memory must come from selected context")
+        if any(memory_id not in selected for memory_id in self.accepted_used_memory_ids):
+            raise ValueError("accepted memory must come from selected context")
+        if any(memory_id not in self.declared_used_memory_ids for memory_id in self.accepted_used_memory_ids):
+            raise ValueError("accepted memory must have been declared")
+        if self.attribution_status is MemoryUsageAttributionStatus.ACCEPTED and not self.accepted_used_memory_ids:
+            raise ValueError("accepted attribution requires accepted memory IDs")
+        return self

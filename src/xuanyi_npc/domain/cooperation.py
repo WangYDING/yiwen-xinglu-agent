@@ -8,6 +8,7 @@ from pydantic import ConfigDict, Field, StrictBool, StrictInt, model_validator
 
 from .actions import AgentAction, ToolName
 from .base import DomainModel, Identifier, NonEmptyText
+from .cooperative_memory import MemoryRetrievalStatus, MemoryUsageTrace
 
 
 class PlayerContributionType(str, Enum):
@@ -168,3 +169,8 @@ class CooperativeTurnResult(DomainModel):
     plan_evaluation_outcome: str | None = None
     public_plan_change_reason: NonEmptyText | None = None
     agent_state_revision: Annotated[StrictInt, Field(ge=1)] | None = None
+    memory_retrieval_status: MemoryRetrievalStatus | None = None
+    memory_retrieval_id: Identifier | None = None
+    selected_memory_count: Annotated[StrictInt, Field(ge=0)] = 0
+    memory_usage_trace: MemoryUsageTrace | None = None
+    public_memory_effect_summary: NonEmptyText | None = None

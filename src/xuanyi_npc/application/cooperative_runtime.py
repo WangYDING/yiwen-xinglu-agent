@@ -45,6 +45,11 @@ from xuanyi_npc.domain.cooperative_planning import (
     PlanStep,
     PlanStepStatus,
 )
+from xuanyi_npc.domain.cooperative_memory import (
+    MemoryRetrievalStatus,
+    MemoryUsageAttributionStatus,
+    MemoryUsageTrace,
+)
 from xuanyi_npc.domain.planning_contract import GoalUpdateKind, PlanUpdateKind
 from xuanyi_npc.storage import StateNotFoundError, StorageError
 
@@ -61,6 +66,10 @@ class CooperativeService(Protocol):
 
     def resume_episode(self, request): ...
     def submit_action_with_receipt(self, request): ...
+
+
+class CooperativeMemoryService(Protocol):
+    def retrieve(self, **kwargs): ...
 
 
 class CooperativeTurnInput(DomainModel):
@@ -80,6 +89,7 @@ class CooperativeRuntime:
         action_validator: PublicActionContractValidator | None = None,
         goal_plan_policy: GoalPlanPolicy | None = None,
         plan_evaluator: DeterministicPlanEvaluator | None = None,
+        memory_service: CooperativeMemoryService | None = None,
     ) -> None:
         self.service = service
         self.agent = agent
@@ -87,6 +97,7 @@ class CooperativeRuntime:
         self.action_validator = action_validator or PublicActionContractValidator()
         self.goal_plan_policy = goal_plan_policy or GoalPlanPolicy()
         self.plan_evaluator = plan_evaluator or DeterministicPlanEvaluator()
+        self.memory_service = memory_service
 
     def handle(self, request: CooperativeTurnInput) -> CooperativeTurnResult:
         contribution = request.contribution
@@ -97,6 +108,11 @@ class CooperativeRuntime:
         pending = self._validated_pending(request.pending_action, contribution, session.revision)
         state, expected_revision = self._load_or_initialize(contribution, observation)
         state = self._mark_invalid_plan(state, observation, contribution.contribution_id)
+        memory_context, memory_trace = self._retrieve_memory_context(
+            contribution=contribution,
+            observation=observation,
+            state=state,
+        )
         if (
             state.current_goal.status is AgentGoalStatus.ACTIVE
             and self.plan_evaluator.condition_met(state.current_goal.completion_condition, observation)
@@ -110,6 +126,7 @@ class CooperativeRuntime:
                 status=CooperativeTurnStatus.RESPONDED,
                 authority_mode=AuthorityMode.AUTONOMOUS,
                 public_rationale="当前目标的确定性完成条件已经满足；本轮不启动下一目标。",
+                memory_usage_trace=memory_trace,
             )
         agent_input = GameNPCAgentInput(
             turn_id=contribution.contribution_id,
@@ -125,11 +142,13 @@ class CooperativeRuntime:
                 state.last_plan_evaluation.public_summary
                 if state.last_plan_evaluation is not None else None
             ),
+            memory_context=memory_context,
         )
 
         planning_supported = callable(getattr(self.agent, "propose_turn", None))
         goal_changed = False
         plan_changed = False
+        turn_proposal = None
         if planning_supported:
             turn_proposal = self.agent.propose_turn(agent_input)
             self.goal_plan_policy.validate(
@@ -142,6 +161,12 @@ class CooperativeRuntime:
             state, goal_changed, plan_changed = self._apply_proposal(
                 state, turn_proposal, contribution.contribution_id, observation.session_revision,
                 contribution.contribution_id,
+            )
+            memory_trace = self._accepted_memory_trace(
+                base=memory_trace,
+                proposal=turn_proposal,
+                goal_changed=goal_changed,
+                plan_changed=plan_changed,
             )
             decision = GameNPCDecision(
                 decision_id=f"decision_{contribution.contribution_id}",
@@ -158,6 +183,7 @@ class CooperativeRuntime:
                     state, decision, goal_changed=goal_changed, plan_changed=plan_changed,
                     status=CooperativeTurnStatus.ACTION_REJECTED,
                     authority_mode=AuthorityMode.FORBIDDEN,
+                    memory_usage_trace=self._reject_decision_memory_trace(memory_trace),
                     error_code="action_outside_active_plan",
                     public_rationale="本轮行动与当前计划步骤不一致，未执行。",
                 )
@@ -167,6 +193,12 @@ class CooperativeRuntime:
             decision = self.agent.decide(agent_input)
 
         decision = self._resolve_contract(agent_input, decision, observation)
+        if turn_proposal is not None:
+            memory_trace = self._finalize_decision_memory_trace(
+                trace=memory_trace,
+                proposal=turn_proposal,
+                decision=decision,
+            )
         action = decision.proposal.action
         selected_tool = action.tool_call.name if action.tool_call is not None else None
         selected_public_target = self._public_target(action, observation)
@@ -180,6 +212,7 @@ class CooperativeRuntime:
                 authority_mode=AuthorityMode.AUTONOMOUS,
                 selected_tool=selected_tool,
                 selected_public_target=selected_public_target,
+                memory_usage_trace=memory_trace,
             )
 
         confirmed_id = None
@@ -216,6 +249,7 @@ class CooperativeRuntime:
                 status=status, authority_mode=authority.mode,
                 selected_tool=selected_tool, selected_public_target=selected_public_target,
                 pending_action=pending_action,
+                memory_usage_trace=memory_trace,
             )
         if authority.mode is AuthorityMode.FORBIDDEN:
             state = self._advance_state_revision(state, contribution.contribution_id, expected_revision)
@@ -225,6 +259,7 @@ class CooperativeRuntime:
                 status=CooperativeTurnStatus.ACTION_REJECTED,
                 authority_mode=authority.mode, error_code=authority.reason_code,
                 selected_tool=selected_tool, selected_public_target=selected_public_target,
+                memory_usage_trace=memory_trace,
             )
 
         receipt = self.service.submit_action_with_receipt(SubmitActionInput(
@@ -262,6 +297,7 @@ class CooperativeRuntime:
                 authority_mode=authority.mode, environment_message=result.message,
                 error_code=result.error_code, selected_tool=selected_tool,
                 selected_public_target=selected_public_target,
+                memory_usage_trace=memory_trace,
             )
 
         # The world commit is authoritative. Always reload its public projection before
@@ -310,7 +346,134 @@ class CooperativeRuntime:
             authority_mode=authority.mode, environment_message=result.message,
             event_sequences=result.event_sequences, error_code=projection_error,
             selected_tool=selected_tool, selected_public_target=selected_public_target,
+            memory_usage_trace=memory_trace,
         )
+
+    def _retrieve_memory_context(self, *, contribution, observation, state):
+        if self.memory_service is None:
+            return None, MemoryUsageTrace(
+                retrieval_status=MemoryRetrievalStatus.UNAVAILABLE,
+                attribution_status=MemoryUsageAttributionStatus.REJECTED,
+                error_code="memory_service_unavailable",
+            )
+        try:
+            context = self.memory_service.retrieve(
+                turn_id=contribution.contribution_id,
+                player_id=contribution.player_id,
+                current_session_id=contribution.session_id,
+                observation=observation,
+                current_goal=state.current_goal,
+                current_plan=state.current_plan,
+                player_contribution=contribution,
+                last_plan_evaluation=state.last_plan_evaluation,
+            )
+        except Exception:
+            return None, MemoryUsageTrace(
+                retrieval_status=MemoryRetrievalStatus.FAILED_SAFE,
+                attribution_status=MemoryUsageAttributionStatus.REJECTED,
+                error_code="memory_retrieval_failed_safe",
+            )
+        status = (
+            MemoryRetrievalStatus.EMPTY
+            if context.selected_count == 0
+            else MemoryRetrievalStatus.SUCCESS
+        )
+        return context, MemoryUsageTrace(
+            retrieval_id=context.retrieval_id,
+            retrieval_status=status,
+            candidate_memory_ids=context.candidate_memory_ids,
+            selected_memory_ids=context.selected_memory_ids,
+            attribution_status=MemoryUsageAttributionStatus.REJECTED,
+        )
+
+    @staticmethod
+    def _accepted_memory_trace(*, base, proposal, goal_changed, plan_changed):
+        usage = getattr(proposal, "memory_usage", None)
+        if usage is None or not usage.used_memory_ids:
+            return base.model_copy(update={
+                "attribution_status": MemoryUsageAttributionStatus.REJECTED,
+            })
+        accepted = []
+        if usage.affected_goal and goal_changed:
+            accepted.extend(usage.used_memory_ids)
+        if usage.affected_plan and plan_changed:
+            accepted.extend(usage.used_memory_ids)
+        accepted_ids = tuple(dict.fromkeys(accepted))
+        status = (
+            MemoryUsageAttributionStatus.ACCEPTED
+            if accepted_ids
+            else MemoryUsageAttributionStatus.DECLARED_ONLY
+        )
+        return base.model_copy(update={
+            "declared_used_memory_ids": usage.used_memory_ids,
+            "accepted_used_memory_ids": accepted_ids,
+            "rejected_memory_ids": tuple(
+                item for item in usage.used_memory_ids if item not in accepted_ids
+            ),
+            "influence_types": usage.influence_types,
+            "attribution_status": status,
+            "goal_changed": usage.affected_goal and goal_changed,
+            "plan_changed": usage.affected_plan and plan_changed,
+            "decision_influenced": usage.affected_decision and bool(accepted_ids),
+            "tool_priority_influenced": False,
+            "communication_influenced": False,
+            "public_effect_summary": usage.public_effect_summary,
+        })
+
+    @staticmethod
+    def _finalize_decision_memory_trace(*, trace, proposal, decision):
+        usage = getattr(proposal, "memory_usage", None)
+        if usage is None or not usage.used_memory_ids:
+            return trace
+        accepted = list(trace.accepted_used_memory_ids)
+        decision_accepts = False
+        if usage.affected_decision:
+            decision_accepts = decision.proposal.action == proposal.decision.action
+        tool_accepts = False
+        if usage.affected_tool_priority:
+            action = decision.proposal.action
+            tool_accepts = (
+                decision.proposal.action == proposal.decision.action
+                and action.action_type is AgentActionType.USE_TOOL
+                and action.tool_call is not None
+            )
+        communication_accepts = False
+        if usage.affected_communication:
+            communication_accepts = (
+                decision.proposal.action == proposal.decision.action
+                and decision.proposal.capability == proposal.decision.capability
+            )
+        if decision_accepts or tool_accepts or communication_accepts:
+            accepted.extend(usage.used_memory_ids)
+        accepted_ids = tuple(dict.fromkeys(accepted))
+        status = (
+            MemoryUsageAttributionStatus.ACCEPTED
+            if accepted_ids
+            else MemoryUsageAttributionStatus.DECLARED_ONLY
+        )
+        return trace.model_copy(update={
+            "accepted_used_memory_ids": accepted_ids,
+            "rejected_memory_ids": tuple(
+                item for item in usage.used_memory_ids if item not in accepted_ids
+            ),
+            "attribution_status": status,
+            "decision_influenced": decision_accepts,
+            "tool_priority_influenced": tool_accepts,
+            "communication_influenced": communication_accepts,
+        })
+
+    @staticmethod
+    def _reject_decision_memory_trace(trace):
+        if not trace.declared_used_memory_ids:
+            return trace
+        return trace.model_copy(update={
+            "accepted_used_memory_ids": (),
+            "rejected_memory_ids": trace.declared_used_memory_ids,
+            "attribution_status": MemoryUsageAttributionStatus.DECLARED_ONLY,
+            "decision_influenced": False,
+            "tool_priority_influenced": False,
+            "communication_influenced": False,
+        })
 
     def _resume(self, contribution):
         public = self.service.resume_episode(ResumeEpisodeInput(
@@ -526,7 +689,7 @@ class CooperativeRuntime:
         # advances exactly once per cooperative turn.
         self.service.state_store.save_cooperative_agent_state(state, expected_revision=expected_revision)
 
-    def _result(self, state, decision, *, goal_changed, plan_changed, status, authority_mode, public_rationale=None, **kwargs):
+    def _result(self, state, decision, *, goal_changed, plan_changed, status, authority_mode, public_rationale=None, memory_usage_trace=None, **kwargs):
         plan = state.current_plan
         current_step = None
         summaries = ()
@@ -544,6 +707,13 @@ class CooperativeRuntime:
             plan_evaluation_outcome=evaluation.outcome.value if evaluation else None,
             public_plan_change_reason=evaluation.public_summary if evaluation else None,
             agent_state_revision=state.revision,
+            memory_retrieval_status=memory_usage_trace.retrieval_status if memory_usage_trace else None,
+            memory_retrieval_id=memory_usage_trace.retrieval_id if memory_usage_trace else None,
+            selected_memory_count=len(memory_usage_trace.selected_memory_ids) if memory_usage_trace else 0,
+            memory_usage_trace=memory_usage_trace,
+            public_memory_effect_summary=(
+                memory_usage_trace.public_effect_summary if memory_usage_trace else None
+            ),
             **kwargs,
         )
 
