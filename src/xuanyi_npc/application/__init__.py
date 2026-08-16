@@ -29,6 +29,14 @@ from .reflection import (
     ReflectionProposalValidationError,
     ReflectionProposalValidator,
 )
+from .reflection_memory import (
+    MAX_PERSISTED_PER_REFLECTION,
+    MAX_REFLECTION_CANDIDATES,
+    REFLECTION_MEMORY_PROJECTION_VERSION,
+    ReflectionMemoryCandidateBuilder,
+    ReflectionMemoryConsolidationService,
+    ReflectionMemoryWritePolicy,
+)
 from .diagnosis_readiness import (
     DiagnosisReadinessDecision,
     DiagnosisReadinessPolicy,
@@ -169,6 +177,12 @@ __all__ = [
     "ReflectionProposalGenerator",
     "ReflectionProposalValidationError",
     "ReflectionProposalValidator",
+    "MAX_PERSISTED_PER_REFLECTION",
+    "MAX_REFLECTION_CANDIDATES",
+    "REFLECTION_MEMORY_PROJECTION_VERSION",
+    "ReflectionMemoryCandidateBuilder",
+    "ReflectionMemoryConsolidationService",
+    "ReflectionMemoryWritePolicy",
     "PublicInvestigationCall",
     "SafeActionRecoveryFeedback",
     "build_safe_action_feedback",

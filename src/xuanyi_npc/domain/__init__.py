@@ -130,6 +130,12 @@ from .reflection import (
     ReusableLessonType,
     stable_reflection_trigger_id,
 )
+from .reflection_memory import (
+    ReflectionConsolidationResult,
+    ReflectionMemoryCandidate,
+    ReflectionMemoryWriteDecision,
+    ReflectionMemoryWriteOutcome,
+)
 from .npc_authority import AuthorityDecision
 from .curriculum import (
     CurriculumPriorityRule,
@@ -385,4 +391,8 @@ __all__ = [
     "ReusableLessonProposal",
     "ReusableLessonType",
     "stable_reflection_trigger_id",
+    "ReflectionConsolidationResult",
+    "ReflectionMemoryCandidate",
+    "ReflectionMemoryWriteDecision",
+    "ReflectionMemoryWriteOutcome",
 ]
