@@ -46,6 +46,17 @@ from .cooperative_memory import (
     summarize_memory_traces,
 )
 from .reflection import ReflectionEvaluationSummary, summarize_reflection_lifecycle
+from .agent_benchmark import (
+    AgentBenchmarkMetricSnapshot,
+    AgentBenchmarkRun,
+    AgentBenchmarkSummary,
+    AgentBenchmarkVariantSummary,
+    BenchmarkFailureCode,
+    BenchmarkScenario,
+    BenchmarkVariant,
+    observe_cooperative_run,
+    summarize_benchmark_runs,
+)
 
 __all__ = [
     "AgentRepairKind",
@@ -83,4 +94,13 @@ __all__ = [
     "summarize_memory_traces",
     "ReflectionEvaluationSummary",
     "summarize_reflection_lifecycle",
+    "AgentBenchmarkMetricSnapshot",
+    "AgentBenchmarkRun",
+    "AgentBenchmarkSummary",
+    "AgentBenchmarkVariantSummary",
+    "BenchmarkFailureCode",
+    "BenchmarkScenario",
+    "BenchmarkVariant",
+    "observe_cooperative_run",
+    "summarize_benchmark_runs",
 ]
