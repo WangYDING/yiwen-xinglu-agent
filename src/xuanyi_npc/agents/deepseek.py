@@ -552,7 +552,7 @@ class DeepSeekChatAdapter:
             "response_format": {"type": "json_object"},
             "thinking": {"type": "disabled"},
             "temperature": 0,
-            "max_tokens": self.config.max_output_tokens,
+            "max_tokens": getattr(request, "max_output_tokens", None) or self.config.max_output_tokens,
         }
 
     def _model_usage(

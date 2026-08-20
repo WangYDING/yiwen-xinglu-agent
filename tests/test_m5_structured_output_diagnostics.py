@@ -28,3 +28,21 @@ def test_diagnostics_distinguish_malformed_and_schema_mismatch_without_raw_conte
     }
     assert "not json" not in report.model_dump_json()
 
+
+def test_adapter_failure_is_not_misclassified_as_repair_exhaustion() -> None:
+    class TruncatedAdapter:
+        def complete(self, request):
+            error = RuntimeError("private provider detail")
+            error.code = "deepseek_output_truncated"
+            raise error
+
+    capture = CapturingAdapter(TruncatedAdapter())
+    request = type("Request", (), {"response_schema": {"title": "GameNPCTurnProposal"}})()
+    try:
+        capture.complete(request)
+    except RuntimeError:
+        pass
+    report = diagnose_captured_responses(model_name="fake", capture=capture)
+    assert report.attempts[0].stage is StructuredFailureStage.PROVIDER_REQUEST_FAILURE
+    assert report.attempts[0].adapter_error_code == "deepseek_output_truncated"
+    assert len(report.attempts) == 1

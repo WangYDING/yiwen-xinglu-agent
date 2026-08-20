@@ -37,6 +37,7 @@ class StructuredAttemptDiagnostic(DomainModel):
     stage: StructuredFailureStage
     validation_issues: tuple[SanitizedValidationIssue, ...] = ()
     adapter_error_code: str | None = None
+    finish_reason: str | None = None
 
 
 class StructuredOutputRootCauseReport(DomainModel):
@@ -46,6 +47,7 @@ class StructuredOutputRootCauseReport(DomainModel):
     structured_output_mode: str
     provider_schema_sent: bool
     requested_schema_title: str | None = None
+    configured_output_token_limit: int | None = Field(default=None, ge=1)
     attempts: tuple[StructuredAttemptDiagnostic, ...]
 
 
@@ -57,9 +59,11 @@ class CapturingAdapter:
         self.responses = []
         self.request_schema_titles = []
         self.failures = []
+        self.request_output_limits = []
 
     def complete(self, request):
         self.request_schema_titles.append(request.response_schema.get("title"))
+        self.request_output_limits.append(getattr(request, "max_output_tokens", None))
         try:
             response = self.adapter.complete(request)
         except Exception as error:
@@ -78,12 +82,14 @@ def diagnose_captured_responses(*, model_name: str, capture: CapturingAdapter) -
             response_length=0,
             stage=StructuredFailureStage.PROVIDER_REQUEST_FAILURE,
             adapter_error_code=capture.failures[0],
+            finish_reason="length" if capture.failures[0] == "deepseek_output_truncated" else None,
         ),)
     return StructuredOutputRootCauseReport(
         model_name=model_name,
         structured_output_mode="json_object",
         provider_schema_sent=False,
         requested_schema_title=next((title for title in capture.request_schema_titles if title), None),
+        configured_output_token_limit=next((value for value in capture.request_output_limits if value), None),
         attempts=attempts,
     )
 
@@ -95,6 +101,7 @@ def _diagnose_content(index: int, content: str) -> StructuredAttemptDiagnostic:
             response_received=True,
             response_length=len(content),
             stage=StructuredFailureStage.PROVIDER_RESPONSE_EMPTY,
+            finish_reason="stop",
         )
     try:
         payload = json.loads(content)
@@ -104,6 +111,7 @@ def _diagnose_content(index: int, content: str) -> StructuredAttemptDiagnostic:
             response_received=True,
             response_length=len(content),
             stage=StructuredFailureStage.MALFORMED_JSON,
+            finish_reason="stop",
         )
     keys = tuple(sorted(str(key) for key in payload)) if isinstance(payload, dict) else ()
     try:
@@ -123,6 +131,7 @@ def _diagnose_content(index: int, content: str) -> StructuredAttemptDiagnostic:
             top_level_json_keys=keys,
             stage=StructuredFailureStage.SCHEMA_MISMATCH,
             validation_issues=issues,
+            finish_reason="stop",
         )
     return StructuredAttemptDiagnostic(
         attempt_index=index,
@@ -130,6 +139,7 @@ def _diagnose_content(index: int, content: str) -> StructuredAttemptDiagnostic:
         response_length=len(content),
         top_level_json_keys=keys,
         stage=StructuredFailureStage.SCHEMA_PARSE_SUCCESS,
+        finish_reason="stop",
     )
 
 
