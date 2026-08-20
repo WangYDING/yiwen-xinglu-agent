@@ -340,7 +340,18 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
                 "memory_retrieval_status":result.memory_retrieval_status.value if result.memory_retrieval_status is not None else "",
                 "memory_retrieval_id":result.memory_retrieval_id or "",
                 "memory_selected_count":str(result.selected_memory_count),
-                "memory_public_effect":result.public_memory_effect_summary or ""}
+                "memory_public_effect":result.public_memory_effect_summary or "",
+                "reflection_triggered":"1" if result.reflection_triggered else "",
+                "reflection_trigger_type":result.reflection_trigger_type.value if result.reflection_trigger_type else "",
+                "reflection_trigger_id":result.reflection_trigger_id or "",
+                "reflection_status":result.reflection_status.value if result.reflection_status else "",
+                "reflection_proposal_status":result.reflection_proposal_status.value if result.reflection_proposal_status else "",
+                "reflection_candidate_ids":",".join(result.reflection_candidate_ids),
+                "reflection_written_memory_ids":",".join(result.reflection_written_memory_ids),
+                "reflection_write_outcomes":",".join(result.reflection_write_outcomes),
+                "reflection_rejection_reasons":",".join(result.reflection_rejection_reasons),
+                "reflection_provenance_ref_ids":",".join(result.reflection_provenance_ref_ids),
+                "public_consolidation_summary":result.public_consolidation_summary or ""}
         if trace is not None:
             values.update({
                 "memory_candidate_ids":",".join(trace.candidate_memory_ids),
@@ -470,6 +481,23 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
             f'<p>attribution status：{_esc(query.get("memory_attribution_status",""))}</p>'
             f'<p>influence types：{_esc(query.get("memory_influence_types",""))}</p>'
         )
+        reflection_written_ids=query.get("reflection_written_memory_ids","")
+        reflection_learning_html=(
+            f'<p class="notice"><strong>经验沉淀：</strong>{_esc(query.get("public_consolidation_summary",""))}</p>'
+            if reflection_written_ids and query.get("public_consolidation_summary","")
+            else ""
+        )
+        reflection_debug_html=(
+            f'<p>reflection trigger type：{_esc(query.get("reflection_trigger_type","") or "none")}</p>'
+            f'<p>reflection trigger ID：{_esc(query.get("reflection_trigger_id","") or "none")}</p>'
+            f'<p>reflection status：{_esc(query.get("reflection_status","") or "none")}</p>'
+            f'<p>proposal status：{_esc(query.get("reflection_proposal_status","") or "none")}</p>'
+            f'<p>candidate IDs：{_esc(query.get("reflection_candidate_ids",""))}</p>'
+            f'<p>write outcomes：{_esc(query.get("reflection_write_outcomes",""))}</p>'
+            f'<p>written memory IDs：{_esc(reflection_written_ids)}</p>'
+            f'<p>rejection reasons：{_esc(query.get("reflection_rejection_reasons",""))}</p>'
+            f'<p>provenance refs：{_esc(query.get("reflection_provenance_ref_ids",""))}</p>'
+        )
         planning_card=""
         if not manual_mode:
             try:
@@ -504,7 +532,7 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
                 planning_card=f'''<section class="card npc-thinking"><h3>NPC 当前思路</h3><p><strong>当前目标：</strong>{_esc(goal.public_description)}</p><p><strong>方向：</strong>{_esc(goal_type)} · <strong>状态：</strong>{_esc(goal_status)}</p>{f'<h4>当前计划</h4><ul>{plan_items}</ul>' if plan_items else '<p>当前计划尚待形成。</p>'}{f'<p class="notice"><strong>NPC 当前准备：</strong>{_esc(current_step)}</p>' if current_step else ''}{changed_html}{memory_plan_html}{evaluation_html}<details><summary>开发信息</summary><p>goal ID：{_esc(goal.goal_id)}</p><p>goal revision：{goal.revision}</p>{plan_debug}{evaluation_debug}<p>runtime：{_esc(runtime_kind or 'unknown')}</p>{memory_debug_html}</details></section>'''
         cooperative_result=""
         if npc_reply or disposition or environment_feedback:
-            cooperative_result=f'''<section class="card"><h3>NPC 协作结果</h3>{f'<p><strong>建议评价：</strong>{_esc(disposition)} · {_esc(suggestion_explanation)}</p>' if disposition else ''}{f'<p><strong>NPC 回应：</strong>{_esc(npc_reply)}</p>' if npc_reply else ''}{memory_effect_html}{f'<p><strong>采取行动：</strong>{_esc(npc_tool_public)}</p>' if npc_tool_public else ''}{f'<p><strong>行动依据：</strong>{_esc(npc_rationale)}</p>' if npc_rationale else ''}{f'<p><strong>环境反馈：</strong>{_esc(environment_feedback)}</p>' if environment_feedback else ''}<details><summary>开发信息</summary><p>runtime：{_esc(runtime_kind or 'unknown')}</p><p>capability：{_esc(npc_action)}</p><p>raw tool：{_esc(debug_tool_name or 'none')}</p>{memory_debug_html}</details></section>'''
+            cooperative_result=f'''<section class="card"><h3>NPC 协作结果</h3>{f'<p><strong>建议评价：</strong>{_esc(disposition)} · {_esc(suggestion_explanation)}</p>' if disposition else ''}{f'<p><strong>NPC 回应：</strong>{_esc(npc_reply)}</p>' if npc_reply else ''}{memory_effect_html}{reflection_learning_html}{f'<p><strong>采取行动：</strong>{_esc(npc_tool_public)}</p>' if npc_tool_public else ''}{f'<p><strong>行动依据：</strong>{_esc(npc_rationale)}</p>' if npc_rationale else ''}{f'<p><strong>环境反馈：</strong>{_esc(environment_feedback)}</p>' if environment_feedback else ''}<details><summary>开发信息</summary><p>runtime：{_esc(runtime_kind or 'unknown')}</p><p>capability：{_esc(npc_action)}</p><p>raw tool：{_esc(debug_tool_name or 'none')}</p>{memory_debug_html}{reflection_debug_html}</details></section>'''
         confirmation=""
         if confirmation_id and decision_id:
             label="同意诊断提议" if authority_mode=="proposal_only" else "确认高风险处置"

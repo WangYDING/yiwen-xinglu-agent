@@ -37,6 +37,7 @@ from .reflection_memory import (
     ReflectionMemoryConsolidationService,
     ReflectionMemoryWritePolicy,
 )
+from .reflection_lifecycle import ReflectionLifecycleService
 from .diagnosis_readiness import (
     DiagnosisReadinessDecision,
     DiagnosisReadinessPolicy,
@@ -183,6 +184,7 @@ __all__ = [
     "ReflectionMemoryCandidateBuilder",
     "ReflectionMemoryConsolidationService",
     "ReflectionMemoryWritePolicy",
+    "ReflectionLifecycleService",
     "PublicInvestigationCall",
     "SafeActionRecoveryFeedback",
     "build_safe_action_feedback",

@@ -9,6 +9,8 @@ from pydantic import ConfigDict, Field, StrictBool, StrictInt, model_validator
 from .actions import AgentAction, ToolName
 from .base import DomainModel, Identifier, NonEmptyText
 from .cooperative_memory import MemoryRetrievalStatus, MemoryUsageTrace
+from .reflection import ReflectionTriggerType
+from .reflection_lifecycle import ReflectionLifecycleStatus, ReflectionProposalStatus
 
 
 class PlayerContributionType(str, Enum):
@@ -174,3 +176,14 @@ class CooperativeTurnResult(DomainModel):
     selected_memory_count: Annotated[StrictInt, Field(ge=0)] = 0
     memory_usage_trace: MemoryUsageTrace | None = None
     public_memory_effect_summary: NonEmptyText | None = None
+    reflection_triggered: StrictBool = False
+    reflection_trigger_type: ReflectionTriggerType | None = None
+    reflection_trigger_id: Identifier | None = None
+    reflection_status: ReflectionLifecycleStatus | None = None
+    reflection_proposal_status: ReflectionProposalStatus | None = None
+    reflection_candidate_ids: tuple[Identifier, ...] = ()
+    reflection_written_memory_ids: tuple[Identifier, ...] = ()
+    reflection_write_outcomes: tuple[Identifier, ...] = ()
+    reflection_rejection_reasons: tuple[Identifier, ...] = ()
+    reflection_provenance_ref_ids: tuple[Identifier, ...] = ()
+    public_consolidation_summary: NonEmptyText | None = None

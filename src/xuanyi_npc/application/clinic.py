@@ -111,6 +111,8 @@ class ClinicService:
     mentor_runtime: ClinicMentorRuntime | None = None
     mentor_agent_factory: object | None = None
     game_npc_agent: object | None = None
+    cooperative_memory_service: object | None = None
+    reflection_service: object | None = None
     legacy_auto_foundation: bool = False
 
     def __post_init__(self) -> None:
@@ -415,6 +417,8 @@ class ClinicService:
         runtime = CooperativeRuntime(
             service=self._service(request.player_id),
             agent=self.game_npc_agent,
+            memory_service=self.cooperative_memory_service,
+            reflection_service=self.reflection_service,
         )
         result = runtime.handle(CooperativeTurnInput(contribution=contribution, pending_action=pending))
         if pending is not None:

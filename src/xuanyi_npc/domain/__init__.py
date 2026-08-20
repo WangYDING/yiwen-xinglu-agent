@@ -136,6 +136,11 @@ from .reflection_memory import (
     ReflectionMemoryWriteDecision,
     ReflectionMemoryWriteOutcome,
 )
+from .reflection_lifecycle import (
+    ReflectionLifecycleResult,
+    ReflectionLifecycleStatus,
+    ReflectionProposalStatus,
+)
 from .npc_authority import AuthorityDecision
 from .curriculum import (
     CurriculumPriorityRule,
@@ -395,4 +400,7 @@ __all__ = [
     "ReflectionMemoryCandidate",
     "ReflectionMemoryWriteDecision",
     "ReflectionMemoryWriteOutcome",
+    "ReflectionLifecycleResult",
+    "ReflectionLifecycleStatus",
+    "ReflectionProposalStatus",
 ]

@@ -1,5 +1,6 @@
 """One-action cooperative runtime with deterministic M2 Goal/Plan lifecycle."""
 
+from hashlib import sha256
 from typing import Protocol
 
 from pydantic import ConfigDict
@@ -51,9 +52,19 @@ from xuanyi_npc.domain.cooperative_memory import (
     MemoryUsageTrace,
 )
 from xuanyi_npc.domain.planning_contract import GoalUpdateKind, PlanUpdateKind
+from xuanyi_npc.domain.reflection import ReflectionTrigger, ReflectionTriggerType
+from xuanyi_npc.domain.reflection_lifecycle import (
+    ReflectionLifecycleStatus,
+    ReflectionProposalStatus,
+)
 from xuanyi_npc.storage import StateNotFoundError, StorageError
 
 from .npc_authority import NPCAuthorityPolicy
+from .reflection import (
+    PublicAssessmentEvidence,
+    PublicObservationDeltaEvidence,
+    PublicOutcomeEvidence,
+)
 
 
 class CooperativeRuntimeError(ValueError):
@@ -70,6 +81,10 @@ class CooperativeService(Protocol):
 
 class CooperativeMemoryService(Protocol):
     def retrieve(self, **kwargs): ...
+
+
+class CooperativeReflectionService(Protocol):
+    def process(self, **kwargs): ...
 
 
 class CooperativeTurnInput(DomainModel):
@@ -90,6 +105,7 @@ class CooperativeRuntime:
         goal_plan_policy: GoalPlanPolicy | None = None,
         plan_evaluator: DeterministicPlanEvaluator | None = None,
         memory_service: CooperativeMemoryService | None = None,
+        reflection_service: CooperativeReflectionService | None = None,
     ) -> None:
         self.service = service
         self.agent = agent
@@ -98,6 +114,7 @@ class CooperativeRuntime:
         self.goal_plan_policy = goal_plan_policy or GoalPlanPolicy()
         self.plan_evaluator = plan_evaluator or DeterministicPlanEvaluator()
         self.memory_service = memory_service
+        self.reflection_service = reflection_service
 
     def handle(self, request: CooperativeTurnInput) -> CooperativeTurnResult:
         contribution = request.contribution
@@ -121,12 +138,18 @@ class CooperativeRuntime:
             state = self._advance_state_revision(state, contribution.contribution_id, expected_revision)
             self._save_state(state, expected_revision)
             decision = self._completion_decision(contribution, state.current_goal.goal_id)
-            return self._result(
+            base = self._result(
                 state, decision, goal_changed=True, plan_changed=state.current_plan is not None,
                 status=CooperativeTurnStatus.RESPONDED,
                 authority_mode=AuthorityMode.AUTONOMOUS,
                 public_rationale="当前目标的确定性完成条件已经满足；本轮不启动下一目标。",
                 memory_usage_trace=memory_trace,
+            )
+            return self._attach_reflection(
+                base, contribution=contribution, state=state,
+                observation=observation, decision=decision,
+                memory_trace=memory_trace, goal_changed=True,
+                plan_changed=state.current_plan is not None,
             )
         agent_input = GameNPCAgentInput(
             turn_id=contribution.contribution_id,
@@ -179,13 +202,19 @@ class CooperativeRuntime:
             if not self._action_matches_plan(decision, state):
                 state = self._advance_state_revision(state, contribution.contribution_id, expected_revision)
                 self._save_state(state, expected_revision)
-                return self._result(
+                base = self._result(
                     state, decision, goal_changed=goal_changed, plan_changed=plan_changed,
                     status=CooperativeTurnStatus.ACTION_REJECTED,
                     authority_mode=AuthorityMode.FORBIDDEN,
                     memory_usage_trace=self._reject_decision_memory_trace(memory_trace),
                     error_code="action_outside_active_plan",
                     public_rationale="本轮行动与当前计划步骤不一致，未执行。",
+                )
+                return self._attach_reflection(
+                    base, contribution=contribution, state=state,
+                    observation=observation, decision=decision,
+                    memory_trace=self._reject_decision_memory_trace(memory_trace),
+                    goal_changed=goal_changed, plan_changed=plan_changed,
                 )
         else:
             # M1/manual test doubles remain a compatibility baseline. The M2 state is
@@ -206,13 +235,19 @@ class CooperativeRuntime:
         if action.action_type is AgentActionType.RESPOND:
             state = self._advance_state_revision(state, contribution.contribution_id, expected_revision)
             self._save_state(state, expected_revision)
-            return self._result(
+            base = self._result(
                 state, decision, goal_changed=goal_changed, plan_changed=plan_changed,
                 status=CooperativeTurnStatus.RESPONDED,
                 authority_mode=AuthorityMode.AUTONOMOUS,
                 selected_tool=selected_tool,
                 selected_public_target=selected_public_target,
                 memory_usage_trace=memory_trace,
+            )
+            return self._attach_reflection(
+                base, contribution=contribution, state=state,
+                observation=observation, decision=decision,
+                memory_trace=memory_trace, goal_changed=goal_changed,
+                plan_changed=plan_changed,
             )
 
         confirmed_id = None
@@ -244,22 +279,34 @@ class CooperativeRuntime:
                 if authority.mode is AuthorityMode.PROPOSAL_ONLY
                 else CooperativeTurnStatus.CONFIRMATION_REQUIRED
             )
-            return self._result(
+            base = self._result(
                 state, decision, goal_changed=goal_changed, plan_changed=plan_changed,
                 status=status, authority_mode=authority.mode,
                 selected_tool=selected_tool, selected_public_target=selected_public_target,
                 pending_action=pending_action,
                 memory_usage_trace=memory_trace,
             )
+            return self._attach_reflection(
+                base, contribution=contribution, state=state,
+                observation=observation, decision=decision,
+                memory_trace=memory_trace, goal_changed=goal_changed,
+                plan_changed=plan_changed,
+            )
         if authority.mode is AuthorityMode.FORBIDDEN:
             state = self._advance_state_revision(state, contribution.contribution_id, expected_revision)
             self._save_state(state, expected_revision)
-            return self._result(
+            base = self._result(
                 state, decision, goal_changed=goal_changed, plan_changed=plan_changed,
                 status=CooperativeTurnStatus.ACTION_REJECTED,
                 authority_mode=authority.mode, error_code=authority.reason_code,
                 selected_tool=selected_tool, selected_public_target=selected_public_target,
                 memory_usage_trace=memory_trace,
+            )
+            return self._attach_reflection(
+                base, contribution=contribution, state=state,
+                observation=observation, decision=decision,
+                memory_trace=memory_trace, goal_changed=goal_changed,
+                plan_changed=plan_changed,
             )
 
         receipt = self.service.submit_action_with_receipt(SubmitActionInput(
@@ -291,13 +338,19 @@ class CooperativeRuntime:
                 plan_changed = True
             state = self._advance_state_revision(state, contribution.contribution_id, expected_revision)
             self._save_state(state, expected_revision)
-            return self._result(
+            base = self._result(
                 state, decision, goal_changed=goal_changed, plan_changed=plan_changed,
                 status=CooperativeTurnStatus.ACTION_REJECTED,
                 authority_mode=authority.mode, environment_message=result.message,
                 error_code=result.error_code, selected_tool=selected_tool,
                 selected_public_target=selected_public_target,
                 memory_usage_trace=memory_trace,
+            )
+            return self._attach_reflection(
+                base, contribution=contribution, state=state,
+                observation=observation, decision=decision,
+                memory_trace=memory_trace, goal_changed=goal_changed,
+                plan_changed=plan_changed, environment_message=result.message,
             )
 
         # The world commit is authoritative. Always reload its public projection before
@@ -340,13 +393,163 @@ class CooperativeRuntime:
             projection_error = None
         except StorageError:
             projection_error = "agent_state_projection_pending"
-        return self._result(
+        base = self._result(
             state, decision, goal_changed=goal_changed, plan_changed=plan_changed,
             status=CooperativeTurnStatus.ACTION_EXECUTED,
             authority_mode=authority.mode, environment_message=result.message,
             event_sequences=result.event_sequences, error_code=projection_error,
             selected_tool=selected_tool, selected_public_target=selected_public_target,
             memory_usage_trace=memory_trace,
+        )
+        return self._attach_reflection(
+            base, contribution=contribution, state=state,
+            observation=post_observation, pre_observation=observation,
+            decision=decision, memory_trace=memory_trace,
+            goal_changed=goal_changed, plan_changed=plan_changed,
+            environment_message=result.message,
+        )
+
+    def _attach_reflection(
+        self,
+        base,
+        *,
+        contribution,
+        state,
+        observation,
+        decision,
+        memory_trace,
+        goal_changed,
+        plan_changed,
+        environment_message=None,
+        pre_observation=None,
+    ):
+        if self.reflection_service is None:
+            return base
+        trigger_type = None
+        lifecycle_source = None
+        evaluation = state.last_plan_evaluation
+        if observation.session_status.value == "completed":
+            trigger_type = ReflectionTriggerType.EPISODE_COMPLETED
+            lifecycle_source = f"episode_completed_{contribution.session_id}"
+        elif (
+            evaluation is not None
+            and evaluation.outcome is PlanEvaluationOutcome.COMPLETE_GOAL
+            and goal_changed
+        ):
+            trigger_type = ReflectionTriggerType.GOAL_COMPLETED
+            lifecycle_source = f"goal_completed_{state.current_goal.goal_id}_{state.current_goal.revision}"
+        elif (
+            (evaluation is not None and evaluation.outcome is PlanEvaluationOutcome.ABANDON_PLAN)
+            or (
+                state.current_plan is not None
+                and state.current_plan.status is AgentPlanStatus.ABANDONED
+                and plan_changed
+            )
+        ):
+            trigger_type = ReflectionTriggerType.PLAN_ABANDONED
+            lifecycle_source = f"plan_abandoned_{state.current_plan.plan_id}_{state.current_plan.revision}"
+        elif (
+            evaluation is not None
+            and evaluation.outcome is PlanEvaluationOutcome.REVISE_PLAN
+            and state.current_plan is not None
+            and state.current_plan.revision == 3
+            and plan_changed
+        ):
+            trigger_type = ReflectionTriggerType.PLAN_REPEATEDLY_REVISED
+            lifecycle_source = f"plan_repeatedly_revised_{state.current_plan.plan_id}"
+        if trigger_type is None or lifecycle_source is None:
+            return base
+        event_digest = sha256(lifecycle_source.encode("utf-8")).hexdigest()[:20]
+        trigger = ReflectionTrigger.create(
+            trigger_type=trigger_type,
+            episode_id=contribution.session_id,
+            case_id=contribution.case_id,
+            lifecycle_event_id=f"reflection_event_{event_digest}",
+            reason="A deterministic cooperative lifecycle boundary was reached.",
+            goal_id=state.current_goal.goal_id,
+            plan_id=state.current_plan.plan_id if state.current_plan is not None else None,
+            turn_id=contribution.contribution_id,
+        )
+        outcomes = ()
+        if environment_message:
+            outcomes = (
+                PublicOutcomeEvidence(
+                    outcome_id=f"outcome_{event_digest}",
+                    public_summary=environment_message,
+                ),
+            )
+        deltas = ()
+        if pre_observation is not None:
+            before = {item.clue_id for item in pre_observation.discovered_clues}
+            added = tuple(
+                item.description
+                for item in observation.discovered_clues
+                if item.clue_id not in before
+            )
+            if added:
+                deltas = (
+                    PublicObservationDeltaEvidence(
+                        delta_id=f"delta_{event_digest}",
+                        public_summary="；".join(added),
+                    ),
+                )
+        assessments = ()
+        if trigger_type is ReflectionTriggerType.EPISODE_COMPLETED:
+            assessments = (
+                PublicAssessmentEvidence(
+                    assessment_id=f"assessment_{event_digest}",
+                    public_summary="当前病例已达到公开完成状态。",
+                ),
+            )
+        contribution_evaluation = decision.proposal.contribution_evaluation
+        try:
+            lifecycle = self.reflection_service.process(
+                trigger=trigger,
+                player_id=contribution.player_id,
+                goals=(state.current_goal,),
+                plans=(state.current_plan,) if state.current_plan is not None else (),
+                plan_evaluations=(evaluation,) if evaluation is not None else (),
+                decisions=(decision,),
+                tool_outcomes=outcomes,
+                observation_deltas=deltas,
+                player_contributions=(contribution,),
+                contribution_evaluations=(
+                    (contribution_evaluation,) if contribution_evaluation is not None else ()
+                ),
+                memory_usage_traces=(memory_trace,) if memory_trace is not None else (),
+                assessments=assessments,
+            )
+        except Exception:
+            return base.model_copy(
+                update={
+                    "reflection_triggered": True,
+                    "reflection_trigger_type": trigger.trigger_type,
+                    "reflection_trigger_id": trigger.trigger_id,
+                    "reflection_status": ReflectionLifecycleStatus.FAILED_SAFE,
+                    "reflection_proposal_status": ReflectionProposalStatus.FAILED_SAFE,
+                }
+            )
+        rejected = tuple(
+            item.reason_code
+            for item in lifecycle.write_decisions
+            if item.outcome.value.startswith("reject_")
+        )
+        return base.model_copy(
+            update={
+                "reflection_triggered": True,
+                "reflection_trigger_type": lifecycle.trigger_type,
+                "reflection_trigger_id": lifecycle.trigger_id,
+                "reflection_status": lifecycle.status,
+                "reflection_proposal_status": lifecycle.proposal_status,
+                "reflection_candidate_ids": lifecycle.candidate_ids,
+                "reflection_written_memory_ids": lifecycle.written_memory_ids,
+                "reflection_write_outcomes": tuple(
+                    item.outcome.value for item in lifecycle.write_decisions
+                ),
+                "reflection_rejection_reasons": rejected,
+                "reflection_provenance_ref_ids": lifecycle.provenance_ref_ids,
+                "public_consolidation_summary": lifecycle.public_consolidation_summary,
+            }
         )
 
     def _retrieve_memory_context(self, *, contribution, observation, state):

@@ -45,6 +45,7 @@ from .cooperative_memory import (
     compare_memory_pair,
     summarize_memory_traces,
 )
+from .reflection import ReflectionEvaluationSummary, summarize_reflection_lifecycle
 
 __all__ = [
     "AgentRepairKind",
@@ -80,4 +81,6 @@ __all__ = [
     "MemoryEvaluationSummary",
     "compare_memory_pair",
     "summarize_memory_traces",
+    "ReflectionEvaluationSummary",
+    "summarize_reflection_lifecycle",
 ]
