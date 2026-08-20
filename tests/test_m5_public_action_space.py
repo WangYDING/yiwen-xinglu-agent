@@ -45,9 +45,24 @@ def test_planning_request_exposes_authoritative_exact_action_space(case_definiti
 
     assert "AUTHORITATIVE_PUBLIC_ACTION_SPACE_available_actions" in context
     assert "ToolCall arguments 必须逐字复制" in context
+    assert "PLAN_INVESTIGATION_CONTRACT" in context
+    assert "suggested_tool" in context
+    assert "public_target_id" in context
+    assert "不得交叉组合 tool/target" in context
     for action in project_public_investigation_actions(value.case_observation):
         assert f'"tool_name": "{action.tool_name.value}"' in context
         assert f'"investigation_id": "{action.investigation_id}"' in context
+
+
+def test_decision_and_plan_guidance_share_the_same_projected_pairs(case_definition, qualified_player_state) -> None:
+    value = planning_input(case_definition, qualified_player_state)
+    context = GameNPCAgent(ScriptedFakeLLM([]))._planning_request(value).messages[-1].content
+    actions = project_public_investigation_actions(value.case_observation)
+
+    for action in actions:
+        tool_position = context.index(f'"tool_name": "{action.tool_name.value}"')
+        target_position = context.index(f'"investigation_id": "{action.investigation_id}"', tool_position)
+        assert target_position > tool_position
 
 
 def test_projection_grants_no_authority_and_validator_remains_strict(case_definition, qualified_player_state) -> None:
@@ -69,4 +84,3 @@ def test_projection_grants_no_authority_and_validator_remains_strict(case_defini
 
     assert captured.value.code == "invalid_tool_arguments"
     assert NPCAuthorityPolicy().view() == authority_before
-

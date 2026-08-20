@@ -235,6 +235,47 @@ def test_hidden_target_is_rejected_then_bounded_fallback_is_safe(case_definition
     assert result.decision.action.action_type is AgentActionType.RESPOND
 
 
+@pytest.mark.parametrize("target", ["invented_investigation", "secret_clue"])
+def test_invented_or_hidden_plan_target_remains_rejected(case_definition, qualified_player_state, target) -> None:
+    value = planning_input(case_definition, qualified_player_state, "继续公开调查。")
+    invalid = turn_proposal(
+        value,
+        disposition=SuggestionDisposition.REJECT,
+        summary="非法调查目标。",
+        target=target,
+    ).model_dump_json()
+    fake = ScriptedFakeLLM([invalid, invalid])
+
+    result = GameNPCAgent(fake).propose_turn(value)
+
+    assert len(fake.requests) == 2
+    assert all(step.suggested_tool is None for step in result.plan_update.draft.steps)
+
+
+def test_mismatched_public_plan_tool_and_target_remains_rejected(case_definition, qualified_player_state) -> None:
+    value = planning_input(case_definition, qualified_player_state, "继续公开调查。")
+    options = value.case_observation.available_investigations
+    first = options[0]
+    mismatched = next(
+        INVESTIGATION_TOOL_BY_ACTION[item.action_type]
+        for item in options[1:]
+        if INVESTIGATION_TOOL_BY_ACTION[item.action_type] is not INVESTIGATION_TOOL_BY_ACTION[first.action_type]
+    )
+    invalid = turn_proposal(
+        value,
+        disposition=SuggestionDisposition.REJECT,
+        summary="工具与公开目标不匹配。",
+        target=first.investigation_id,
+        tool=mismatched,
+    ).model_dump_json()
+    fake = ScriptedFakeLLM([invalid, invalid])
+
+    result = GameNPCAgent(fake).propose_turn(value)
+
+    assert len(fake.requests) == 2
+    assert all(step.suggested_tool is None for step in result.plan_update.draft.steps)
+
+
 def test_plan_draft_forbids_tool_calls_and_authority_fields() -> None:
     with pytest.raises(ValidationError):
         PlanStepDraft.model_validate({

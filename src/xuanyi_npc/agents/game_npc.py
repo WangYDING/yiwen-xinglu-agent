@@ -217,6 +217,11 @@ class GameNPCAgent:
             "PUBLIC_ACTION_CONTRACT: 若 decision 使用调查 Tool，只能选择 AVAILABLE_PUBLIC_ACTION_SPACE 中存在的 action；"
             "ToolCall arguments 必须逐字复制该 action 的 exact arguments。不得自造 ID、使用自然语言 target、"
             "使用 clue ID 替代 investigation_id、省略 required argument 或添加未声明 argument。\n"
+            "PLAN_INVESTIGATION_CONTRACT: 若 PlanDraft step 对应调查 action，suggested_tool 必须复制上述同一个"
+            " AVAILABLE_PUBLIC_ACTION_SPACE entry 的 tool_name，public_target_id 必须复制该 entry 的 investigation_id；"
+            "不得交叉组合 tool/target，不得自造、使用自然语言、hidden/unavailable、clue 或 patient ID。"
+            "非调查型 PlanStep 不得为了填充格式强行绑定 investigation target；PlanStep 仍只是 future intent，"
+            "不是 ToolCallRequest。\n"
             "PLAYER_BELIEF_player_contribution:\n" + contribution + "\n"
             "authoritative_player_view:\n" + value.player_view.model_dump_json(indent=2)
         )
@@ -276,6 +281,8 @@ class GameNPCAgent:
             proposed_goal_type=goal_draft.goal_type.value if goal_draft else None,
             plan_update_operation=proposal.plan_update.update.value,
             proposed_plan_step_intents=tuple(step.intent.value for step in plan_draft.steps) if plan_draft else (),
+            proposed_plan_step_tools=tuple(step.suggested_tool.value if step.suggested_tool else None for step in plan_draft.steps) if plan_draft else (),
+            proposed_plan_step_targets=tuple(step.public_target_id for step in plan_draft.steps) if plan_draft else (),
             decision_goal_id=None,
             decision_plan_id=None,
             decision_plan_step_id=None,

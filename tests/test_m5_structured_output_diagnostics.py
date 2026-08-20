@@ -151,6 +151,8 @@ def test_goal_plan_summary_keeps_only_sanitized_structured_fields() -> None:
         "active_plan_step_intent": "gather_evidence", "goal_update_operation": "keep",
         "proposed_goal_type": None, "plan_update_operation": "revise",
         "proposed_plan_step_intents": ("gather_evidence", "analyze_evidence"),
+        "proposed_plan_step_tools": ("question_patient", None),
+        "proposed_plan_step_targets": ("ask_about_memory", None),
         "decision_goal_id": None, "decision_plan_id": None,
         "decision_plan_step_id": None, "decision_planning_intent": None,
     })
@@ -160,4 +162,6 @@ def test_goal_plan_summary_keeps_only_sanitized_structured_fields() -> None:
     assert attempt.active_plan_step_id == "step_question"
     assert attempt.goal_update_operation == "keep"
     assert attempt.proposed_plan_step_intents == ("gather_evidence", "analyze_evidence")
+    assert attempt.proposed_plan_step_tools == ("question_patient", None)
+    assert attempt.proposed_plan_step_targets == ("ask_about_memory", None)
     assert attempt.decision_goal_id is None

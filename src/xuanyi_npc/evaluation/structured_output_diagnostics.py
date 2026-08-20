@@ -91,6 +91,8 @@ class PlanningAttemptTelemetry(DomainModel):
     proposed_goal_type: str | None = None
     plan_update_operation: str | None = None
     proposed_plan_step_intents: tuple[str, ...] = ()
+    proposed_plan_step_tools: tuple[str | None, ...] = ()
+    proposed_plan_step_targets: tuple[str | None, ...] = ()
     decision_goal_id: str | None = None
     decision_plan_id: str | None = None
     decision_plan_step_id: str | None = None
@@ -164,7 +166,8 @@ class PlanningTelemetryCollector:
                 "current_goal_id", "current_goal_type", "current_goal_status",
                 "current_plan_id", "current_plan_status", "active_plan_step_id",
                 "active_plan_step_intent", "goal_update_operation", "proposed_goal_type",
-                "plan_update_operation", "proposed_plan_step_intents", "decision_goal_id",
+                "plan_update_operation", "proposed_plan_step_intents", "proposed_plan_step_tools",
+                "proposed_plan_step_targets", "decision_goal_id",
                 "decision_plan_id", "decision_plan_step_id", "decision_planning_intent",
             )})
         elif event == "repair_started":
