@@ -1,8 +1,8 @@
 """M1 cooperative Game NPC built on the shared bounded LLM boundary."""
 
-from typing import Annotated, Literal, Protocol, runtime_checkable
+from typing import Annotated, Callable, Literal, Protocol, runtime_checkable
 
-from pydantic import ConfigDict, Field, StrictInt
+from pydantic import ConfigDict, Field, StrictInt, ValidationError
 
 from xuanyi_npc.application.action_contract import (
     PublicActionContractValidator,
@@ -97,10 +97,11 @@ class GameNPCAgentInterface(Protocol):
 class GameNPCAgent:
     runtime_kind = AgentRuntimeKind.REAL_LLM
 
-    def __init__(self, adapter: LLMAdapter, config: GameNPCAgentConfig | None = None) -> None:
+    def __init__(self, adapter: LLMAdapter, config: GameNPCAgentConfig | None = None, diagnostic_hook: Callable[[str, dict], None] | None = None) -> None:
         self.adapter = adapter
         self.config = config or GameNPCAgentConfig()
-        self.structured_output = BoundedStructuredOutput(adapter)
+        self.diagnostic_hook = diagnostic_hook
+        self.structured_output = BoundedStructuredOutput(adapter, diagnostic_hook)
         self.goal_plan_policy = GoalPlanPolicy()
         self.action_validator = PublicActionContractValidator()
 
@@ -137,6 +138,8 @@ class GameNPCAgent:
                 original, invalid, error, agent_input
             ),
         )
+        if result.output is None and self.diagnostic_hook is not None:
+            self.diagnostic_hook("fallback_used", {"fallback_reason": "model_output_unavailable"})
         return result.output or self._fallback_turn_proposal(agent_input)
 
     def repair_action_contract(self, agent_input: GameNPCAgentInput, prior: GameNPCDecision, feedback: SafeActionRecoveryFeedback) -> GameNPCDecision:
@@ -219,18 +222,41 @@ class GameNPCAgent:
         return proposal
 
     def _parse_turn(self, response: LLMResponse, value: GameNPCAgentInput) -> GameNPCTurnProposal:
-        proposal = GameNPCTurnProposal.model_validate_json(response.content)
-        self._validate_decision_proposal(proposal.decision, value)
-        self.action_validator.validate(proposal.decision.action, value.case_observation)
-        self._validate_memory_usage(proposal, value)
-        self.goal_plan_policy.validate(
-            proposal,
-            current_goal=value.current_goal,
-            current_plan=value.current_plan,
-            observation=value.case_observation,
-            authority_view=value.authority_view,
-        )
+        self._diagnostic("parser_reached")
+        try:
+            proposal = GameNPCTurnProposal.model_validate_json(response.content)
+        except ValidationError as error:
+            first = error.errors(include_input=False, include_url=False)[0]
+            code = first["type"]
+            if code != "json_invalid":
+                self._diagnostic("schema_validation_reached")
+                self._diagnostic("schema_validation_failed", error_code=code, error_path=tuple(str(item) for item in first["loc"]))
+            self._diagnostic("parse_failed", error_code=code)
+            raise
+        self._diagnostic("parse_succeeded")
+        self._diagnostic("schema_validation_reached")
+        self._diagnostic("schema_validation_succeeded")
+        self._diagnostic("deterministic_validation_reached")
+        try:
+            self._validate_decision_proposal(proposal.decision, value)
+            self.action_validator.validate(proposal.decision.action, value.case_observation)
+            self._validate_memory_usage(proposal, value)
+            self.goal_plan_policy.validate(
+                proposal,
+                current_goal=value.current_goal,
+                current_plan=value.current_plan,
+                observation=value.case_observation,
+                authority_view=value.authority_view,
+            )
+        except (ValidationError, ValueError) as error:
+            self._diagnostic("deterministic_validation_failed", error_code=getattr(error, "code", type(error).__name__))
+            raise
+        self._diagnostic("deterministic_validation_succeeded")
         return proposal
+
+    def _diagnostic(self, event: str, **data) -> None:
+        if self.diagnostic_hook is not None:
+            self.diagnostic_hook(event, data)
 
     @staticmethod
     def _validate_memory_usage(proposal: GameNPCTurnProposal, value: GameNPCAgentInput) -> None:

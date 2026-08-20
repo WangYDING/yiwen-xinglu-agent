@@ -51,6 +51,108 @@ class StructuredOutputRootCauseReport(DomainModel):
     attempts: tuple[StructuredAttemptDiagnostic, ...]
 
 
+class PlanningAttemptTelemetry(DomainModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    attempt_index: int = Field(ge=1, le=2)
+    provider_called: bool = False
+    provider_response_received: bool | None = None
+    response_length: int | None = Field(default=None, ge=0)
+    finish_reason: str | None = None
+    adapter_error_code: str | None = None
+    parser_reached: bool = False
+    parse_success: bool | None = None
+    schema_validation_reached: bool = False
+    schema_validation_success: bool | None = None
+    schema_error_code: str | None = None
+    schema_error_path: tuple[str, ...] = ()
+    deterministic_validation_reached: bool = False
+    deterministic_validation_success: bool | None = None
+    deterministic_error_code: str | None = None
+
+
+class PlanningStructuredOutputTelemetry(DomainModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    request_id: str
+    run_id: str
+    request_kind: str = "game_npc_planning"
+    model: str
+    configured_max_output_tokens: int = Field(ge=1)
+    attempts: tuple[PlanningAttemptTelemetry, ...]
+    repair_attempted: bool = False
+    repair_result: str | None = None
+    fallback_used: bool = False
+    public_fallback_reason: str | None = None
+
+
+class PlanningTelemetryCollector:
+    """Opt-in mutable observer; snapshot is sanitized and immutable."""
+
+    def __init__(self, *, request_id: str, run_id: str, model: str, configured_max_output_tokens: int) -> None:
+        self.identity = (request_id, run_id, model, configured_max_output_tokens)
+        self.attempts: dict[int, dict] = {}
+        self.repair_attempted = False
+        self.repair_result = None
+        self.fallback_used = False
+        self.public_fallback_reason = None
+        self.current_attempt = 1
+
+    def hook(self, event: str, data: dict) -> None:
+        if "attempt_index" in data:
+            self.current_attempt = int(data["attempt_index"])
+        index = int(data.get("attempt_index", self.current_attempt))
+        attempt = self.attempts.setdefault(index, {"attempt_index": index})
+        if event == "attempt_started":
+            attempt["provider_called"] = True
+        elif event == "response_received":
+            attempt.update(provider_response_received=True, response_length=data["response_length"], finish_reason=data.get("finish_reason"))
+        elif event == "adapter_error":
+            attempt.update(provider_response_received=False, adapter_error_code=data.get("adapter_error_code"), finish_reason=data.get("finish_reason"))
+        elif event == "parser_reached":
+            attempt["parser_reached"] = True
+        elif event == "parse_succeeded":
+            attempt["parse_success"] = True
+        elif event == "parse_failed":
+            attempt["parse_success"] = False
+        elif event == "schema_validation_reached":
+            attempt["schema_validation_reached"] = True
+        elif event == "schema_validation_succeeded":
+            attempt["schema_validation_success"] = True
+        elif event == "schema_validation_failed":
+            attempt.update(schema_validation_success=False, schema_error_code=data.get("error_code"), schema_error_path=data.get("error_path", ()))
+        elif event == "deterministic_validation_reached":
+            attempt["deterministic_validation_reached"] = True
+        elif event == "deterministic_validation_succeeded":
+            attempt["deterministic_validation_success"] = True
+        elif event == "deterministic_validation_failed":
+            attempt.update(deterministic_validation_success=False, deterministic_error_code=data.get("error_code"))
+        elif event == "repair_started":
+            self.repair_attempted = True
+            attempt["provider_called"] = True
+        elif event == "repair_succeeded":
+            self.repair_result = "succeeded"
+        elif event == "repair_failed":
+            self.repair_result = "failed"
+        elif event == "fallback_used":
+            self.fallback_used = True
+            self.public_fallback_reason = data.get("fallback_reason")
+
+    def snapshot(self) -> PlanningStructuredOutputTelemetry:
+        request_id, run_id, model, limit = self.identity
+        return PlanningStructuredOutputTelemetry(
+            request_id=request_id,
+            run_id=run_id,
+            model=model,
+            configured_max_output_tokens=limit,
+            attempts=tuple(PlanningAttemptTelemetry(**self.attempts[index]) for index in sorted(self.attempts)),
+            repair_attempted=self.repair_attempted,
+            repair_result=self.repair_result,
+            fallback_used=self.fallback_used,
+            public_fallback_reason=self.public_fallback_reason,
+        )
+
+
 class CapturingAdapter:
     """In-memory response capture; no prompt, key, or raw response is serialized."""
 

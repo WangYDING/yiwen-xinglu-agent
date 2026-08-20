@@ -116,9 +116,10 @@ class _ControlledMemoryService:
 class DeepSeekCooperativePilotExecutor:
     """Real adapter + existing CooperativeRuntime; no benchmark policy hooks."""
 
-    def __init__(self, *, adapter, artifact_root: Path) -> None:
+    def __init__(self, *, adapter, artifact_root: Path, diagnostic_hook=None) -> None:
         self.adapter = adapter
         self.artifact_root = artifact_root
+        self.diagnostic_hook = diagnostic_hook
 
     def execute(self, request: RealExecutionRequest) -> RealExecutionResult:
         from xuanyi_npc.agents.game_npc import GameNPCAgent
@@ -137,7 +138,7 @@ class DeepSeekCooperativePilotExecutor:
         memory_service = None
         if request.condition in {RealBenchmarkCondition.NO_RELEVANT_MEMORY, RealBenchmarkCondition.RELEVANT_MEMORY, RealBenchmarkCondition.IRRELEVANT_MEMORY}:
             memory_service = _ControlledMemoryService(self._memory_context(request.condition))
-        runtime = CooperativeRuntime(service=service, agent=GameNPCAgent(self.adapter), memory_service=memory_service)
+        runtime = CooperativeRuntime(service=service, agent=GameNPCAgent(self.adapter, diagnostic_hook=self.diagnostic_hook), memory_service=memory_service)
         public_text, suggested_tool = self._contribution(request.scenario_id)
         results = []
         turn_limit = 2 if request.scenario_id is BenchmarkScenario.REPLAN_AFTER_NEW_EVIDENCE else 1
