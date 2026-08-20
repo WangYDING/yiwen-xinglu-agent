@@ -69,6 +69,16 @@ class PlanningAttemptTelemetry(DomainModel):
     deterministic_validation_reached: bool = False
     deterministic_validation_success: bool | None = None
     deterministic_error_code: str | None = None
+    deterministic_error_path: tuple[str, ...] = ()
+    capability: str | None = None
+    action_type: str | None = None
+    tool_name: str | None = None
+    public_target_id: str | None = None
+    goal_id: str | None = None
+    plan_id: str | None = None
+    plan_step_id: str | None = None
+    planning_intent: str | None = None
+    authority_intent: str | None = None
 
 
 class PlanningStructuredOutputTelemetry(DomainModel):
@@ -126,7 +136,12 @@ class PlanningTelemetryCollector:
         elif event == "deterministic_validation_succeeded":
             attempt["deterministic_validation_success"] = True
         elif event == "deterministic_validation_failed":
-            attempt.update(deterministic_validation_success=False, deterministic_error_code=data.get("error_code"))
+            attempt.update(deterministic_validation_success=False, deterministic_error_code=data.get("error_code"), deterministic_error_path=data.get("error_path", ()))
+        elif event == "proposal_action_summary":
+            attempt.update({key: data.get(key) for key in (
+                "capability", "action_type", "tool_name", "public_target_id", "goal_id",
+                "plan_id", "plan_step_id", "planning_intent", "authority_intent",
+            )})
         elif event == "repair_started":
             self.repair_attempted = True
             attempt["provider_called"] = True

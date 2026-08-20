@@ -121,3 +121,20 @@ def test_bounded_direct_success_and_repair_failure_are_observed_without_inferenc
     assert failed_result.output is None
     assert failed.snapshot().repair_attempted is True
     assert failed.snapshot().repair_result == "failed"
+
+
+def test_public_action_summary_and_contract_code_are_sanitized_structured_fields() -> None:
+    collector = PlanningTelemetryCollector(request_id="request_6", run_id="run_6", model="fake", configured_max_output_tokens=2048)
+    collector.hook("proposal_action_summary", {
+        "capability": "use_tool", "action_type": "use_tool", "tool_name": "observe_qi",
+        "public_target_id": "investigation_qi", "goal_id": "goal_case", "plan_id": None,
+        "plan_step_id": None, "planning_intent": None, "authority_intent": "investigation",
+    })
+    collector.hook("deterministic_validation_failed", {
+        "error_code": "action_mismatch", "error_path": ("decision", "action", "tool_call"),
+    })
+    attempt = collector.snapshot().attempts[0]
+    assert attempt.tool_name == "observe_qi"
+    assert attempt.public_target_id == "investigation_qi"
+    assert attempt.deterministic_error_code == "action_mismatch"
+    assert attempt.deterministic_error_path == ("decision", "action", "tool_call")

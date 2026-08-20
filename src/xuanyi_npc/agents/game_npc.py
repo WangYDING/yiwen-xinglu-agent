@@ -236,6 +236,32 @@ class GameNPCAgent:
         self._diagnostic("parse_succeeded")
         self._diagnostic("schema_validation_reached")
         self._diagnostic("schema_validation_succeeded")
+        action = proposal.decision.action
+        tool_name = action.tool_call.name.value if action.tool_call else None
+        target_id = None
+        if action.tool_call is not None:
+            proposed_target = next(iter(action.tool_call.arguments.values()), None)
+            public_ids = {
+                *(item.investigation_id for item in value.case_observation.available_investigations),
+                *(item.diagnosis_id for item in value.case_observation.diagnosis_candidates),
+                *(item.treatment_id for item in value.case_observation.available_treatments),
+            }
+            if isinstance(proposed_target, str) and proposed_target in public_ids:
+                target_id = proposed_target
+        current_plan = value.current_plan
+        current_step = current_plan.steps[current_plan.current_step_index] if current_plan else None
+        self._diagnostic(
+            "proposal_action_summary",
+            capability=proposal.decision.capability.value,
+            action_type=action.action_type.value,
+            tool_name=tool_name,
+            public_target_id=target_id,
+            goal_id=value.current_goal.goal_id if value.current_goal else None,
+            plan_id=current_plan.plan_id if current_plan else None,
+            plan_step_id=current_step.step_id if current_step else None,
+            planning_intent=current_step.intent.value if current_step else None,
+            authority_intent=("treatment" if tool_name == "execute_treatment" else "diagnosis" if tool_name == "submit_diagnosis" else "investigation" if tool_name else "respond"),
+        )
         self._diagnostic("deterministic_validation_reached")
         try:
             self._validate_decision_proposal(proposal.decision, value)
@@ -249,7 +275,7 @@ class GameNPCAgent:
                 authority_view=value.authority_view,
             )
         except (ValidationError, ValueError) as error:
-            self._diagnostic("deterministic_validation_failed", error_code=getattr(error, "code", type(error).__name__))
+            self._diagnostic("deterministic_validation_failed", error_code=getattr(error, "code", type(error).__name__), error_path=("decision", "action", "tool_call"))
             raise
         self._diagnostic("deterministic_validation_succeeded")
         return proposal
