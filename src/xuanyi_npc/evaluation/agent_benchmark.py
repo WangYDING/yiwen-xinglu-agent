@@ -203,6 +203,7 @@ _INVESTIGATION_TOOLS = {
 def observe_cooperative_run(
     *,
     run_id: str,
+    benchmark_version: str = BENCHMARK_VERSION,
     variant: BenchmarkVariant,
     scenario_id: BenchmarkScenario,
     case_id: str,
@@ -315,6 +316,7 @@ def observe_cooperative_run(
     runtime_kind = next(iter(runtime_kinds)) if len(runtime_kinds) == 1 else "mixed" if runtime_kinds else "unknown"
     return AgentBenchmarkRun(
         run_id=run_id,
+        benchmark_version=benchmark_version,
         variant=variant,
         scenario_id=scenario_id,
         case_id=case_id,
