@@ -48,14 +48,22 @@ from .cooperative_memory import (
 from .reflection import ReflectionEvaluationSummary, summarize_reflection_lifecycle
 from .agent_benchmark import (
     AgentBenchmarkMetricSnapshot,
+    AgentBenchmarkBehaviorSnapshot,
+    AgentBenchmarkInitialConditions,
+    AgentBenchmarkPairResult,
+    AgentBenchmarkPairSummary,
     AgentBenchmarkRun,
     AgentBenchmarkSummary,
     AgentBenchmarkVariantSummary,
     BenchmarkFailureCode,
+    BenchmarkCapability,
+    BenchmarkPairConclusion,
     BenchmarkScenario,
     BenchmarkVariant,
     observe_cooperative_run,
+    compare_benchmark_pair,
     summarize_benchmark_runs,
+    summarize_benchmark_pairs,
 )
 
 __all__ = [
@@ -95,12 +103,20 @@ __all__ = [
     "ReflectionEvaluationSummary",
     "summarize_reflection_lifecycle",
     "AgentBenchmarkMetricSnapshot",
+    "AgentBenchmarkBehaviorSnapshot",
+    "AgentBenchmarkInitialConditions",
+    "AgentBenchmarkPairResult",
+    "AgentBenchmarkPairSummary",
     "AgentBenchmarkRun",
     "AgentBenchmarkSummary",
     "AgentBenchmarkVariantSummary",
     "BenchmarkFailureCode",
+    "BenchmarkCapability",
+    "BenchmarkPairConclusion",
     "BenchmarkScenario",
     "BenchmarkVariant",
     "observe_cooperative_run",
+    "compare_benchmark_pair",
     "summarize_benchmark_runs",
+    "summarize_benchmark_pairs",
 ]
