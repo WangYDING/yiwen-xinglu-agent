@@ -1,5 +1,6 @@
 """M1 cooperative Game NPC built on the shared bounded LLM boundary."""
 
+import json
 from typing import Annotated, Callable, Literal, Protocol, runtime_checkable
 
 from pydantic import ConfigDict, Field, StrictInt, ValidationError
@@ -7,6 +8,7 @@ from pydantic import ConfigDict, Field, StrictInt, ValidationError
 from xuanyi_npc.application.action_contract import (
     PublicActionContractValidator,
     SafeActionRecoveryFeedback,
+    project_public_investigation_actions,
 )
 from xuanyi_npc.application.goal_plan_policy import GoalPlanPolicy
 from xuanyi_npc.application.views import CaseObservation, PlayerView
@@ -197,6 +199,11 @@ class GameNPCAgent:
         evaluation = value.last_plan_evaluation.model_dump_json(indent=2) if value.last_plan_evaluation else "null"
         feedback = value.last_environment_feedback or "null"
         memory_context = value.memory_context.model_dump_json(indent=2) if value.memory_context else "null"
+        public_actions = tuple(
+            item.model_dump(mode="json")
+            for item in project_public_investigation_actions(value.case_observation)
+        )
+        public_action_space = json.dumps(public_actions, ensure_ascii=False, indent=2)
         context = (
             f"turn_id={value.turn_id}\n本轮 action_id 必须为 npc_{value.turn_id}\n"
             "AUTHORITATIVE_WORLD_case_observation:\n" + value.case_observation.model_dump_json(indent=2) + "\n"
@@ -206,6 +213,10 @@ class GameNPCAgent:
             "AGENT_INTENT_current_plan:\n" + current_plan + "\n"
             "AGENT_INTENT_last_plan_evaluation:\n" + evaluation + "\n"
             "HISTORICAL_NON_AUTHORITATIVE_CONTEXT_memory_context:\n" + memory_context + "\n"
+            "AUTHORITATIVE_PUBLIC_ACTION_SPACE_available_actions:\n" + public_action_space + "\n"
+            "PUBLIC_ACTION_CONTRACT: 若 decision 使用调查 Tool，只能选择 AVAILABLE_PUBLIC_ACTION_SPACE 中存在的 action；"
+            "ToolCall arguments 必须逐字复制该 action 的 exact arguments。不得自造 ID、使用自然语言 target、"
+            "使用 clue ID 替代 investigation_id、省略 required argument 或添加未声明 argument。\n"
             "PLAYER_BELIEF_player_contribution:\n" + contribution + "\n"
             "authoritative_player_view:\n" + value.player_view.model_dump_json(indent=2)
         )
@@ -260,6 +271,7 @@ class GameNPCAgent:
             plan_id=current_plan.plan_id if current_plan else None,
             plan_step_id=current_step.step_id if current_step else None,
             planning_intent=current_step.intent.value if current_step else None,
+            argument_keys=tuple(sorted(action.tool_call.arguments)) if action.tool_call else (),
             authority_intent=("treatment" if tool_name == "execute_treatment" else "diagnosis" if tool_name == "submit_diagnosis" else "investigation" if tool_name else "respond"),
         )
         self._diagnostic("deterministic_validation_reached")

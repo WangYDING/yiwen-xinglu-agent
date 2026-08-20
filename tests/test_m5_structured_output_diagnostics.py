@@ -129,6 +129,7 @@ def test_public_action_summary_and_contract_code_are_sanitized_structured_fields
         "capability": "use_tool", "action_type": "use_tool", "tool_name": "observe_qi",
         "public_target_id": "investigation_qi", "goal_id": "goal_case", "plan_id": None,
         "plan_step_id": None, "planning_intent": None, "authority_intent": "investigation",
+        "argument_keys": ("investigation_id",),
     })
     collector.hook("deterministic_validation_failed", {
         "error_code": "action_mismatch", "error_path": ("decision", "action", "tool_call"),
@@ -138,3 +139,4 @@ def test_public_action_summary_and_contract_code_are_sanitized_structured_fields
     assert attempt.public_target_id == "investigation_qi"
     assert attempt.deterministic_error_code == "action_mismatch"
     assert attempt.deterministic_error_path == ("decision", "action", "tool_call")
+    assert attempt.argument_keys == ("investigation_id",)

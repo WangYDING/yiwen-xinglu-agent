@@ -44,6 +44,29 @@ class PublicInvestigationCall(DomainModel):
     public_description: NonEmptyText
 
 
+class PublicInvestigationAction(DomainModel):
+    """Exact model-visible call shape derived from the validator's public source."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    tool_name: ToolName
+    investigation_id: Identifier
+    arguments: dict[Literal["investigation_id"], Identifier]
+
+
+def project_public_investigation_actions(
+    observation: CaseObservation,
+) -> tuple[PublicInvestigationAction, ...]:
+    return tuple(
+        PublicInvestigationAction(
+            tool_name=INVESTIGATION_TOOL_BY_ACTION[item.action_type],
+            investigation_id=item.investigation_id,
+            arguments={"investigation_id": item.investigation_id},
+        )
+        for item in observation.available_investigations
+    )
+
+
 class SafeActionRecoveryFeedback(DomainModel):
     """Only public, refreshed options allowed in a repair or rejection message."""
 

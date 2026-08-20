@@ -78,6 +78,7 @@ class PlanningAttemptTelemetry(DomainModel):
     plan_id: str | None = None
     plan_step_id: str | None = None
     planning_intent: str | None = None
+    argument_keys: tuple[str, ...] = ()
     authority_intent: str | None = None
 
 
@@ -141,6 +142,7 @@ class PlanningTelemetryCollector:
             attempt.update({key: data.get(key) for key in (
                 "capability", "action_type", "tool_name", "public_target_id", "goal_id",
                 "plan_id", "plan_step_id", "planning_intent", "authority_intent",
+                "argument_keys",
             )})
         elif event == "repair_started":
             self.repair_attempted = True
