@@ -39,6 +39,14 @@
 - [真人试玩协议](evaluation/R6_PLAYTEST_PROTOCOL.md)
 - [发布前审计](evaluation/R6_RELEASE_READINESS_AUDIT.md)
 
+## Cooperative Agent Benchmark
+
+- [M5 最终 Benchmark 与失败分析报告](benchmarks/m5/agent_benchmark_report.md)
+- [M5-12 post-fix sanitized artifact](benchmarks/m5/m5_12_postfix_real_benchmark.json)
+- [M5-3 / M5-12 pre-post summary](benchmarks/m5/m5_12_pre_post_summary.json)
+
+该报告属于历史 Cooperative/DoctorAgent 工程评测，不代表当前 MentorAgent 产品效果或统计成功率。
+
 ## 作品集
 
 - [演示素材及来源](portfolio/assets/README.md)

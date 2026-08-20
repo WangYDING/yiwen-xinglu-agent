@@ -50,6 +50,18 @@ New-Item -ItemType Directory -Force .\runtime_data\clinic | Out-Null
 
 关键原则是职责分离：玩家亲自处理病例；MentorAgent 只读取过滤后的公开视图并提交受限教学表达；确定性服务计算师评、成长、课程、考试、权限和传承，再以事件和原子存档保存。历史 DoctorAgent、MCP 和 semantic shadow 均不进入正式导师产品主循环。详细边界见 [产品系统架构](docs/architecture/PRODUCT_SYSTEM_ARCHITECTURE.md) 与 [ADR](docs/architecture/DECISIONS.md)。
 
+## Cooperative Agent M1～M5 工程评测
+
+| Milestone | 验证重点 |
+|---|---|
+| M1 | Cooperation 与受限公开 Decision |
+| M2 | Goal/Plan 与 observable replan |
+| M3 | Memory selected → declared → accepted |
+| M4 | validated Reflection 与 pollution control |
+| M5 | paired ablations、真实模型失败诊断与 post-fix replication |
+
+[M5 最终 Benchmark 报告](docs/benchmarks/m5/agent_benchmark_report.md)记录了 5 个 deterministic pairs、三个连续 first-failure 的单变量排障，以及 `deepseek-v4-flash` 的 post-fix 9-run 小型 Pilot。该 Pilot 中 9/9 initial proposals 直接通过 schema 与确定性 contracts，Relevant Memory treatment 3/3 declared/accepted 并伴随合法 Plan/tool-priority 差异；这些是受控、小样本工程证据，不是统计显著性、当前 MentorAgent 产品效果或玩家收益证明。完整限制见报告的 [Limitations](docs/benchmarks/m5/agent_benchmark_report.md#limitations)。
+
 ## 六病例教学与成长
 
 ![旧纸伞、灰灶客栈、月井回声之间的确定性公开连续性](docs/portfolio/assets/campaign-flow.svg)
