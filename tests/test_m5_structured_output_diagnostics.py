@@ -140,3 +140,24 @@ def test_public_action_summary_and_contract_code_are_sanitized_structured_fields
     assert attempt.deterministic_error_code == "action_mismatch"
     assert attempt.deterministic_error_path == ("decision", "action", "tool_call")
     assert attempt.argument_keys == ("investigation_id",)
+
+
+def test_goal_plan_summary_keeps_only_sanitized_structured_fields() -> None:
+    collector = PlanningTelemetryCollector(request_id="request_7", run_id="run_7", model="fake", configured_max_output_tokens=2048)
+    collector.hook("goal_plan_summary", {
+        "current_goal_id": "goal_case", "current_goal_type": "gather_evidence",
+        "current_goal_status": "active", "current_plan_id": "plan_case",
+        "current_plan_status": "active", "active_plan_step_id": "step_question",
+        "active_plan_step_intent": "gather_evidence", "goal_update_operation": "keep",
+        "proposed_goal_type": None, "plan_update_operation": "revise",
+        "proposed_plan_step_intents": ("gather_evidence", "analyze_evidence"),
+        "decision_goal_id": None, "decision_plan_id": None,
+        "decision_plan_step_id": None, "decision_planning_intent": None,
+    })
+    attempt = collector.snapshot().attempts[0]
+
+    assert attempt.current_goal_id == "goal_case"
+    assert attempt.active_plan_step_id == "step_question"
+    assert attempt.goal_update_operation == "keep"
+    assert attempt.proposed_plan_step_intents == ("gather_evidence", "analyze_evidence")
+    assert attempt.decision_goal_id is None

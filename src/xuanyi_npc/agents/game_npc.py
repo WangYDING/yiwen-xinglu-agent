@@ -10,7 +10,7 @@ from xuanyi_npc.application.action_contract import (
     SafeActionRecoveryFeedback,
     project_public_investigation_actions,
 )
-from xuanyi_npc.application.goal_plan_policy import GoalPlanPolicy
+from xuanyi_npc.application.goal_plan_policy import GoalPlanPolicy, GoalPlanPolicyError
 from xuanyi_npc.application.views import CaseObservation, PlayerView
 from xuanyi_npc.domain import AgentAction, AgentActionType
 from xuanyi_npc.domain import ToolCallRequest, ToolName
@@ -261,6 +261,26 @@ class GameNPCAgent:
                 target_id = proposed_target
         current_plan = value.current_plan
         current_step = current_plan.steps[current_plan.current_step_index] if current_plan else None
+        goal_draft = proposal.goal_update.draft
+        plan_draft = proposal.plan_update.draft
+        self._diagnostic(
+            "goal_plan_summary",
+            current_goal_id=value.current_goal.goal_id if value.current_goal else None,
+            current_goal_type=value.current_goal.goal_type.value if value.current_goal else None,
+            current_goal_status=value.current_goal.status.value if value.current_goal else None,
+            current_plan_id=current_plan.plan_id if current_plan else None,
+            current_plan_status=current_plan.status.value if current_plan else None,
+            active_plan_step_id=current_step.step_id if current_step else None,
+            active_plan_step_intent=current_step.intent.value if current_step else None,
+            goal_update_operation=proposal.goal_update.update.value,
+            proposed_goal_type=goal_draft.goal_type.value if goal_draft else None,
+            plan_update_operation=proposal.plan_update.update.value,
+            proposed_plan_step_intents=tuple(step.intent.value for step in plan_draft.steps) if plan_draft else (),
+            decision_goal_id=None,
+            decision_plan_id=None,
+            decision_plan_step_id=None,
+            decision_planning_intent=None,
+        )
         self._diagnostic(
             "proposal_action_summary",
             capability=proposal.decision.capability.value,
@@ -287,7 +307,17 @@ class GameNPCAgent:
                 authority_view=value.authority_view,
             )
         except (ValidationError, ValueError) as error:
-            self._diagnostic("deterministic_validation_failed", error_code=getattr(error, "code", type(error).__name__), error_path=("decision", "action", "tool_call"))
+            error_code = getattr(error, "code", type(error).__name__)
+            error_path = ("decision", "action", "tool_call")
+            if isinstance(error, GoalPlanPolicyError):
+                error_code = "goal_plan_" + "_".join(str(error).replace(",", "").split())
+                if "goal" in str(error):
+                    error_path = ("goal_update",)
+                elif "plan" in str(error) and "step" not in str(error) and "tool" not in str(error):
+                    error_path = ("plan_update", "update")
+                else:
+                    error_path = ("plan_update", "draft", "steps")
+            self._diagnostic("deterministic_validation_failed", error_code=error_code, error_path=error_path)
             raise
         self._diagnostic("deterministic_validation_succeeded")
         return proposal

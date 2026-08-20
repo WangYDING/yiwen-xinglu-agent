@@ -80,6 +80,21 @@ class PlanningAttemptTelemetry(DomainModel):
     planning_intent: str | None = None
     argument_keys: tuple[str, ...] = ()
     authority_intent: str | None = None
+    current_goal_id: str | None = None
+    current_goal_type: str | None = None
+    current_goal_status: str | None = None
+    current_plan_id: str | None = None
+    current_plan_status: str | None = None
+    active_plan_step_id: str | None = None
+    active_plan_step_intent: str | None = None
+    goal_update_operation: str | None = None
+    proposed_goal_type: str | None = None
+    plan_update_operation: str | None = None
+    proposed_plan_step_intents: tuple[str, ...] = ()
+    decision_goal_id: str | None = None
+    decision_plan_id: str | None = None
+    decision_plan_step_id: str | None = None
+    decision_planning_intent: str | None = None
 
 
 class PlanningStructuredOutputTelemetry(DomainModel):
@@ -143,6 +158,14 @@ class PlanningTelemetryCollector:
                 "capability", "action_type", "tool_name", "public_target_id", "goal_id",
                 "plan_id", "plan_step_id", "planning_intent", "authority_intent",
                 "argument_keys",
+            )})
+        elif event == "goal_plan_summary":
+            attempt.update({key: data.get(key) for key in (
+                "current_goal_id", "current_goal_type", "current_goal_status",
+                "current_plan_id", "current_plan_status", "active_plan_step_id",
+                "active_plan_step_intent", "goal_update_operation", "proposed_goal_type",
+                "plan_update_operation", "proposed_plan_step_intents", "decision_goal_id",
+                "decision_plan_id", "decision_plan_step_id", "decision_planning_intent",
             )})
         elif event == "repair_started":
             self.repair_attempted = True
