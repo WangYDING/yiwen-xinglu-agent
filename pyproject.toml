@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "xuanyi-npc"
 version = "0.1.0"
-description = "玄医问道：可审计的师承型智能 NPC / Xuanyi: An Auditable Agentic Mentor NPC"
+description = "玄医问道：可审计的人机协作游戏 NPC / Human-Agent cooperative game NPC system for auditable supernatural case investigation"
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [

@@ -1,142 +1,251 @@
-# 玄医问道：可审计的师承型智能 NPC
+# 玄医问道：Human-Agent Cooperative Game NPC System
 
-## Xuanyi: An Auditable Agentic Mentor NPC
+## Project in One Sentence
 
-一个包含六个志怪病例、确定性成长、六课教学、正式考试、第一条完整传承链和本地医馆入口的可审计游戏 AI 产品。
+`xuanyi-npc` 是一个可运行、可审计的智能游戏 NPC 项目。玩家与一名游侠型自主 NPC 结伴调查古风志怪异案：玩家可以提出线索、质疑、判断和审批，但不能遥控 NPC；NPC 会结合眼前情况、自己的目标和计划、过去经验，自主选择下一步行动。LLM 不能直接修改游戏世界，真正的状态变化必须通过确定性代码规则。
 
-只想开始游戏：请直接阅读 **[START_HERE.md](START_HERE.md)**。
+技术上，这条主链由 `GameNPCAgent`、Goal/Plan、Memory、Tool Use、Authority Policy 和 `CaseEngine` 共同完成。主要可玩场景是本地六病例 Clinic；`MentorAgent` 是保留的教学与表达分支，`DoctorAgent` 是 V0 baseline。**This is not a Multi-Agent system.**
 
-Xuanyi is a playable six-case game-AI product built around an auditable mentor NPC.
-Players investigate, diagnose, and act; the mentor teaches, offers bounded hints, reviews performance, and explains deterministic progression without taking control of the case.
-Deterministic rules own case truth, assessment, progression, permissions, exams, and inheritance.
-The local clinic is the product entry point. Historical DoctorAgent auto-play, MCP, and semantic-retrieval experiments remain engineering evidence rather than the product identity.
-Semantic memory remains disabled after failing its quality gate; the current mentor uses structured, auditable history.
-Current reproducibility evidence is limited to Windows and Python 3.12.
+## Key Features
 
-## 为什么值得看
+- **Human-Agent Cooperation**：玩家影响决策，但不能替 Agent 构造或执行工具调用。
+- **Tool Use + Bounded Authority**：Agent 只能在公开行动空间中提议动作，高风险处置需要玩家确认。
+- **Goal / Planning / Replanning**：Goal 和 Plan 是显式状态；新证据、拒绝或执行结果可以触发可观察的计划调整。
+- **Long-term Memory**：只检索经过范围与来源约束的历史；Agent 必须显式声明并接受记忆后，记忆才能影响本次决策。
+- **Outcome-grounded Reflection**：反思必须由结果证据支撑；弱证据被拒绝，不能污染未来经验。
+- **Deterministic Safety + Benchmark**：LLM 负责 proposal，确定性策略、行动契约与 `CaseEngine` 负责验证和状态变更。
 
-- **可玩产品，不是聊天壳**：同一玩家可在本地医馆完成 [6 个完整病例](docs/product/R5_SIX_CASE_CLINIC_PRODUCT.md)；每案支持调查、诊断和 `resolved / suppressed / worsened` 三类处置结果。
-- **玩家行动、导师教学**：[R2～R3 教学闭环](docs/product/R3_ADAPTIVE_THREE_CASE_TEACHING.md)让玩家亲自处理病例；玄医先生负责课程、反思、有限可信提示、病例后师评和结构化历史引用，不替玩家操作病例。
-- **考试、权限与传承**：[R4 完整传承链](docs/product/R4_EXAM_PERMISSION_INHERITANCE.md)提供规则评分的六题正式考试、失败补课重考、先过滤权限和“溯契还因”单传承；导师不能看答案或自行授予。
-- **普通用户医馆入口**：[R5 本地产品](docs/product/R5_SIX_CASE_CLINIC_PRODUCT.md)组合六病例、教学、考试、传承、师评与恢复，仅绑定 `127.0.0.1`。
-- **R6 状态如实分层**：[离线验收](docs/evaluation/R6_OFFLINE_PRODUCT_ACCEPTANCE.md)不等于真实模型或真人试玩通过；v2 Pilot 已运行但未过准入，v3 五请求工程案例及真实医馆五请求烟雾已完成；烟雾发现的内部 ID 展示缺陷已[离线修复](docs/evaluation/R6_PUBLIC_PRESENTATION_BOUNDARY.md)，真人试玩和远程发布仍未执行。
-- **模型不能直接改状态**：MentorAgent 只能提交受限 `MentorAction`；病例事实、师评、成长、考试、权限和传承均由确定性规则持有。历史 DoctorAgent/MCP 安全契约保留为工程证据。
-- **保留真实失败**：历史 DoctorAgent Pilot 与 Dense 语义检索的正负结果继续可审计，但不作为导师效果或玩家收益证据；Dense 语义记忆未过质量门禁后默认关闭。
+## 为什么它是 Agent，而不是固定 Workflow？
 
-## 60 秒无 Key 启动
+固定 Workflow 的下一步通常由预先写好的流程决定；这里的 NPC 则要根据当前 Observation 自己判断下一步，同时接受玩家影响但保留独立决定权：
 
-需要 Windows 和 Python 3.12。核心试玩不需要 API Key、GPU、Torch 或 BGE。
+- 它可以接受、部分接受、拒绝玩家建议，或者要求更多证据、提出替代方案；
+- 它有显式 Goal 和 Plan，新证据出现后可以 Replan；
+- 它可以在当前 Action Space 中选择不同 Tool，而不是沿固定脚本前进；
+- 相关 Memory 可以改变未来 Plan 顺序或 Tool priority，但所有执行仍受 deterministic constraints 约束。
 
-普通用户入口：
+## 一回合里到底发生了什么？
+
+1. 玩家提出判断、建议或审批。
+2. NPC 获取当前允许看到的病例和环境信息。
+3. NPC 查看当前目标、计划，以及有没有相关的过去经验。
+4. NPC 自己判断是否接受玩家建议，并决定下一步想做什么。
+5. 系统检查动作是否合法、参数是否正确、是否需要玩家确认。
+6. 合法后才执行一个 Tool，并由 `CaseEngine` 更新状态。
+7. 得到新结果后，NPC 判断继续原 Plan 还是 Replan。
+8. 一个阶段结束后，系统可以根据真实结果形成新的经验。
+
+对应的技术流程是：
+
+```text
+PlayerContribution
+→ public Observation
+→ Goal / Plan
+→ scoped Memory Retrieval
+→ GameNPCAgent proposal
+→ cooperative Decision
+→ deterministic validation
+→ bounded Tool
+→ CaseEngine
+→ Plan Evaluation / Replanning
+→ evidence-grounded Reflection
+→ conservative Experience Consolidation
+```
+
+Plan 不等于执行权限。LLM proposes；deterministic system validates。模型输出必须先通过公开 Action Space、Goal/Plan 一致性和 Authority 检查，才能到达工具与规则引擎。
+
+## Human-Agent Cooperation
+
+玩家通过 `PlayerContribution` 提出建议、假设、风险意见或审批；玩家文本不会直接变成 `ToolCall`。Agent 独立评估贡献并返回：
+
+- `ACCEPT`
+- `PARTIAL_ACCEPT`
+- `REJECT`
+- `REQUEST_MORE_EVIDENCE`
+- `PROPOSE_ALTERNATIVE`
+
+调查动作可在权限边界内自主执行；诊断通过协商形成；处置属于高风险动作，必须经过明确确认。玩家可以影响 Agent，但不能绕过 Agent 判断、工具契约或病例规则。每个 cooperative turn 最多执行一个 Tool，避免一次模型输出连续改变多处状态。
+
+## Planning, Memory and Reflection
+
+### Planning
+
+Planning 让 NPC 不只是“每回合临时猜一步”，而是能先问患者、再检查物品、最后观察状态。如果中途出现新证据，原来的顺序不再合适，它可以调整计划。
+
+技术上，`Goal` 表示当前想完成什么，`Plan` 保存有序步骤；`GoalPlanPolicy` 检查目标、步骤和公开 target 是否与当前合法行动一致，`PlanEvaluator` 根据执行结果和新 Observation 决定继续、修订、完成或结束。Replanning 是可观察的状态转换，不是藏在自然语言里的推断。
+
+### Memory
+
+Memory 是过去经历形成的历史经验，不是当前世界真相。系统“检索到了”某段历史，不代表 Agent 真正使用了它；只有完成 `selected → declared → accepted`，才认为该记忆影响了本次行为。也就是说，retrieved/selected ≠ used。
+
+技术上，长期记忆会先按玩家、病例、类型和来源过滤，再进入候选选择和显式使用声明。Memory 带有来源记录，但不能覆盖当前 Observation、注入新指令或扩大 Agent 权限。
+
+### Reflection
+
+项目不会让 LLM 随便总结一句话就写进长期 Memory。正确流程是：真实结果 → 候选经验 → 检查有没有证据 → 检查是否过度推断 → 合格后才进入长期记忆。这样可以避免一次错误总结持续污染未来决策。
+
+技术上，Episode 结果先形成可验证 evidence，再生成 Reflection proposal；validator 拒绝弱证据和越界推断，通过后形成 `MemoryCandidate`，并经过保守 consolidation 才能进入未来检索。Reflection 不能直接写长期 Memory。
+
+## 为什么不能让 LLM 想做什么就做什么？
+
+> LLM 只有“提出下一步行动”的权力，没有直接修改游戏世界状态的权力。
+
+| 通俗理解 | 技术实现 | 作用 |
+|---|---|---|
+| 现在有哪些动作能做 | Public Action Space | 只暴露当前合法、公开的动作和目标 |
+| 参数对不对 | `PublicActionContract` | 拒绝非法 tool、target 和 arguments |
+| Goal/Plan 是否一致 | `GoalPlanPolicy` | 防止计划与当前状态或行动脱节 |
+| NPC 有没有权限 | Authority Policy | 控制调查、诊断协商和处置确认边界 |
+| 世界最终怎么变化 | `CaseEngine` | 掌握病例规则、事件和状态变化 |
+| 历史能不能凌驾于现实 | Memory boundary | 当前 Observation 始终优先，记忆不能扩大权限 |
+| 总结能不能成为经验 | Reflection validator | 只有有证据的候选才能进入 consolidation |
+
+即使模型输出无效或被 Prompt Injection 诱导，fallback、Authority 和 `CaseEngine` 仍保持独立的确定性安全边界。
+
+## Evaluation
+
+Benchmark 不是为了证明“这个 Agent 比别的系统强多少”，而是验证 Planning、Memory、Reflection 是否真的改变了可观察行为，以及安全边界面对真实 LLM 输出时是否仍然有效。
+
+### Deterministic Ablation
+
+M5 在冻结的同条件 fixtures 上完成 5 个 paired experiments：
+
+| Outcome | Count |
+|---|---:|
+| `IMPROVED` | 3 |
+| `EXPECTED_NOOP` | 2 |
+| `REGRESSED` | 0 |
+| `NOT_COMPARABLE` | 0 |
+
+三个 `IMPROVED` 分别覆盖 observable replanning、相关记忆引起的合法行为差异，以及 validated Reflection 对未来 Episode 的影响；两个 `EXPECTED_NOOP` 验证无关记忆和弱 Reflection 不应改变行为。这些结果证明受控机制差异，不应换算成“60% 提升”。
+
+### Real LLM Validation
+
+`deepseek-v4-flash` 的 post-fix small real-model pilot 共 9 runs：Prompt Injection、Relevant Memory baseline、Relevant Memory treatment 各 3 repeats。
+
+| Metric | Result |
+|---|---:|
+| Complete initial response | 9/9 |
+| Parser reached / schema valid | 9/9 |
+| `PublicActionContract` pass | 9/9 |
+| `GoalPlanPolicy` pass | 9/9 |
+| Direct proposal success | 9/9 |
+| Repair attempted | 0/9 |
+| Fallback used | 0/9 |
+| Output truncation | 0/9 |
+
+Prompt Injection 条件中，模型 proposal 以 `REJECT` 拒绝越权建议 3/3，确定性系统保持无危险执行 3/3。Relevant Memory treatment 中，记忆 `selected` 3/3、`declared` 3/3、`accepted` 3/3，并伴随合法的 Plan 顺序与 tool-priority 变化 3/3。
+
+这是单一真实模型、每条件 3 repeats、有限场景下的描述性工程证据，不具有统计显著性，也不代表生产分布成功率或玩家收益。完整方法、artifacts 与限制见 [M5 Agent Benchmark and Failure Analysis](docs/benchmarks/m5/agent_benchmark_report.md)。
+
+### Failure Analysis
+
+这是一次保留下来的真实排障案例。最初，9/9 real-model runs 都进入 safe fallback；stage telemetry 随后依次定位到：
+
+1. 输出被 512 token 截断，parser 没有拿到完整 proposal；
+2. Tool 参数格式不符合 contract；
+3. Plan 使用了当前不合法的 target。
+
+每次只修一个变量，再从同一路径重新运行：
+
+```text
+observe
+→ locate first failure
+→ single-variable fix
+→ re-run the same path
+```
+
+最终，post-fix Pilot 获得 9/9 direct valid proposals，repair、fallback、truncation 均为 0/9。这个结果不是通过放宽 validator、schema、`PublicActionContract`、`GoalPlanPolicy` 或 Authority 来“刷通过率”。
+
+## Playable Product
+
+本地 Clinic 将 cooperative Game NPC 主链放入六个志怪病例：玩家与自主 NPC 组成调查搭档，共同调查异事、协商诊断、确认高风险处置，并看到 Goal、Plan、replan 和公开历史的变化。规则层保存事件和结果，页面仅通过 loopback `127.0.0.1` 提供本地体验。
+
+保留的产品与工程入口包括：
+
+- 六病例 Clinic Web：主要可玩入口，承载玩家与自主 NPC 的合作调查；
+- Mentor teaching/presentation：保留的课程、提示、师评、考试和传承表达分支；
+- manual/Fake/DeepSeek V0 CLI：手动体验、回归与受控实验；
+- MCP stdio：本地工具集成入口；
+- deterministic acceptance 和 real-model pilot：评测入口，不是玩家入口。
+
+## Quick Start
+
+当前可复现环境为 Windows 和 Python 3.12。核心本地体验不需要 API Key、GPU、Torch 或 BGE。
 
 ```powershell
+py -3.12 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -e .
 New-Item -ItemType Directory -Force .\runtime_data\clinic | Out-Null
 .\.venv\Scripts\xuanyi-clinic.exe --state-dir .\runtime_data\clinic
 ```
 
-`xuanyi-clinic` 是唯一正式玩家产品入口。详见 [医馆用户指南](docs/product/R5_CLINIC_USER_GUIDE.md)。
+终端会输出 `http://127.0.0.1:<port>/`。详细安装、存档与恢复说明见 [START_HERE.md](START_HERE.md) 和[医馆用户指南](docs/product/R5_CLINIC_USER_GUIDE.md)。
 
-| 类别 | 安装入口 | 边界 |
-|---|---|---|
-| 玩家 | `xuanyi-clinic` | 正式本地医馆，推荐入口 |
-| CLI | `xuanyi-play` | 手动玩法与工程调试 |
-| MCP | `xuanyi-mcp-stdio` | 本地集成入口 |
-| 验收 | `xuanyi-m5-acceptance`、`xuanyi-product-acceptance` | 离线确定性验收 |
-| 历史实验 | `xuanyi-case-demo`、`xuanyi-deepseek-models`、`xuanyi-real-mentor-pilot` | 工程证据或显式受控实验，不是玩家入口；仓库数据型 Runner 保留为 Python 模块但不随 wheel 安装命令 |
+Secondary commands：
 
-病例与 Campaign 规则已作为包资源安装，普通用户无需寻找 `site-packages`、编辑 JSON 或配置 `.env`。完整安装、构建与仓库外验证见 [M6-P1 分发记录](docs/archive/M6_P1_DISTRIBUTION_VERIFICATION.md)。
-
-## 安全架构
-
-关键原则是职责分离：玩家亲自处理病例；MentorAgent 只读取过滤后的公开视图并提交受限教学表达；确定性服务计算师评、成长、课程、考试、权限和传承，再以事件和原子存档保存。历史 DoctorAgent、MCP 和 semantic shadow 均不进入正式导师产品主循环。详细边界见 [产品系统架构](docs/architecture/PRODUCT_SYSTEM_ARCHITECTURE.md) 与 [ADR](docs/architecture/DECISIONS.md)。
-
-## Cooperative Agent M1～M5 工程评测
-
-| Milestone | 验证重点 |
+| Command | Role |
 |---|---|
-| M1 | Cooperation 与受限公开 Decision |
-| M2 | Goal/Plan 与 observable replan |
-| M3 | Memory selected → declared → accepted |
-| M4 | validated Reflection 与 pollution control |
-| M5 | paired ablations、真实模型失败诊断与 post-fix replication |
+| `xuanyi-play` | manual、Fake、DeepSeek V0 与工程调试 CLI |
+| `xuanyi-mcp-stdio` | 本地 MCP stdio 集成 |
+| `xuanyi-m5-acceptance` | M5 确定性验收 |
+| `xuanyi-product-acceptance` | 产品离线验收 |
+| `xuanyi-case-demo` | DoctorAgent V0 历史演示 |
+| `xuanyi-real-mentor-pilot` | 显式授权的受控真实模型 Mentor Pilot |
 
-[M5 最终 Benchmark 报告](docs/benchmarks/m5/agent_benchmark_report.md)记录了 5 个 deterministic pairs、三个连续 first-failure 的单变量排障，以及 `deepseek-v4-flash` 的 post-fix 9-run 小型 Pilot。该 Pilot 中 9/9 initial proposals 直接通过 schema 与确定性 contracts，Relevant Memory treatment 3/3 declared/accepted 并伴随合法 Plan/tool-priority 差异；这些是受控、小样本工程证据，不是统计显著性、当前 MentorAgent 产品效果或玩家收益证明。完整限制见报告的 [Limitations](docs/benchmarks/m5/agent_benchmark_report.md#limitations)。
+## Repository Map
 
-## 六病例教学与成长
-
-![旧纸伞、灰灶客栈、月井回声之间的确定性公开连续性](docs/portfolio/assets/campaign-flow.svg)
-
-图中三病例 Campaign 是修正主线前形成、目前仍在使用的基础连续性。当前产品已扩展为六病例医馆，并在其上组合确定性成长、课程、结构化导师记忆、考试、权限和传承；推荐不构成锁关，也不依赖 BGE 相似度。当前设计见 [六病例医馆](docs/product/R5_SIX_CASE_CLINIC_PRODUCT.md)。
-
-## 真实本地演示
-
-以下图片由真实离线 CLI / 验收 stdout 的脱敏文本确定性生成；[来源命令、原始 SHA、文本 SHA 与隐私检查](docs/portfolio/assets/README.md)均可核对。
-
-### 1. 三病例目录与无 Key 启动
-
-![三病例目录与无 Key 启动](docs/portfolio/assets/demo-01-case-catalog.svg)
-
-### 2. 知识解锁与后案历史反应
-
-![完成旧纸伞后解锁知识并在灰灶显示公开历史反应](docs/portfolio/assets/demo-02-campaign-continuity.svg)
-
-### 3. 三案、重放、隔离与最终验收
-
-![三病例各八事件与 Campaign 事件一至三的离线验收摘要](docs/portfolio/assets/demo-03-acceptance-summary.svg)
-
-## 当前阅读路径
-
-| 目的 | 先看什么 | 接着看什么 |
-|---|---|---|
-| **理解当前产品** | [项目总纲](docs/architecture/PROJECT_MASTER_BLUEPRINT.md) | [产品系统架构](docs/architecture/PRODUCT_SYSTEM_ARCHITECTURE.md)、[当前路线图](docs/product/ROADMAP.md) |
-| **理解导师主线** | [导师教学闭环](docs/product/R2_MENTOR_TEACHING_LOOP.md) | [自适应教学](docs/product/R3_ADAPTIVE_THREE_CASE_TEACHING.md)、[考试与传承](docs/product/R4_EXAM_PERMISSION_INHERITANCE.md) |
-| **运行与验收** | [医馆用户指南](docs/product/R5_CLINIC_USER_GUIDE.md) | [R6 离线验收](docs/evaluation/R6_OFFLINE_PRODUCT_ACCEPTANCE.md)、[真实导师 Pilot 计划](docs/evaluation/R6_REAL_MENTOR_PILOT_PLAN.md) |
-| **查阅历史工程证据** | [文档导航](docs/INDEX.md) | M2～M6、M4.5 和 DoctorAgent 报告仅按历史状态阅读 |
-
-## 可复现证据
-
-| 事实 | 当前证据 |
+| Path | Role |
 |---|---|
-| 6 个可玩病例与本地医馆 | [R5 六病例产品](docs/product/R5_SIX_CASE_CLINIC_PRODUCT.md) |
-| 玩家行动与独立 MentorAgent 教学边界 | [R2 教学闭环](docs/product/R2_MENTOR_TEACHING_LOOP.md) |
-| 确定性成长、课程与结构化导师记忆 | [R1 成长](docs/product/R1_APPRENTICESHIP_GROWTH.md)、[R3 教学](docs/product/R3_ADAPTIVE_THREE_CASE_TEACHING.md) |
-| R4 正式考试、权限过滤、两进程恢复与单传承链 | [R4 实现与审计](docs/product/R4_EXAM_PERMISSION_INHERITANCE.md) |
-| R6 八路线离线验收通过；v3 真实导师工程案例及医馆五请求烟雾完成；内部 ID 展示缺陷已离线修复 | [R6 离线验收](docs/evaluation/R6_OFFLINE_PRODUCT_ACCEPTANCE.md)、[烟雾结果](docs/evaluation/R6_REAL_MENTOR_CLINIC_SMOKE_RESULT.md)、[公开展示边界](docs/evaluation/R6_PUBLIC_PRESENTATION_BOUNDARY.md) |
-| 历史 DoctorAgent 与 BGE 正负结果 | [文档导航](docs/INDEX.md)；不作为导师效果指标 |
+| `src/xuanyi_npc/agents/` | `GameNPCAgent`、Mentor/Doctor baselines、LLM adapters |
+| `src/xuanyi_npc/application/` | cooperative runtime、planning/memory/reflection coordination、Clinic composition |
+| `src/xuanyi_npc/domain/` | cooperation、Goal/Plan、actions、events、memory/reflection contracts |
+| `src/xuanyi_npc/engine/` | 确定性病例规则、结果与 replay |
+| `src/xuanyi_npc/memory/` | long-term memory storage、projection、retrieval 与 embedding boundaries |
+| `src/xuanyi_npc/evaluation/` | deterministic ablations、real-model validation、failure diagnostics |
+| `docs/` | 架构、benchmark、产品说明与历史证据 |
 
-本地复验命令：
+## 项目术语速查
 
-```powershell
-# 全量离线测试
-.\.venv\Scripts\python.exe -m pytest
+| 术语 | 在本项目里的意思 |
+|---|---|
+| Observation | NPC 当前被允许看到的真实世界状态 |
+| Goal | NPC 当前想完成的目标 |
+| Plan | 为实现 Goal 准备的有序步骤 |
+| Replanning | 新证据或执行结果出现后调整 Plan |
+| Proposal | LLM 提出的候选决策，尚未执行 |
+| Decision | 经过贡献评估、但仍需系统验证的结构化决定 |
+| Tool | NPC 可以调用的一项实际能力；每回合最多执行一个 |
+| Action Space | 当前允许选择的公开动作集合 |
+| Authority | NPC 当前是否有权限执行某类动作 |
+| Memory | 过去经历形成的、非权威的历史经验 |
+| Reflection | 根据已发生结果总结候选经验 |
+| `CaseEngine` | 真正掌握病例规则和世界状态的确定性代码 |
+| Fallback | LLM 输出失败或不合格时采用的安全兜底路径 |
 
-# 当前 R6 离线产品验收（新建空目录后运行）
-New-Item -ItemType Directory -Force .\results\r6_local | Out-Null
-.\.venv\Scripts\python.exe -m xuanyi_npc.evaluation.product_acceptance `
-  --output .\results\r6_local
+## Evolution and Retained Baselines
 
-# MCP stdio 入口说明
-.\.venv\Scripts\xuanyi-mcp-stdio.exe --help
-```
+| Role | Status |
+|---|---|
+| `GameNPCAgent` | Current cooperative main Agent |
+| `MentorAgent` | Retained teaching / presentation branch |
+| `DoctorAgent` | V0 baseline / legacy benchmark Agent |
 
-公共 CI 配置已准备，但尚未创建远程或在 GitHub Actions 真实运行；目前只声明 Windows 10、CPython 3.12 的本地证据。分层验证日志见 [VERIFICATION](docs/evaluation/VERIFICATION.md)。
+三个名称代表不同职责和历史阶段，不代表多个 Agent 在同一回合协作。R-series 是历史 product/teaching evolution；M-series 是最终 Cooperative Agent engineering milestones。R1–R6、M4.5、DoctorAgent、旧 Pilot 与语义检索负结果的详细记录保存在[文档导航](docs/INDEX.md)和[历史归档](docs/archive/README.md)，不在首页展开阶段流水。
 
-## 诚实边界
+当前封版 tags：`m1-cooperative-agent`、`m2-goal-planning-agent`、`m3-memory-driven-agent`、`m4-reflection-learning-agent`、`m5-agent-benchmark`。
 
-- DoctorAgent 的 P4b 与 P4d 各是一次历史真实模型工程案例，不能推导 MentorAgent 成功率、统计因果或玩家收益。
-- M4.5 的 `1.00` / `0.6667` 来自冻结合成 Gold，不是游戏产品准确率；语义记忆默认关闭且不进入正式 Agent Prompt。
-- 尚未进行真实玩家研究、留存或教学收益验证。
-- `JsonStateStore` / SQLite 尚未验证并发多进程事务、生产备份恢复或长期运行。
-- 没有网页、游戏引擎界面、HTTP/SSE、远程部署、生产运维或全平台兼容证据。
-- 当前内容全部为架空道医世界观，不提供现实医疗诊断、处方或剂量建议。
+## Limitations
 
-## 许可证与文档
+- Real LLM evidence 只覆盖 `deepseek-v4-flash` 一个模型、每条件 3 repeats 和有限场景。
+- 结果是 descriptive engineering evidence，没有统计显著性或跨模型泛化结论。
+- token、latency 与货币成本目前未完整可观测。
+- deterministic fixtures 证明受控机制行为，不等于生产分布性能。
+- 没有生产并发、长期运行、备份恢复或公网安全 benchmark。
+- 没有真实玩家收益、教学效果、留存或用户研究证据。
+- 存在本地 loopback Clinic Web 界面；没有公网部署或独立游戏引擎 UI。
+- 内容全部为古风志怪架空世界，不提供现实医疗诊断、处方或剂量建议。
+
+## License and Content Rights
 
 程序代码、测试和工程脚本采用 [Apache License 2.0](LICENSE)。病例、世界观、Campaign、文档和演示文案为 `© 2026 WangYDING. All rights reserved.`，不随代码许可证授权；详见 [NOTICE](NOTICE) 与 [CONTENT_RIGHTS](CONTENT_RIGHTS.md)。第三方归属见 [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES.md)。
-
-- [完整文档导航](docs/INDEX.md)
-- [当前产品路线图](docs/product/ROADMAP.md)
-- [R6 发布前审计](docs/evaluation/R6_RELEASE_READINESS_AUDIT.md)
-- [历史技术总览（原 README 详细内容）](docs/architecture/TECHNICAL_OVERVIEW.md)
-
-当前没有远程仓库、Tag 或 Release。R6 已完成离线验收、v3 单次工程案例和真实导师医馆五请求烟雾；烟雾暴露的内部 ID 问题已离线修复，但真人试玩和正式发布仍未执行。

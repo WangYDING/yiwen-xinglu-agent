@@ -6,7 +6,7 @@
 
 ## 1. 先记住这一句话
 
-《玄医问道》是一个本地运行的师承型智能 NPC 游戏：玩家亲自调查、诊断和处置六个架空病例，导师 NPC 负责教学与反馈；LLM 只生成受约束的表达或建议，病例真相、评分、成长、考试、权限和传承全部由确定性规则管理，因此关键状态可以测试、审计、恢复和重放。
+《玄医问道》是一个本地运行、可审计的 Human-Agent Cooperative Game NPC 项目：玩家与一名游侠型自主 NPC 结伴调查六个古风志怪异案；NPC 自主维护 Goal/Plan、评估玩家贡献并在权限内推进调查，玩家参与线索、质疑、诊断协商和高风险授权，确定性规则最终裁定行动合法性与世界状态。
 
 如果面试官只给 20 秒，用上面这一段，不要从“我调用了 DeepSeek API”开始讲。
 
@@ -14,18 +14,18 @@
 
 ### 20 秒版本
 
-我做了一个可审计的师承型智能 NPC 游戏。玩家完成六个志怪病例，导师根据玩家经过规则验证的行为进行教学、评价和传承判断。核心设计是把 LLM 限制在语言表达层，把真相、评分、成长和权限留在确定性规则层，从而避免模型幻觉直接污染游戏状态。
+我做了一个可审计的人机协作游戏 NPC 系统。玩家与自主 NPC 共同调查六个志怪异案：NPC 会根据公开 Observation、Goal/Plan 和历史 Memory 自主提出下一步行动，玩家通过线索、质疑和高风险授权参与决策。LLM proposal 必须经过行动契约、权限策略和 `CaseEngine` 的确定性验证，才能真正改变世界状态。
 
 ### 60 秒版本
 
-这个项目要解决的问题是：传统对话 NPC 会说话，但它的记忆、成长反馈和权限发放往往不可验证。我把系统拆成领域层、应用层、Agent 层、存储层和交互层。玩家动作先被转换为严格命令，`CaseEngine` 校验线索、技能和前置条件后产生领域事件；应用服务再据此更新病例、教学、成长、考试和权限状态。导师只能看到过滤后的公开上下文，并输出受限 `MentorAction`，不能直接改状态。项目提供本地网页医馆、JSON 存档、SQLite 结构化记忆、Fake/真实模型适配器及离线验收。目前六个病例和完整传承链可离线运行，但尚未证明真人教学收益、生产并发或远程部署能力。
+这个项目要解决的问题是：如何让 NPC 保有自主判断、规划、工具使用和历史经验，同时让玩家能够真正影响调查，又不让模型直接控制游戏世界。我把系统拆成领域层、应用层、Agent 层、存储层和交互层。`GameNPCAgent` 根据公开 Observation、Goal/Plan、玩家贡献和受约束 Memory 形成 proposal；应用层随后检查行动契约、计划一致性和权限，合法 Tool 才交给 `CaseEngine` 更新案件状态。项目提供六病例本地 Clinic、JSON/SQLite 持久化、Fake/真实模型适配器及 M1–M5 冻结 benchmark。MentorAgent 教学表达与 DoctorAgent baseline 作为保留分支存在，但不代表当前主 Agent 身份。
 
 ### 3 分钟版本的顺序
 
-1. 背景：让 NPC 不只会聊天，还能基于可信历史持续教学。
-2. 难点：模型不稳定，而游戏真相、评分和权限必须稳定。
-3. 方案：LLM 与权威规则职责分离；命令—事件—投影形成可审计链路。
-4. 产品：六病例、成长、课程、考试、权限、传承、本地医馆。
+1. 背景：让 NPC 不只会聊天，还能自主规划、调查并与玩家协作判断。
+2. 难点：模型行为不稳定，而行动合法性、案件真相和世界状态必须稳定。
+3. 方案：Agent 形成意图，玩家参与判断与高风险授权，确定性系统裁决执行。
+4. 产品：六个志怪异案、本地 Clinic，以及可观察的 Goal/Plan、replan 和历史经验影响。
 5. 工程：Pydantic 契约、JSON/SQLite 存储、Adapter、恢复与回放、离线测试。
 6. 失败与取舍：Dense 语义检索未过质量门禁，正式链路改用结构化可信历史。
 7. 边界：真实模型只有有限工程案例；没有真人效果、生产并发和远程发布证据。
@@ -40,9 +40,11 @@
         │  只做输入解析、输出展示和错误映射
         ▼
 应用服务 application/
-        │  编排病例、成长、教学、考试、权限、传承与存储
-        ├──────────────► MentorAgent / LLMAdapter
-        │                 只读安全上下文 → 受限建议/表达
+        │  编排 cooperation、Goal/Plan、Memory、Reflection 与病例执行
+        ├──────────────► GameNPCAgent / LLMAdapter
+        │                 公开上下文 → 受限 proposal
+        ├──────────────► retained MentorAgent
+        │                 教学分支的受限建议/表达
         ▼
 领域模型 domain/ ───► CaseEngine
         │              校验命令 → 新会话 + 领域事件
@@ -76,19 +78,18 @@ evaluation/ + tests/：回放、故障注入、离线验收与质量门禁
 
 ## 4. 必须讲透的核心链路
 
-### 4.1 玩家执行一个病例动作
+### 4.1 Cooperative GameNPC 推进一个回合
 
-1. `ClinicRequestHandler.do_POST()` 解析表单并构造 `ClinicActionInput`。
-2. `ClinicService.submit_case_action()` 校验玩家、病例、Session 和幂等操作标识。
-3. 应用服务把公开选择转换成 `InvestigationCommand`、`SubmitDiagnosisCommand` 或 `ExecuteTreatmentCommand`。
-4. `CaseEngine.execute()` 校验上下文、Session 状态、技能、线索、证据和处置前置。
-5. 引擎返回新的 `CaseSessionState`、一个领域事件以及公开消息，不原地修改输入。
-6. 应用层保存权威状态；病例结束后再确定性结算成长、教学评价和 Campaign 连续性。
-7. 网页从公开 View 渲染结果，隐藏真相和内部 ID。
+1. 玩家通过 `PlayerContribution` 提交线索、质疑、建议、判断或授权。
+2. `CooperativeRuntime` 组合当前 public Observation、Goal/Plan 和范围受限的 Memory。
+3. `GameNPCAgent` 评估玩家贡献并提出候选下一步行动；玩家文本不会直接成为 ToolCall。
+4. `PublicActionContract`、`GoalPlanPolicy` 和 Authority Policy 校验行动、参数、计划一致性与授权边界。
+5. 合法后，本轮落实一个主要 Tool，并由 `CaseEngine` 决定真实结果和更新世界状态。
+6. 新结果进入 Plan Evaluation / Replanning；阶段结束后，Reflection 只能基于结果证据形成候选经验。
 
-关键回答：模型不参与病例规则判定，所以同样的已提交状态和命令会得到稳定结果。
+关键回答：Agent 决定准备推进什么，玩家参与判断和高风险授权，确定性系统决定什么真正能够发生。
 
-### 4.2 导师生成反馈
+### 4.2 Retained MentorAgent 生成教学反馈
 
 1. 应用层先计算允许公开的课程、关系、历史和结果事实。
 2. `MentorAgentInput` 校验输入是否满足当前交互阶段。
@@ -96,7 +97,7 @@ evaluation/ + tests/：回放、故障注入、离线验收与质量门禁
 4. 输出必须符合动作白名单和阶段约束；格式失败时只进行一次有界修复。
 5. 再次失败则使用确定性 fallback；导师回复不是权威状态事实。
 
-关键回答：Agent 的能力来自“受限决策边界”，不是让模型直接访问所有工具和数据库。
+关键回答：这是保留的 teaching/presentation branch。MentorAgent 的受限表达边界是真实能力，但不能用来定义当前 Cooperative GameNPC 的全部行动能力。
 
 ### 4.3 状态与记忆如何恢复
 
@@ -118,14 +119,14 @@ evaluation/ + tests/：回放、故障注入、离线验收与质量门禁
 
 ### 决策二：命令与事件分离
 
-- 命令代表玩家“想做什么”；事件代表规则确认后“实际发生了什么”。
+- proposal 或命令代表 Agent/玩家“希望推进什么”；事件代表规则确认后“实际发生了什么”。
 - 成长和记忆只能消费已提交事件，不能消费模型意图或未验证输入。
 - 收益是可回放、可追责和更容易写故障恢复测试；代价是模型数量和编排代码增加。
 
 ### 决策三：规则确定，语言可生成
 
 - 规则决定答案、分数、课程资格、考试结果和传承。
-- LLM 负责导师角色化表达，并可在允许集合内给教学建议。
+- 主链 LLM 负责受限行动 proposal；retained Mentor 分支负责角色化教学表达和允许范围内的建议。
 - 这使无 API Key 模式仍可完整玩，也便于比较 Fake 与真实模型。
 
 ### 决策四：结构化历史优先于向量记忆
@@ -169,7 +170,7 @@ JSON 适合本地单机产品的可检查快照；SQLite 用于结构化长期�
 
 ### 模型挂了游戏还能玩吗？
 
-能。病例、成长、考试、权限、传承和存档都是确定性能力；默认 Fake/本地导师可以表达固定反馈。真实模型只是可选表达增强。
+能。病例规则和存档是确定性的；Fake cooperative NPC 可以走同一受限 proposal 与验证链路。retained Mentor 分支也有确定性 fallback，真实模型只提供受控增强。
 
 ### 如何处理重复请求？
 
@@ -177,7 +178,7 @@ JSON 适合本地单机产品的可检查快照；SQLite 用于结构化长期�
 
 ### 项目最大的失败是什么？
 
-Dense 语义记忆在离线质量门禁中没有稳定达到要求，所以没有把它包装成正式能力，而是保留实验记录并让正式导师读取结构化可信历史。这个失败促使系统明确区分“权威事实”和“可替换检索策略”。
+Dense 语义记忆在离线质量门禁中没有稳定达到要求，所以没有把它包装成正式能力，而是保留实验记录，并让 retained Mentor 分支继续读取结构化可信历史。这个失败促使系统明确区分“权威事实”和“可替换检索策略”。
 
 ### 目前最需要改进什么？
 
@@ -187,12 +188,12 @@ Dense 语义记忆在离线质量门禁中没有稳定达到要求，所以没�
 
 ### 推荐标题
 
-**玄医问道——可审计的师承型智能 NPC 游戏（Python / Pydantic / SQLite / LLM）**
+**玄医问道——可审计的 Human-Agent Cooperative Game NPC 系统（Python / Pydantic / SQLite / LLM）**
 
 ### 推荐描述
 
-- 设计并实现本地师承型智能 NPC 游戏，组合 6 个可玩病例、确定性成长、课程、考试、权限与传承闭环，并提供网页医馆、CLI 和 MCP 工程入口。
-- 将 LLM 限制在权限过滤后的表达与结构化建议层，以 Pydantic 动作契约、规则二次校验、有界修复和确定性降级，隔离模型幻觉对关键游戏状态的影响。
+- 设计并实现 Human-Agent Cooperative Game NPC 系统：自主 NPC 维护 Goal/Plan、评估玩家贡献、调用受限 Tool，并与玩家共同调查 6 个古风志怪异案。
+- 以 PublicActionContract、GoalPlanPolicy、Authority Policy 和 `CaseEngine` 分离 Agent 意图、玩家判断/授权与确定性世界裁决，隔离模型幻觉对关键游戏状态的影响。
 - 基于命令—领域事件—投影设计病例与长期记忆链路，以 JSON 保存权威状态、SQLite 保存可重建结构化记忆，支持幂等投影、失败协调、恢复与回放。
 - 建立规则测试、Fake 故障注入、场景评测和有限真实模型 Pilot；当前仓库包含 86 个测试文件，2026-08-14 全量 pytest 为 703 项通过。
 - 对未通过质量门禁的 Dense 语义检索保持默认关闭，并在文档中区分离线验收、真实模型工程案例与尚未执行的真人效果验证。
@@ -221,7 +222,7 @@ Dense 语义记忆在离线质量门禁中没有稳定达到要求，所以没�
 
 每次都应先预测行为，再运行测试，最后用自己的话记录原因。
 
-1. **跑通产品**：创建弟子，完成一次调查、诊断和处置；找到对应 JSON 状态变化。
+1. **跑通产品**：创建玩家档案，完成一次与 NPC 的合作调查、诊断协商和处置确认；找到对应 JSON 状态变化。当前 Clinic 部分 presentation 仍可能显示历史“弟子”称谓。
 2. **跟踪动作链**：给 `ClinicService.submit_case_action()`、命令转换和 `CaseEngine.execute()` 设置断点，画出一张时序图。
 3. **手写规则测试**：新增一个“引用未发现证据必须被拒绝且不产生事件”的测试，不复制现有测试。
 4. **制造 Agent 故障**：让 Fake Adapter 返回非法动作，观察一次修复和 fallback，解释为何状态不受影响。
@@ -250,11 +251,12 @@ Dense 语义记忆在离线质量门禁中没有稳定达到要求，所以没�
 
 ### 第三轮：理解 Agent 与记忆（约 4 小时）
 
-1. `agents/mentor.py`、`agents/mentor_contract.py`
-2. `application/clinic_mentor.py`
-3. `application/memory_coordination.py`
+1. `agents/game_npc.py`
+2. `application/cooperative_runtime.py`、`application/goal_plan_policy.py`
+3. `application/game_npc_memory.py`、`application/memory_coordination.py`
 4. `memory/projection.py`、`storage/sqlite_memory.py`
-5. 对应测试文件
+5. retained branch：`agents/mentor.py`、`application/clinic_mentor.py`
+6. 对应测试文件
 
 ### 第四轮：建立证据意识（约 2 小时）
 
@@ -267,7 +269,7 @@ Dense 语义记忆在离线质量门禁中没有稳定达到要求，所以没�
 
 当你能独立完成以下任务时，可以把项目稳妥地写进简历：
 
-- 白板画出玩家动作和导师反馈两条链路。
+- 白板画出 PlayerContribution → GameNPCAgent proposal → deterministic validation → Tool → CaseEngine → Replanning/Reflection 主链，并区分 retained Mentor feedback 分支。
 - 指出五类权威状态分别由哪个模块持有。
 - 解释 LLM 输出错误、存储写入失败、重复请求时系统如何处理。
 - 在 30 分钟内修改一个规则并补充测试。

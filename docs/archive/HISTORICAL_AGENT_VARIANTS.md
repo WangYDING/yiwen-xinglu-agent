@@ -1,4 +1,6 @@
-# Agent 版本边界
+# 历史 Agent 版本边界
+
+> 该文档描述历史 Agent variants，不代表当前 Cooperative GameNPC 主架构。当前架构与入口请从[项目 README](../../README.md)和[文档导航](../INDEX.md)开始阅读。
 
 V0、V1、V2 共用同一套确定性病例引擎、权限过滤视图、`AgentAction` Schema 和 `EpisodeResult`。版本升级只能增加明确列出的能力，不能改变病例真相或绕过领域规则。
 

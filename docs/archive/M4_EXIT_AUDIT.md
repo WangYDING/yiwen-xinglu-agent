@@ -43,7 +43,7 @@ M4-P0 至 P4 的退出证据一致，未发现需要在审计中修复产品代�
 
 | 条件 | 证据与结论 |
 |---|---|
-| V1 只增加基础长期记忆并保持固定课程 | `AGENT_VARIANTS.md` 与配置边界固定 V1 为 Vector Top-K + Fixed Curriculum；通过 |
+| V1 只增加基础长期记忆并保持固定课程 | `HISTORICAL_AGENT_VARIANTS.md` 与配置边界固定 V1 为 Vector Top-K + Fixed Curriculum；通过 |
 | 模型不能直接写永久记忆 | `AgentAction` 与九个 MCP 工具均无记忆写入口，写入只接受已验证来源；通过 |
 | 多因素排序、自适应教学和 Reflection 不属于 M4 | 路线图、变体表和 ADR-034 一致保留在 V2/后续；通过 |
 
