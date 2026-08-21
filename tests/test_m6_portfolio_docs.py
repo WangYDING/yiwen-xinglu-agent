@@ -13,7 +13,7 @@ README = REPO_ROOT / "README.md"
 def test_readme_presents_current_cooperative_product_in_order() -> None:
     text = README.read_text(encoding="utf-8")
     headings = (
-        "# 玄医问道：Human-Agent Cooperative Game NPC System",
+        "# 异闻行录：Human-Agent Cooperative Game NPC System",
         "## Human-Agent Cooperation",
         "## Planning, Memory and Reflection",
         "## Evaluation",
@@ -27,6 +27,9 @@ def test_readme_presents_current_cooperative_product_in_order() -> None:
     assert "`MentorAgent` | Retained teaching / presentation branch" in text
     assert "`DoctorAgent` | V0 baseline / legacy benchmark Agent" in text
     assert text.index("GameNPCAgent proposal") < text.index("MentorAgent` | Retained")
+    assert "M-series 是最终 Cooperative Agent engineering milestones" in text
+    assert "R-series 是历史 product/teaching evolution" in text
+    assert "# 问道医途" not in text
     assert "# 玄医问道：可审计的师承型智能 NPC" not in text
     assert "Xuanyi: An Auditable Agentic Mentor NPC" not in text
 

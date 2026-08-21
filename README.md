@@ -1,8 +1,10 @@
-# 玄医问道：Human-Agent Cooperative Game NPC System
+# 异闻行录：Human-Agent Cooperative Game NPC System
 
 ## Project in One Sentence
 
-`xuanyi-npc` 是一个可运行、可审计的智能游戏 NPC 项目。玩家与一名游侠型自主 NPC 结伴调查古风志怪异案：玩家可以提出线索、质疑、判断和审批，但不能遥控 NPC；NPC 会结合眼前情况、自己的目标和计划、过去经验，自主选择下一步行动。LLM 不能直接修改游戏世界，真正的状态变化必须通过确定性代码规则。
+`异闻行录` 是一个可运行、可审计的智能游戏 NPC 项目。玩家与一名游侠型自主 NPC 结伴调查古风志怪异案：玩家可以提出线索、质疑、判断和审批，但不能遥控 NPC；NPC 会结合眼前情况、自己的目标和计划、过去经验，自主选择下一步行动。LLM 不能直接修改游戏世界，真正的状态变化必须通过确定性代码规则。
+
+`xuanyi-npc` 是为兼容已有安装、命令、API、Schema 与历史证据而保留的技术 package / repository identifier，不是当前对外产品名。
 
 技术上，这条主链由 `GameNPCAgent`、Goal/Plan、Memory、Tool Use、Authority Policy 和 `CaseEngine` 共同完成。主要可玩场景是本地六病例 Clinic；`MentorAgent` 是保留的教学与表达分支，`DoctorAgent` 是 V0 baseline。**This is not a Multi-Agent system.**
 

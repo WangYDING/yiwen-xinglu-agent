@@ -1,6 +1,6 @@
 # 开始游戏
 
-这里仅说明如何在 Windows + Python 3.12 上启动本地 Clinic。核心游戏不需要 API Key、GPU、Torch 或 BGE。当前主路线是玩家与自主 NPC 组成调查搭档，共同处理六个古风志怪异案。
+这里仅说明如何在 Windows + Python 3.12 上启动《异闻行录》本地 Clinic。核心游戏不需要 API Key、GPU、Torch 或 BGE。当前主路线是玩家与自主 NPC 组成调查搭档，共同处理六个古风志怪异案。
 
 ## 第一次安装
 
@@ -11,7 +11,7 @@ py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -e .
 ```
 
-## 启动本地医馆
+## 启动
 
 ```powershell
 New-Item -ItemType Directory -Force .\runtime_data\clinic | Out-Null
@@ -26,7 +26,7 @@ New-Item -ItemType Directory -Force .\runtime_data\clinic | Out-Null
 
 - 页面操作会写入 `runtime_data/clinic/`，它不会进入 Git。
 - 下次使用相同命令启动，即可从开始页恢复玩家档案。当前页面按钮可能仍显示历史称谓“恢复弟子”。
-- 回到运行医馆的 PowerShell，按 `Ctrl+C` 正常退出。
+- 回到 PowerShell，按 `Ctrl+C` 正常退出。
 
 ## 入口边界
 
@@ -40,4 +40,4 @@ New-Item -ItemType Directory -Force .\runtime_data\clinic | Out-Null
 | 验收 | `xuanyi-m5-acceptance`、`xuanyi-product-acceptance` | 离线确定性验收 |
 | 历史实验 | `xuanyi-case-demo`、`xuanyi-deepseek-models`、`xuanyi-real-mentor-pilot` | 工程证据或显式受控实验，不是玩家入口 |
 
-遇到问题请查看[医馆用户指南](docs/product/R5_CLINIC_USER_GUIDE.md)。项目定位、架构和历史证据不在本页展开，可从 [README](README.md) 和[文档索引](docs/INDEX.md)进入。
+遇到问题请查看[用户指南](docs/product/R5_CLINIC_USER_GUIDE.md)。项目定位、架构和历史证据不在本页展开，可从 [README](README.md) 和[文档索引](docs/INDEX.md)进入。

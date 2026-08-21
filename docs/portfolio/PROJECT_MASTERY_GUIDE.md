@@ -1,4 +1,4 @@
-# 《玄医问道》项目掌握与面试手册
+# 《异闻行录》项目掌握与面试手册
 
 > 用途：帮助项目作者从“项目能运行”进阶到“能解释、能定位、能修改、能接受追问”。
 >
@@ -6,7 +6,7 @@
 
 ## 1. 先记住这一句话
 
-《玄医问道》是一个本地运行、可审计的 Human-Agent Cooperative Game NPC 项目：玩家与一名游侠型自主 NPC 结伴调查六个古风志怪异案；NPC 自主维护 Goal/Plan、评估玩家贡献并在权限内推进调查，玩家参与线索、质疑、诊断协商和高风险授权，确定性规则最终裁定行动合法性与世界状态。
+《异闻行录》是一个本地运行、可审计的 Human-Agent Cooperative Game NPC 项目：玩家与一名游侠型自主 NPC 结伴调查六个古风志怪异案；NPC 自主维护 Goal/Plan、评估玩家贡献并在权限内推进调查，玩家参与线索、质疑、诊断协商和高风险授权，确定性规则最终裁定行动合法性与世界状态。
 
 如果面试官只给 20 秒，用上面这一段，不要从“我调用了 DeepSeek API”开始讲。
 
@@ -188,7 +188,7 @@ Dense 语义记忆在离线质量门禁中没有稳定达到要求，所以没�
 
 ### 推荐标题
 
-**玄医问道——可审计的 Human-Agent Cooperative Game NPC 系统（Python / Pydantic / SQLite / LLM）**
+**异闻行录——可审计的 Human-Agent Cooperative Game NPC 系统（Python / Pydantic / SQLite / LLM）**
 
 ### 推荐描述
 

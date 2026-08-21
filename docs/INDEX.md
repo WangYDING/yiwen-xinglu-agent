@@ -1,6 +1,8 @@
 # 文档导航
 
-项目文档按“当前 Cooperative GameNPC、保留的产品分支、架构、作品集、验证与历史证据”分层。文件移动只改善导航，不删除或改写历史结论。
+《异闻行录》项目文档按“当前 Cooperative GameNPC、保留的产品分支、架构、作品集、验证与历史证据”分层。文件移动只改善导航，不删除或改写历史结论。
+
+当前正式身份是 Human-Agent Cooperative Game NPC System；`GameNPCAgent` 是当前主 Agent，`MentorAgent` 是 retained teaching / presentation branch，`DoctorAgent` 是 V0 baseline。权威层级依次为[项目总纲](architecture/PROJECT_MASTER_BLUEPRINT.md)、[产品系统架构](architecture/PRODUCT_SYSTEM_ARCHITECTURE.md)、[路线图](product/ROADMAP.md)和[项目首页](../README.md)。
 
 ## 第一次接触项目
 
