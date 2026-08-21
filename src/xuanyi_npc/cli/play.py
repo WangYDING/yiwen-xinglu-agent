@@ -202,7 +202,7 @@ class PlayCLI:
         self.current_teaching_session_id: str | None = None
 
     def run(self) -> int:
-        self._print("玄医问道 · 病例修习")
+        self._print("异闻行录 · 三案兼容玩法入口")
         mode_label = {
             GameplayMode.MANUAL: "manual（玩家操作，无 LLM）",
             GameplayMode.FAKE: "fake（离线演示 Agent）",
@@ -828,7 +828,7 @@ class PlayCLI:
             self._print(f"推荐下一案：{recommended.title}")
             self._print(f"推荐理由：{recommended.public_reason}")
         else:
-            self._print("三个病例均已完成。")
+            self._print("该兼容入口的三案均已完成。")
 
     def _print_case_history_context(self, result: MultiCaseServiceResult) -> None:
         if result.history_reaction is not None:
@@ -934,13 +934,13 @@ class PlayCLI:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="xuanyi-play",
-        description="交互式游玩玄医问道的确定性病例。",
+        description="异闻行录保留的三案手动/演示兼容入口；正式产品入口为六异案 Clinic Web。",
     )
     parser.add_argument(
         "--case-dir",
         type=Path,
         default=None,
-        help="可选的病例 JSON 目录；默认使用安装包内置的三个病例。",
+        help="可选的病例 JSON 目录；默认使用保留的三案兼容资源。",
     )
     parser.add_argument(
         "--state-dir",

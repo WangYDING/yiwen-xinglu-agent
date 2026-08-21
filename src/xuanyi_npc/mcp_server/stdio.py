@@ -73,7 +73,7 @@ def create_configured_stdio_server(config: StdioServerConfig) -> MCPServer:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="xuanyi-mcp-stdio",
-        description="Run the Xuanyi M3-P1 MCP server over stdio.",
+        description="Local MCP integration for the Yiwen Xinglu cooperative game NPC system.",
     )
     parser.add_argument(
         "--case-dir",

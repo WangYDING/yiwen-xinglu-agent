@@ -1,1 +1,1 @@
-"""Versioned runtime data shipped with the Xuanyi Python distribution."""
+"""Versioned runtime data for the Yiwen Xinglu cooperative game NPC package."""
