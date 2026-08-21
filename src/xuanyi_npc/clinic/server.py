@@ -60,12 +60,12 @@ def _esc(value: object) -> str:
 
 
 def _page(title: str, body: str) -> bytes:
-    document = f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{_esc(title)} · 问道医途</title><style>{STYLE}</style></head><body><header><h1>问道医途 · 志怪异案</h1><p class="notice">全部病案与玄术均为架空游戏内容，不构成现实医疗建议。</p></header><main>{body}</main></body></html>"""
+    document = f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{_esc(title)} · 异闻行录</title><style>{STYLE}</style></head><body><header><h1>异闻行录 · 志怪异案</h1><p class="notice">全部异案、人物与术法均为架空游戏内容，不对应现实事件或现实医疗建议。</p></header><main>{body}</main></body></html>"""
     return document.encode("utf-8")
 
 
 GOAL_TYPE_LABELS = {
-    AgentGoalType.RESOLVE_CASE: "完成病例",
+    AgentGoalType.RESOLVE_CASE: "完成异案",
     AgentGoalType.GATHER_EVIDENCE: "收集证据",
     AgentGoalType.VALIDATE_HYPOTHESIS: "验证判断",
     AgentGoalType.FORM_DIAGNOSIS: "形成辨证",
@@ -190,7 +190,7 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
         except (ClinicError, ValidationError, ValueError) as exc:
             self._error(400, str(exc))
         except Exception:
-            self._error(500, "医馆暂时无法处理请求，已保留最后一次成功进度。")
+            self._error(500, "异案调查入口暂时无法处理请求，已保留最后一次成功进度。")
 
     def do_POST(self):
         try:
@@ -433,16 +433,16 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
             self._send(200, _page("异案大厅", self._nav(player_id) + '<h2>志怪异案选案大厅</h2><p>同行 NPC 的调查建议仅供参考，六案均可选择。</p><div class="case-grid">' + cards + "</div>"))
             return
         if not session_id:
-            raise ClinicError("session_required", "缺少病例进度。")
+            raise ClinicError("session_required", "缺少案件进度。")
         result,guide,guide_stages,current_stage,dialogue,abilities = self.server.clinic_service.case_experience(player_id, case_id, session_id)
         observation = result.observation
         if observation is None:
-            raise ClinicError("case_unavailable", "病例公开状态不可用。")
+            raise ClinicError("case_unavailable", "案件公开状态不可用。")
         clues = "".join(f"<li>{_esc(item.description)}</li>" for item in observation.discovered_clues) or "<li>尚未发现</li>"
         actions = "".join(f'<form method="post" action="/cases/action"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="case_id" value="{_esc(case_id)}"><input type="hidden" name="session_id" value="{_esc(session_id)}"><input type="hidden" name="operation_id" value="{self._token()}"><input type="hidden" name="action_type" value="investigation"><input type="hidden" name="selection_id" value="{_esc(item.investigation_id)}"><button>{_esc(item.public_description)}</button></form>' for item in observation.available_investigations)
         diagnoses = "".join(f'<option value="{_esc(item.diagnosis_id)}">{_esc(item.public_description)}</option>' for item in observation.diagnosis_candidates)
         notice=self._query().get("notice","")
-        body = f'''{self._nav(player_id)}<h2>{_esc(observation.title)}</h2><p>{_esc(observation.synopsis)}</p>{f'<p class="notice">{_esc(notice)}</p>' if notice else ''}<section class="card"><h3>自然语言调查</h3><form method="post" action="/cases/natural"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="case_id" value="{_esc(case_id)}"><input type="hidden" name="session_id" value="{_esc(session_id)}"><input type="hidden" name="operation_id" value="{self._token()}"><textarea name="text" rows="3" required placeholder="例如：询问乘客虚弱出现的先后顺序"></textarea><button>执行调查提案</button></form><small>文本先转换为行动提案，病例规则会再次校验能力、熟练度与前置证据。</small></section><section class="card"><h3>线索簿</h3><ul>{clues}</ul></section><details class="card"><summary>无障碍／模型不可用时的降级调查入口</summary>{actions or '<p>暂无</p>'}</details>'''
+        body = f'''{self._nav(player_id)}<h2>{_esc(observation.title)}</h2><p>{_esc(observation.synopsis)}</p>{f'<p class="notice">{_esc(notice)}</p>' if notice else ''}<section class="card"><h3>自然语言调查</h3><form method="post" action="/cases/natural"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="case_id" value="{_esc(case_id)}"><input type="hidden" name="session_id" value="{_esc(session_id)}"><input type="hidden" name="operation_id" value="{self._token()}"><textarea name="text" rows="3" required placeholder="例如：询问乘客虚弱出现的先后顺序"></textarea><button>执行调查提案</button></form><small>文本先转换为行动提案，案件规则会再次校验能力、熟练度与前置证据。</small></section><section class="card"><h3>线索簿</h3><ul>{clues}</ul></section><details class="card"><summary>无障碍／模型不可用时的降级调查入口</summary>{actions or '<p>暂无</p>'}</details>'''
         stage_html="".join(f'<li class="{"progress-done" if done else ""}">{"✓" if done else "○"} {_esc(stage.title)}<p>{_esc(stage.public_purpose)}</p><small>参考问法（不会自动执行）：{_esc("；".join(stage.suggested_questions))}</small></li>' for stage,done in guide_stages)
         mentor_history="".join(f'<p><strong>{"你" if turn.role=="player" else "师父"}：</strong>{_esc(turn.text)}</p>' for turn in dialogue.recent_mentor_turns)
         ability_html="".join(f'<li>{_esc(item.name)} · {item.proficiency} · {"可用" if item.executable else _esc(item.reason)}</li>' for item in abilities)
@@ -450,13 +450,15 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
         embedded=f'''<p><strong>本案学习目标：</strong>{_esc(guide.learning_goal)}</p><div class="case-workspace"><section class="card"><h3>病例专属调查提纲</h3><ul>{stage_html}</ul></section><section class="card"><h3>病例人物对话与调查</h3><p>在下方自然语言调查框中说明交谈对象、问题或检查目标。</p></section><aside><section class="card mentor"><h3>病例内请教师父</h3>{mentor_history}{f'<p class="notice">{_esc(mentor_notice)}</p>' if mentor_notice else ''}<form method="post" action="/cases/mentor"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="case_id" value="{_esc(case_id)}"><input type="hidden" name="session_id" value="{_esc(session_id)}"><input type="hidden" name="operation_id" value="{self._token()}"><textarea name="text" rows="3" required placeholder="请教师父调查方法或证据整理"></textarea><button>请教师父指点</button></form></section><section class="card"><h3>当前能力和行动限制</h3><ul>{ability_html}</ul><small>服务端会在每次行动时重新校验。</small></section></aside></div>'''
         body=body.replace(f'<h2>{_esc(observation.title)}</h2>',f'<h2>{_esc(observation.title)}</h2>'+embedded)
         manual_mode=self._query().get("mode")=="manual"
-        participants=case_participants(case_id);names={x.participant_id:x.display_name for x in participants}|{"player":"你","mentor":"师父"}
-        bubbles="".join(f'<article class="bubble {_esc(msg.message_type)}"><strong>{_esc(names.get(msg.speaker_id,"系统"))}</strong>{"<span class=\"private-mark\"> · 师徒传音</span>" if msg.message_type=="mentor_private" else ""}<p>{_esc(msg.public_text)}</p></article>' for msg in dialogue.recent_messages) or '<p class="notice">尚未开始交谈。默认接收者为当前求医者；输入 @ 可切换人物或师父。</p>'
+        participants=case_participants(case_id);names={x.participant_id:x.display_name for x in participants}|{"player":"你","mentor":"师父" if manual_mode else "调查搭档"}
+        private_mark="师徒传音" if manual_mode else "搭档私语"
+        empty_dialogue=('<p class="notice">尚未开始交谈。默认交谈对象为当前案中人物；输入 @ 可切换其他人物或师父。</p>' if manual_mode else '<p class="notice">尚未开始交谈。默认交谈对象为当前案中人物；可切换其他案中人物，与调查搭档协作请使用上方协作框。</p>')
+        bubbles="".join(f'<article class="bubble {_esc(msg.message_type)}"><strong>{_esc(names.get(msg.speaker_id,"系统"))}</strong>{f"<span class=\"private-mark\"> · {_esc(private_mark)}</span>" if msg.message_type=="mentor_private" else ""}<p>{_esc(msg.public_text)}</p></article>' for msg in dialogue.recent_messages) or empty_dialogue
         options=('<option value="@师父 "></option>' if manual_mode else '')+''.join(f'<option value="@{_esc(x.display_name)} "></option>' for x in participants)
         current=names.get(dialogue.current_target,"请选择")
-        chat=f'''<section class="chat"><p>当前交谈对象：<strong>{_esc(current)}</strong></p><div class="chat-log">{bubbles}</div><form class="composer" method="post" action="/cases/chat"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="case_id" value="{_esc(case_id)}"><input type="hidden" name="session_id" value="{_esc(session_id)}"><input type="hidden" name="interaction_mode" value="{'manual' if manual_mode else 'cooperative'}"><input type="hidden" name="operation_id" value="{self._token()}"><textarea name="message" rows="3" list="case-recipients" required placeholder="{'向角色说话，或输入 @师父' if manual_mode else '向病例角色说话；NPC 协作请使用上方协作框'}"></textarea><datalist id="case-recipients">{options}</datalist><button>发送</button></form></section>'''
+        chat=f'''<section class="chat"><p>当前交谈对象：<strong>{_esc(current)}</strong></p><div class="chat-log">{bubbles}</div><form class="composer" method="post" action="/cases/chat"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="case_id" value="{_esc(case_id)}"><input type="hidden" name="session_id" value="{_esc(session_id)}"><input type="hidden" name="interaction_mode" value="{'manual' if manual_mode else 'cooperative'}"><input type="hidden" name="operation_id" value="{self._token()}"><textarea name="message" rows="3" list="case-recipients" required placeholder="{'向案中人物说话，或输入 @师父' if manual_mode else '与案中人物交谈；与调查搭档协作请使用上方协作框'}"></textarea><datalist id="case-recipients">{options}</datalist><button>发送</button></form></section>'''
         chat=chat.replace('<textarea name="message" rows="3" list="case-recipients"','<input name="message" list="case-recipients"').replace('</textarea><datalist','><datalist')
-        drawers=f'''<section class="drawers"><details class="card"><summary>调查提纲与进度</summary><ul>{stage_html}</ul></details><details class="card"><summary>已发现线索</summary><ul>{clues}</ul></details><details class="card"><summary>能力与技法</summary><ul>{ability_html}</ul></details><details class="card"><summary>病例参与者</summary><ul>{''.join(f'<li>{_esc(x.display_name)}</li>' for x in participants)}</ul></details><details class="card"><summary>辨证与处置</summary><p>达到规则要求后，下方将显示可提交入口。</p></details></section>'''
+        drawers=f'''<section class="drawers"><details class="card"><summary>调查提纲与进度</summary><ul>{stage_html}</ul></details><details class="card"><summary>已发现线索</summary><ul>{clues}</ul></details><details class="card"><summary>能力与技法</summary><ul>{ability_html}</ul></details><details class="card"><summary>案中人物</summary><ul>{''.join(f'<li>{_esc(x.display_name)}</li>' for x in participants)}</ul></details><details class="card"><summary>辨证与处置</summary><p>达到规则要求后，下方将显示可提交入口。</p></details></section>'''
         query=self._query();npc_reply=query.get("npc_reply","");disposition=query.get("suggestion_disposition","")
         suggestion_explanation=query.get("suggestion_explanation","");npc_action=query.get("npc_action","")
         environment_feedback=query.get("environment_feedback","");confirmation_id=query.get("confirmation_id","")
@@ -537,7 +539,7 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
         if confirmation_id and decision_id:
             label="同意诊断提议" if authority_mode=="proposal_only" else "确认高风险处置"
             hidden=f'<input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="case_id" value="{_esc(case_id)}"><input type="hidden" name="session_id" value="{_esc(session_id)}"><input type="hidden" name="confirmation_id" value="{_esc(confirmation_id)}"><input type="hidden" name="decision_id" value="{_esc(decision_id)}">'
-            confirmation=f'''<section class="card notice"><h3>需要玩家协商</h3><p>该行动尚未执行。NPC 会在你回应后依据最新病例状态再次判断。</p><form method="post" action="/cases/cooperate/respond">{hidden}<input type="hidden" name="operation_id" value="{self._token()}"><input type="hidden" name="response" value="approve"><button>{label}</button></form><form method="post" action="/cases/cooperate/respond">{hidden}<input type="hidden" name="operation_id" value="{self._token()}"><input type="hidden" name="response" value="reject"><button>拒绝并要求替代方案</button></form></section>'''
+            confirmation=f'''<section class="card notice"><h3>需要玩家协商</h3><p>该行动尚未执行。NPC 会在你回应后依据最新案件状态再次判断。</p><form method="post" action="/cases/cooperate/respond">{hidden}<input type="hidden" name="operation_id" value="{self._token()}"><input type="hidden" name="response" value="approve"><button>{label}</button></form><form method="post" action="/cases/cooperate/respond">{hidden}<input type="hidden" name="operation_id" value="{self._token()}"><input type="hidden" name="response" value="reject"><button>拒绝并要求替代方案</button></form></section>'''
         cooperative_form=(f'''<section class="card"><h3>与调查搭档协作</h3><form method="post" action="/cases/cooperate"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="case_id" value="{_esc(case_id)}"><input type="hidden" name="session_id" value="{_esc(session_id)}"><input type="hidden" name="operation_id" value="{self._token()}"><select name="contribution_type"><option value="suggestion">建议调查方向</option><option value="hypothesis">提出假设</option><option value="challenge">质疑 NPC</option><option value="evidence_interpretation">解释证据</option><option value="question">询问判断</option></select><textarea name="text" rows="3" required placeholder="表达你的假设或建议；NPC 会独立评价并决定具体行动。"></textarea><button>与 NPC 讨论并推进</button></form><small>你的输入是建议或判断，不会由页面直接转换为工具调用。Cooperative 主线不启用独立 Mentor teaching Agent。</small><p><a href="/cases?{urlencode({"player_id":player_id,"case_id":case_id,"session_id":session_id,"mode":"manual"})}">进入 retained manual / teaching 支线</a></p></section>''' if not manual_mode else f'<section class="card"><h3>Manual / teaching 模式（保留支线）</h3><p>这里保留旧师父教学与手动行动入口，不代表当前 Cooperative GameNPC 的主关系。</p><a href="/cases?{urlencode({"player_id":player_id,"case_id":case_id,"session_id":session_id})}">返回 cooperative 调查主线</a></section>')
         body=f'''{self._nav(player_id)}<h2>{_esc(observation.title)}</h2><p>{_esc(observation.synopsis)}</p>{cooperative_form}{planning_card}{cooperative_result}{confirmation}{chat}{drawers}'''
         if observation.can_submit_diagnosis:
@@ -546,7 +548,7 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
         treatments = "".join(f'<form method="post" action="/cases/action"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="case_id" value="{_esc(case_id)}"><input type="hidden" name="session_id" value="{_esc(session_id)}"><input type="hidden" name="operation_id" value="{self._token()}"><input type="hidden" name="action_type" value="treatment"><input type="hidden" name="selection_id" value="{_esc(item.treatment_id)}"><button>{_esc(item.public_description)}</button></form>' for item in observation.available_treatments)
         if treatments:
             body += '<details class="card"><summary>Manual / baseline：直接选择处置</summary>' + treatments + '</details>'
-        self._send(200, _page("病例", body))
+        self._send(200, _page("异案", body))
 
     def _exam(self, player_id):
         view = self.server.clinic_service.home(player_id)
@@ -613,7 +615,7 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
 
 
 def build_parser():
-    parser = argparse.ArgumentParser(prog="xuanyi-clinic", description="启动仅绑定 127.0.0.1 的本地玄医馆。")
+    parser = argparse.ArgumentParser(prog="xuanyi-clinic", description="启动仅绑定 127.0.0.1 的本地异案调查入口。")
     parser.add_argument("--state-dir", type=Path)
     parser.add_argument("--host", default="127.0.0.1", choices=("127.0.0.1",))
     parser.add_argument("--port", type=int, default=0)
@@ -656,7 +658,7 @@ def main(argv=None):
         service = build_clinic_service(args.state_dir, resources,runtime)
         server = ClinicHTTPServer((args.host, args.port), service)
         host, port = server.server_address
-        print(f"玄医馆已启动：http://{host}:{port}", flush=True)
+        print(f"异案调查入口已启动：http://{host}:{port}", flush=True)
         try:
             server.serve_forever(poll_interval=0.1)
         except KeyboardInterrupt:

@@ -11,7 +11,7 @@ def start_server(state_dir):
         stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
     )
     line = process.stdout.readline().strip()
-    assert line.startswith("玄医馆已启动：http://127.0.0.1:"), (line, process.stderr.read())
+    assert line.startswith("异案调查入口已启动：http://127.0.0.1:"), (line, process.stderr.read())
     return process, line.split("：", 1)[1]
 
 

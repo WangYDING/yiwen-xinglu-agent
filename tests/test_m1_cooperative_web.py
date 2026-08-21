@@ -275,6 +275,9 @@ def test_case_page_marks_direct_action_route_as_manual_baseline(tmp_path):
         assert "不会由页面直接转换为工具调用" in page
         assert "Cooperative 主线不启用独立 Mentor teaching Agent" in page
         assert "retained manual / teaching 支线" in page
+        assert "与案中人物交谈；与调查搭档协作请使用上方协作框" in page
+        assert "案中人物" in page and "病例参与者" not in page
+        assert "当前求医者" not in page and "向病例角色说话" not in page
     finally:
         stop(server, thread)
 
@@ -291,7 +294,24 @@ def test_cooperative_mode_suppresses_independent_mentor_but_manual_keeps_it(tmp_
         "op_coop_mentor_block", "@师父 请提示", allow_mentor=False,
     )
     assert response.speaker_id == "system"
-    assert "独立师父介入仅在" in response.public_text
+    assert "案中人物聊天只用于普通人物问答" in response.public_text
+
+    before = clinic.store.load_case_session(cooperative.session_id)
+    response, _ = clinic.case_chat_message(
+        player, cooperative.case_id, cooperative.session_id,
+        "op_coop_action_block", "检查纸伞上的水痕", allow_mentor=False,
+    )
+    after = clinic.store.load_case_session(cooperative.session_id)
+    assert response.speaker_id == "system"
+    assert "与调查搭档协作" in response.public_text
+    assert after.action_history == before.action_history
+
+    response, _ = clinic.case_chat_message(
+        player, cooperative.case_id, cooperative.session_id,
+        "op_coop_agent_alias_block", "@调查搭档 请继续调查", allow_mentor=False,
+    )
+    assert response.speaker_id == "system"
+    assert "本案没有这位可交谈人物" in response.public_text
 
     manual = clinic.start_case(player, "gray_hearth_inn", cooperative=False)
     manual_dialogue = clinic.case_dialogues.load(manual.session_id, player, manual.case_id)

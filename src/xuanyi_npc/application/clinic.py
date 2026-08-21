@@ -273,11 +273,13 @@ class ClinicService:
         elif classification.intent=="off_topic":
             response=ChatMessage(speaker_id="system",recipient_id="player",message_type="rejection",public_text="此事与当前异象关系不明。请围绕受影响者、契物、现场痕迹或炁息说明要查什么。")
             dialogue=dialogue.model_copy(update={"off_track_count":dialogue.off_track_count+1})
+        elif not allow_mentor and classification.intent in {
+            "mentor_message", "investigation_action", "diagnosis_statement", "treatment_statement",
+        }:
+            response=ChatMessage(speaker_id="system",recipient_id="player",message_type="system",public_text="案中人物聊天只用于普通人物问答；调查、判断、建议和授权请使用上方“与调查搭档协作”入口。")
         elif classification.intent in {"diagnosis_statement","treatment_statement"}:
             label="辨证" if classification.intent=="diagnosis_statement" else "处置"
             response=ChatMessage(speaker_id="system",recipient_id="player",message_type="system",public_text=f"已识别为{label}陈述。请在“辨证与处置”抽屉中核对系统理解并确认；本条消息没有直接执行。")
-        elif classification.intent=="mentor_message" and not allow_mentor:
-            response=ChatMessage(speaker_id="system",recipient_id="player",message_type="system",public_text="协作模式由同一位 NPC 负责行动与解释；独立师父介入仅在 manual / teaching 模式开放。")
         elif classification.intent=="mentor_message":
             decision=self.mentor_interventions.decide("player_mentioned_mentor",dialogue)
             reply,_=self.mentor_case_message(player_id,case_id,session_id,text,trigger_type="player_mentioned_mentor",allowed_actions=decision.rule.allowed_action_types)

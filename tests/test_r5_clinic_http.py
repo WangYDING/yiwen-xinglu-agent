@@ -47,6 +47,9 @@ def test_primary_entry_presents_cooperative_investigation_relationship(clinic_ht
     port, _ = clinic_http
     status, _, start = request(port, "GET", "/")
     assert status == 200
+    assert "异闻行录 · 志怪异案" in start
+    assert "全部异案、人物与术法均为架空游戏内容" in start
+    assert "问道医途" not in start and "全部病案" not in start
     assert "创建玩家档案" in start and "恢复调查档案" in start
     assert "自主 NPC" in start and "调查搭档" in start
     assert "创建弟子" not in start and "恢复弟子" not in start
