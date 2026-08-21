@@ -11,7 +11,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 ASSET_ROOT = REPO_ROOT / "docs" / "portfolio" / "assets"
 TRANSCRIPT_ROOT = ASSET_ROOT / "transcripts"
 CARDS = (
-    ("01_case_catalog.txt", "demo-01-case-catalog.svg", "01 · 三病例目录 / no-key"),
+    ("01_case_catalog.txt", "demo-01-case-catalog.svg", "01 · 三案兼容 CLI 目录 / no-key"),
     ("02_campaign_continuity.txt", "demo-02-campaign-continuity.svg", "02 · 公开知识与跨案反应"),
     ("03_acceptance_summary.txt", "demo-03-acceptance-summary.svg", "03 · 离线验收摘要"),
 )
