@@ -273,8 +273,8 @@ def test_case_page_marks_direct_action_route_as_manual_baseline(tmp_path):
         _, _, page = request(server.server_address[1], "GET", f"/cases?player_id={player}&case_id={opened.case_id}&session_id={opened.session_id}")
         assert 'action="/cases/cooperate"' in page
         assert "不会由页面直接转换为工具调用" in page
-        assert "cooperative 模式不启用独立师父 Agent" in page
-        assert "legacy manual / teaching 模式" in page
+        assert "Cooperative 主线不启用独立 Mentor teaching Agent" in page
+        assert "retained manual / teaching 支线" in page
     finally:
         stop(server, thread)
 

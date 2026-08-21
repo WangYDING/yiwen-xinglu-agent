@@ -10,42 +10,42 @@ REPO_ROOT = Path(__file__).parents[1]
 README = REPO_ROOT / "README.md"
 
 
-def test_readme_presents_the_current_mentor_product_in_order() -> None:
+def test_readme_presents_current_cooperative_product_in_order() -> None:
     text = README.read_text(encoding="utf-8")
     headings = (
-        "# 玄医问道：可审计的师承型智能 NPC",
-        "## Xuanyi: An Auditable Agentic Mentor NPC",
-        "## 为什么值得看",
-        "## 60 秒无 Key 启动",
-        "## 安全架构",
-        "## 六病例教学与成长",
-        "## 真实本地演示",
-        "## 当前阅读路径",
-        "## 可复现证据",
-        "## 诚实边界",
-        "## 许可证与文档",
+        "# 玄医问道：Human-Agent Cooperative Game NPC System",
+        "## Human-Agent Cooperation",
+        "## Planning, Memory and Reflection",
+        "## Evaluation",
+        "### Real LLM Validation",
+        "## Evolution and Retained Baselines",
+        "## Limitations",
     )
     positions = [text.index(heading) for heading in headings]
     assert positions == sorted(positions)
-    assert "six-case game-AI product" in text
-    assert "MentorAgent" in text
-    assert "DoctorAgent" in text and "历史" in text
-    assert "语义记忆" in text and "默认关闭" in text
-    assert "Windows 10、CPython 3.12" in text
-    assert "公共 CI" in text and "尚未" in text
+    assert "`GameNPCAgent` | Current cooperative main Agent" in text
+    assert "`MentorAgent` | Retained teaching / presentation branch" in text
+    assert "`DoctorAgent` | V0 baseline / legacy benchmark Agent" in text
+    assert text.index("GameNPCAgent proposal") < text.index("MentorAgent` | Retained")
+    assert "# 玄医问道：可审计的师承型智能 NPC" not in text
+    assert "Xuanyi: An Auditable Agentic Mentor NPC" not in text
 
 
 def test_current_product_claims_have_evidence_links() -> None:
     text = README.read_text(encoding="utf-8")
-    required_linked_claims = (
-        "| 6 个可玩病例与本地医馆 | [",
-        "| 玩家行动与独立 MentorAgent 教学边界 | [",
-        "| 确定性成长、课程与结构化导师记忆 | [",
-        "| R4 正式考试、权限过滤、两进程恢复与单传承链 | [",
-        "| R6 八路线离线验收通过；v3 真实导师工程案例及医馆五请求烟雾完成；内部 ID 展示缺陷已离线修复 | [",
-    )
-    for claim in required_linked_claims:
-        assert claim in text
+    benchmark_target = "docs/benchmarks/m5/agent_benchmark_report.md"
+    assert f"]({benchmark_target})" in text
+    assert (REPO_ROOT / benchmark_target).is_file()
+    assert "M5 在冻结的同条件 fixtures 上完成 5 个 paired experiments" in text
+    assert "post-fix small real-model pilot 共 9 runs" in text
+    assert "不代表生产分布成功率或玩家收益" in text
+
+    assert "`MentorAgent` | Retained teaching / presentation branch" in text
+    assert "[文档导航](docs/INDEX.md)" in text
+    assert "[历史归档](docs/archive/README.md)" in text
+    assert (REPO_ROOT / "docs" / "INDEX.md").is_file()
+    assert (REPO_ROOT / "docs" / "archive" / "README.md").is_file()
+    assert text.index(f"]({benchmark_target})") < text.index("`MentorAgent` | Retained")
 
 
 def test_demo_assets_are_reproducible_and_private() -> None:

@@ -60,7 +60,7 @@ def _esc(value: object) -> str:
 
 
 def _page(title: str, body: str) -> bytes:
-    document = f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{_esc(title)} · 问道医途</title><style>{STYLE}</style></head><body><header><h1>问道医途 · 玄医馆</h1><p class="notice">全部病案与玄术均为架空游戏内容，不构成现实医疗建议。</p></header><main>{body}</main></body></html>"""
+    document = f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{_esc(title)} · 问道医途</title><style>{STYLE}</style></head><body><header><h1>问道医途 · 志怪异案</h1><p class="notice">全部病案与玄术均为架空游戏内容，不构成现实医疗建议。</p></header><main>{body}</main></body></html>"""
     return document.encode("utf-8")
 
 
@@ -154,7 +154,7 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
     def _player_id(self, values):
         value = values.get("player_id", "")
         if not re.fullmatch(r"[A-Za-z0-9_-]{1,80}", value):
-            raise ClinicError("player_required", "请选择或创建弟子。")
+            raise ClinicError("player_required", "请选择或创建玩家档案。")
         return value
 
     def do_GET(self):
@@ -373,20 +373,20 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
 
     def _nav(self, player_id):
         q = urlencode({"player_id": player_id})
-        return f'<nav><a href="/clinic?{q}">医馆主页</a> · <a href="/teaching?{q}">导师教学</a> · <a href="/cases?{q}">病例</a> · <a href="/exam?{q}">考试</a> · <a href="/inheritance?{q}">传承</a> · <a href="/assessment?{q}">师评</a></nav>'
+        return f'<nav><a href="/clinic?{q}">调查主页</a> · <a href="/cases?{q}">调查异案</a> · <a href="/teaching?{q}">教学 / 请教（可选）</a> · <a href="/assessment?{q}">调查记录 / 阶段反馈</a> · <a href="/exam?{q}">修习考试</a> · <a href="/inheritance?{q}">传承</a></nav>'
 
     def _welcome(self, player_id):
         player=self.server.clinic_service.home(player_id).player_summary
         mentor=self.server.clinic_service.mentor_status
-        runtime=(f'<section class="card"><h3>导师运行</h3><p>模式：真实DeepSeek</p><p>已用费用：{_esc(mentor["used_cost"])} CNY</p><form method="post" action="/mentor/explain"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="request_id" value="initial_lesson_hint_1"><input type="hidden" name="operation_id" value="{self._token()}"><button>请导师说明初课与提示</button></form></section>' if mentor["mode"]=="deepseek" else '')
-        body=f'''<h2>首次入馆</h2><section class="card"><h3>系统旁白</h3><p>你是玄医馆新收的弟子。这里收治的并非寻常病痛，而是人与契、物、炁息交缠所成的异象。你需要亲自询问、查验、辨明因果，再决定如何处置。</p></section><section class="card mentor"><h3>师父</h3><p>你来了。医馆今日已有数案候诊。先别急着下结论，记住：问清来由，核对证据，再谈施治。</p></section><form method="post" action="/welcome/complete"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="operation_id" value="{self._token()}"><button>记下教诲，前往选案</button></form>'''
-        body=f'<p>入馆弟子：{_esc(player.display_name)}</p>'+runtime+body
-        self._send(200,_page("首次入馆",body))
+        runtime=(f'<section class="card"><h3>教学表达运行（保留支线）</h3><p>模式：真实DeepSeek</p><p>已用费用：{_esc(mentor["used_cost"])} CNY</p><form method="post" action="/mentor/explain"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="request_id" value="initial_lesson_hint_1"><input type="hidden" name="operation_id" value="{self._token()}"><button>查看教学支线的初课与提示</button></form></section>' if mentor["mode"]=="deepseek" else '')
+        body=f'''<h2>初次同行</h2><section class="card"><h3>系统旁白</h3><p>你将与一名游侠型自主 NPC 结伴，调查人与契、物、炁息交缠而成的古风志怪异案。你可以提供线索、质疑、建议和判断；同行 NPC 会自主规划并推进调查，重大或不可逆处置仍需要你的明确确认。</p></section><section class="card mentor"><h3>调查搭档</h3><p>各地已有数桩异事待查。我们先核对公开证据，再协商判断；我会自行决定下一步准备调查什么，真正的行动结果仍由案件规则裁定。</p></section><form method="post" action="/welcome/complete"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="operation_id" value="{self._token()}"><button>与搭档同行，前往选案</button></form>'''
+        body=f'<p>调查者：{_esc(player.display_name)}</p>'+runtime+body
+        self._send(200,_page("初次同行",body))
 
     def _start(self):
         players = self.server.clinic_service.list_players()
-        restored = "".join(f'<li><a href="/clinic?player_id={_esc(item.player_id)}">{_esc(item.display_name)}</a></li>' for item in players) or "<li>尚无弟子存档</li>"
-        body = f"""<h2>进入医馆</h2><div class="grid"><section class="card"><h3>创建弟子</h3><form method="post" action="/players"><label>弟子名 <input name="display_name" maxlength="40" required></label><input type="hidden" name="operation_id" value="{self._token()}"><button>创建并进入</button></form></section><section class="card"><h3>恢复弟子</h3><ul>{restored}</ul></section></div><p>无需输入工具名、JSON、Session ID 或内部规则；页面会把自然语言选择转换为严格应用命令。</p>"""
+        restored = "".join(f'<li><a href="/clinic?player_id={_esc(item.player_id)}">{_esc(item.display_name)}</a></li>' for item in players) or "<li>尚无调查档案</li>"
+        body = f"""<h2>进入志怪异案调查</h2><p>你将与一名自主 NPC 组成调查搭档，共同调查异事。</p><div class="grid"><section class="card"><h3>创建玩家档案</h3><form method="post" action="/players"><label>玩家名 <input name="display_name" maxlength="40" required></label><input type="hidden" name="operation_id" value="{self._token()}"><button>创建并进入</button></form></section><section class="card"><h3>恢复调查档案</h3><ul>{restored}</ul></section></div><p>无需输入工具名、JSON、Session ID 或内部规则；页面会把自然语言选择转换为严格应用命令。</p>"""
         self._send(200, _page("开始", body))
 
     def _home(self, player_id):
@@ -402,8 +402,8 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
         permissions = "、".join(PUBLIC_PRESENTATION.name("permission", item, fallback="已开放内容") for item in view.permissions)
         exam_status = PUBLIC_PRESENTATION.name("exam_status", view.exam_status, fallback="考试状态已更新")
         inheritance_status = PUBLIC_PRESENTATION.name("inheritance_status", view.inheritance_status, fallback="传承状态已更新")
-        body = f'''{self._nav(player_id)}<h2>{_esc(view.player_summary.display_name)}的医馆</h2>{runtime}<div class="grid"><section class="card"><h3>导师与课程</h3><p>{_esc(view.mentor_summary)}</p><p>阶段：{_esc(stage)}</p><p>当前建议：{_esc(recommendation)}</p><p><a href="/foundation?player_id={_esc(player_id)}">入门教学</a></p></section><section class="card"><h3>七项能力</h3><ul>{ability}</ul></section><section class="card"><h3>关系</h3><p>亲近 {_esc(view.relationship['affinity'])} · 信任 {_esc(view.relationship['trust'])} · 认可 {_esc(view.relationship['recognition'])}</p></section><section class="card"><h3>六病例</h3><ul>{cases}</ul></section><section class="card"><h3>考试与传承</h3><p>考试：{_esc(exam_status)}</p><p>传承：{_esc(inheritance_status)}</p><p>权限：{_esc(permissions)}</p></section></div>'''
-        self._send(200, _page("医馆", body))
+        body = f'''{self._nav(player_id)}<h2>{_esc(view.player_summary.display_name)}的调查档案</h2><p>主线：与自主 NPC 共同调查志怪异案；课程、考试与传承属于可选修习支线。</p>{runtime}<div class="grid"><section class="card"><h3>调查搭档与可选修习</h3><p>{_esc(view.mentor_summary)}</p><p>修习阶段：{_esc(stage)}</p><p>当前调查建议：{_esc(recommendation)}</p><p><a href="/foundation?player_id={_esc(player_id)}">查看可选入门教学</a></p></section><section class="card"><h3>七项能力</h3><ul>{ability}</ul></section><section class="card"><h3>关系</h3><p>亲近 {_esc(view.relationship['affinity'])} · 信任 {_esc(view.relationship['trust'])} · 认可 {_esc(view.relationship['recognition'])}</p></section><section class="card"><h3>可调查异案</h3><ul>{cases}</ul></section><section class="card"><h3>可选修习与传承</h3><p>考试：{_esc(exam_status)}</p><p>传承：{_esc(inheritance_status)}</p><p>权限：{_esc(permissions)}</p></section></div>'''
+        self._send(200, _page("调查主页", body))
 
     def _foundation(self,player_id):
         state=self.server.clinic_service.store.load_apprenticeship(player_id)
@@ -429,8 +429,8 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
         if not case_id:
             view = self.server.clinic_service.home(player_id)
             labels={"not_started":"未开始","active":"调查中","completed":"已完成"}
-            cards = "".join(f'<section class="card"><h3>{_esc(item.title)}</h3><p>{_esc(item.synopsis)}</p><p><strong>难度：</strong>异象案</p><p class="status">状态：{_esc(labels.get(item.status,item.status))}</p>{"<p class=\"recommended\">师父推荐</p>" if item.recommended else ""}<form method="post" action="/cases/start"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="case_id" value="{_esc(item.case_id)}"><input type="hidden" name="operation_id" value="{self._token()}"><button>{"继续调查" if item.status=="active" else "接案"}</button></form></section>' for item in view.visible_cases)
-            self._send(200, _page("六案大厅", self._nav(player_id) + '<h2>六病例选案大厅</h2><p>推荐仅供参考，六案均可选择。</p><div class="case-grid">' + cards + "</div>"))
+            cards = "".join(f'<section class="card"><h3>{_esc(item.title)}</h3><p>{_esc(item.synopsis)}</p><p><strong>难度：</strong>异象案</p><p class="status">状态：{_esc(labels.get(item.status,item.status))}</p>{"<p class=\"recommended\">调查建议</p>" if item.recommended else ""}<form method="post" action="/cases/start"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="case_id" value="{_esc(item.case_id)}"><input type="hidden" name="operation_id" value="{self._token()}"><button>{"继续调查" if item.status=="active" else "接案"}</button></form></section>' for item in view.visible_cases)
+            self._send(200, _page("异案大厅", self._nav(player_id) + '<h2>志怪异案选案大厅</h2><p>同行 NPC 的调查建议仅供参考，六案均可选择。</p><div class="case-grid">' + cards + "</div>"))
             return
         if not session_id:
             raise ClinicError("session_required", "缺少病例进度。")
@@ -538,7 +538,7 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
             label="同意诊断提议" if authority_mode=="proposal_only" else "确认高风险处置"
             hidden=f'<input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="case_id" value="{_esc(case_id)}"><input type="hidden" name="session_id" value="{_esc(session_id)}"><input type="hidden" name="confirmation_id" value="{_esc(confirmation_id)}"><input type="hidden" name="decision_id" value="{_esc(decision_id)}">'
             confirmation=f'''<section class="card notice"><h3>需要玩家协商</h3><p>该行动尚未执行。NPC 会在你回应后依据最新病例状态再次判断。</p><form method="post" action="/cases/cooperate/respond">{hidden}<input type="hidden" name="operation_id" value="{self._token()}"><input type="hidden" name="response" value="approve"><button>{label}</button></form><form method="post" action="/cases/cooperate/respond">{hidden}<input type="hidden" name="operation_id" value="{self._token()}"><input type="hidden" name="response" value="reject"><button>拒绝并要求替代方案</button></form></section>'''
-        cooperative_form=(f'''<section class="card"><h3>与 NPC 协作</h3><form method="post" action="/cases/cooperate"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="case_id" value="{_esc(case_id)}"><input type="hidden" name="session_id" value="{_esc(session_id)}"><input type="hidden" name="operation_id" value="{self._token()}"><select name="contribution_type"><option value="suggestion">建议调查方向</option><option value="hypothesis">提出假设</option><option value="challenge">质疑 NPC</option><option value="evidence_interpretation">解释证据</option><option value="question">询问判断</option></select><textarea name="text" rows="3" required placeholder="表达你的假设或建议；NPC 会独立评价并决定具体行动。"></textarea><button>与 NPC 讨论并推进</button></form><small>你的输入是建议或判断，不会由页面直接转换为工具调用。cooperative 模式不启用独立师父 Agent。</small><p><a href="/cases?{urlencode({"player_id":player_id,"case_id":case_id,"session_id":session_id,"mode":"manual"})}">进入 legacy manual / teaching 模式</a></p></section>''' if not manual_mode else f'<section class="card"><h3>Manual / teaching 模式</h3><p>当前保留旧师父教学与手动行动入口。</p><a href="/cases?{urlencode({"player_id":player_id,"case_id":case_id,"session_id":session_id})}">返回 cooperative 模式</a></section>')
+        cooperative_form=(f'''<section class="card"><h3>与调查搭档协作</h3><form method="post" action="/cases/cooperate"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="case_id" value="{_esc(case_id)}"><input type="hidden" name="session_id" value="{_esc(session_id)}"><input type="hidden" name="operation_id" value="{self._token()}"><select name="contribution_type"><option value="suggestion">建议调查方向</option><option value="hypothesis">提出假设</option><option value="challenge">质疑 NPC</option><option value="evidence_interpretation">解释证据</option><option value="question">询问判断</option></select><textarea name="text" rows="3" required placeholder="表达你的假设或建议；NPC 会独立评价并决定具体行动。"></textarea><button>与 NPC 讨论并推进</button></form><small>你的输入是建议或判断，不会由页面直接转换为工具调用。Cooperative 主线不启用独立 Mentor teaching Agent。</small><p><a href="/cases?{urlencode({"player_id":player_id,"case_id":case_id,"session_id":session_id,"mode":"manual"})}">进入 retained manual / teaching 支线</a></p></section>''' if not manual_mode else f'<section class="card"><h3>Manual / teaching 模式（保留支线）</h3><p>这里保留旧师父教学与手动行动入口，不代表当前 Cooperative GameNPC 的主关系。</p><a href="/cases?{urlencode({"player_id":player_id,"case_id":case_id,"session_id":session_id})}">返回 cooperative 调查主线</a></section>')
         body=f'''{self._nav(player_id)}<h2>{_esc(observation.title)}</h2><p>{_esc(observation.synopsis)}</p>{cooperative_form}{planning_card}{cooperative_result}{confirmation}{chat}{drawers}'''
         if observation.can_submit_diagnosis:
             evidence = ",".join(item.clue_id for item in observation.discovered_clues)
@@ -577,7 +577,7 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
         plan = teaching.plan_service.ensure(player_id)
         query=self._query();message=query.get("mentor_message","");notice=query.get("mentor_notice","")
         rendered=(f'<p class="notice">{_esc(notice)}</p>' if notice else '')+(f'<section class="card"><h3>导师说明</h3><p>{_esc(message)}</p></section>' if message else '')
-        body = self._nav(player_id) + f'''<h2>请教师父</h2><section class="card mentor"><form method="post" action="/mentor/ask"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="operation_id" value="{self._token()}"><textarea name="text" rows="3" required placeholder="询问玩法、能力、当前建议或调查原则"></textarea><button>请教</button></form></section><p>师父不会泄露隐藏线索、正确辨证或处置，也不会替你执行行动。</p>'''+rendered
+        body = self._nav(player_id) + f'''<h2>教学 / 请教（保留支线）</h2><p>这是 retained Mentor teaching 模式，用于课程与提示表达，不代表当前 Cooperative GameNPC 的主关系。</p><section class="card mentor"><h3>请教师父</h3><form method="post" action="/mentor/ask"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="operation_id" value="{self._token()}"><textarea name="text" rows="3" required placeholder="询问玩法、能力、当前建议或调查原则"></textarea><button>请教</button></form></section><p>师父不会泄露隐藏线索、正确辨证或处置，也不会替你执行行动。</p>'''+rendered
         real_mode = self.server.clinic_service.mentor_status["mode"] == "deepseek"
         if real_mode:
             body += f'<form method="post" action="/mentor/explain"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="request_id" value="initial_lesson_hint_1"><input type="hidden" name="operation_id" value="{self._token()}"><button>请导师说明初课与提示</button></form>'
@@ -591,12 +591,12 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
                 body += f'<form method="post" action="/mentor/explain"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="request_id" value="wrong_diagnosis_remediation_1"><input type="hidden" name="operation_id" value="{self._token()}"><button>请导师解释本次辨证补课</button></form>'
         sessions = [item for item in self.server.clinic_service.store.list_teaching_sessions() if item.player_id == player_id]
         body += '<section class="card"><h3>课程记录</h3><ul>' + ("".join(f'<li>{_esc(PUBLIC_PRESENTATION.name("lesson",item.lesson_id))} · {_esc(PUBLIC_PRESENTATION.name("phase",item.phase.value))} · 提示 {len(item.used_hint_ids)}/2</li>' for item in sessions) or '<li>尚无课程记录</li>') + '</ul></section>'
-        self._send(200, _page("导师教学", body))
+        self._send(200, _page("教学 / 请教", body))
 
     def _assessment(self, player_id):
         sessions = [item for item in self.server.clinic_service.store.list_teaching_sessions() if item.player_id == player_id and item.assessment is not None]
         cards = "".join(f'<section class="card"><h3>{_esc(PUBLIC_PRESENTATION.name("lesson",item.lesson_id))}</h3><p>{_esc(PUBLIC_PRESENTATION.sanitize_legacy_text(item.mentor_review.message) if item.mentor_review else "结构化师评已形成")}</p><p>改进方向：{_esc("、".join(PUBLIC_PRESENTATION.name("ability",value.value) for value in item.assessment.improvement_abilities) or "无")}</p></section>' for item in sessions)
-        self._send(200, _page("师评", self._nav(player_id) + '<h2>成长与师徒历程</h2>' + (cards or '<p>完成病例后将在此显示师评。</p>')))
+        self._send(200, _page("阶段反馈", self._nav(player_id) + '<h2>调查记录与阶段反馈</h2><p>这里保留课程师评与成长记录，属于可选修习支线。</p>' + (cards or '<p>完成病例后将在此显示规则验证的阶段反馈。</p>')))
 
     def _post_button(self, path, player_id, label):
         return f'<form method="post" action="{path}"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="operation_id" value="{self._token()}"><button>{_esc(label)}</button></form>'

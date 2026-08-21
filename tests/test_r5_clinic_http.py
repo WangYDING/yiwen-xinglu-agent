@@ -43,6 +43,57 @@ def test_start_page_escapes_player_name_and_never_returns_traceback(clinic_http)
     assert "Traceback" not in home and "API Key" not in home
 
 
+def test_primary_entry_presents_cooperative_investigation_relationship(clinic_http):
+    port, _ = clinic_http
+    status, _, start = request(port, "GET", "/")
+    assert status == 200
+    assert "创建玩家档案" in start and "恢复调查档案" in start
+    assert "自主 NPC" in start and "调查搭档" in start
+    assert "创建弟子" not in start and "恢复弟子" not in start
+
+    token = re.search(r'name="operation_id" value="([^"]+)', start).group(1)
+    status, headers, _ = request(
+        port,
+        "POST",
+        "/players",
+        {"display_name": "同行者", "operation_id": token},
+    )
+    assert status == 303
+    status, _, welcome = request(port, "GET", headers["Location"])
+    assert status == 200
+    assert "初次同行" in welcome and "游侠型自主 NPC" in welcome
+    assert "调查搭档" in welcome and "与搭档同行，前往选案" in welcome
+    assert "新收的弟子" not in welcome and "记下教诲" not in welcome
+
+
+def test_home_navigation_and_retained_mentor_copy_have_clear_priority(clinic_http):
+    port, server = clinic_http
+    player_id = server.clinic_service.create_player("异案调查者").player_summary.player_id
+
+    status, _, home = request(port, "GET", f"/clinic?player_id={player_id}")
+    assert status == 200
+    assert "调查档案" in home and "调查搭档与可选修习" in home
+    assert "调查异案" in home and "教学 / 请教（可选）" in home
+    assert "可调查异案" in home and "可选修习与传承" in home
+    assert "导师与课程" not in home and "成长与师徒历程" not in home
+
+    status, _, cases = request(port, "GET", f"/cases?player_id={player_id}")
+    assert status == 200
+    assert "志怪异案选案大厅" in cases and "调查建议" in cases
+    assert "师父推荐" not in cases
+
+    status, _, teaching = request(port, "GET", f"/teaching?player_id={player_id}")
+    assert status == 200
+    assert "教学 / 请教（保留支线）" in teaching
+    assert "retained Mentor teaching" in teaching
+    assert "不代表当前 Cooperative GameNPC 的主关系" in teaching
+
+    status, _, assessment = request(port, "GET", f"/assessment?player_id={player_id}")
+    assert status == 200
+    assert "调查记录与阶段反馈" in assessment
+    assert "成长与师徒历程" not in assessment
+
+
 def test_post_refresh_is_idempotent_and_unknown_ids_are_safe(clinic_http):
     port, server = clinic_http
     _, _, page = request(port, "GET", "/")
