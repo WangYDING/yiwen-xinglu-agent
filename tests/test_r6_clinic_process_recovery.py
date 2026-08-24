@@ -7,11 +7,11 @@ from urllib.request import Request, urlopen
 
 def start_server(state_dir):
     process = subprocess.Popen(
-        [sys.executable, "-m", "xuanyi_npc.clinic.server", "--state-dir", str(state_dir)],
+        [sys.executable, "-m", "xuanyi_npc.clinic.server", "--state-dir", str(state_dir), "--npc-mode", "offline"],
         stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
     )
     line = process.stdout.readline().strip()
-    assert line.startswith("异案调查入口已启动：http://127.0.0.1:"), (line, process.stderr.read())
+    assert line.startswith("《异闻行录》已启动：http://127.0.0.1:"), (line, process.stderr.read())
     return process, line.split("：", 1)[1]
 
 

@@ -5,7 +5,7 @@ from typing import Annotated, Literal
 
 from pydantic import ConfigDict, Field
 
-from xuanyi_npc.agents import DeterministicCooperativeNPC, DeterministicFakeMentor
+from xuanyi_npc.agents import DeterministicFakeMentor
 from xuanyi_npc.domain.cooperation import (
     CooperativeTurnResult,
     PendingActionConfirmation,
@@ -116,6 +116,8 @@ class ClinicService:
     legacy_auto_foundation: bool = False
 
     def __post_init__(self) -> None:
+        if self.game_npc_agent is None:
+            raise ValueError("ClinicService requires an explicit game_npc_agent")
         kwargs = {"state_store": self.store, "case_catalog": self.base_catalog,
                   "campaign_rules": CampaignRuleSet.load(self.campaign_path, self.base_catalog),
                   "clock": self.clock}
@@ -135,7 +137,6 @@ class ClinicService:
             else DeterministicCaseMentor())
         self.mentor_interventions=MentorInterventionPolicy()
         self.mentor_working_memory=MentorWorkingMemoryStore(self.store.root)
-        self.game_npc_agent = self.game_npc_agent or DeterministicCooperativeNPC()
         self.cooperative_pending: dict[str, PendingActionConfirmation] = {}
 
     def create_player(self, display_name: str):

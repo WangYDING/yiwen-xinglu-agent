@@ -1,6 +1,7 @@
 """M1 cooperative Game NPC built on the shared bounded LLM boundary."""
 
 import json
+from threading import local
 from typing import Annotated, Callable, Literal, Protocol, runtime_checkable
 
 from pydantic import ConfigDict, Field, StrictInt, ValidationError
@@ -106,6 +107,7 @@ class GameNPCAgent:
         self.structured_output = BoundedStructuredOutput(adapter, diagnostic_hook)
         self.goal_plan_policy = GoalPlanPolicy()
         self.action_validator = PublicActionContractValidator()
+        self._planning_execution = local()
 
     def decide(self, agent_input: GameNPCAgentInput) -> GameNPCDecision:
         request = self._request(agent_input)
@@ -142,7 +144,13 @@ class GameNPCAgent:
         )
         if result.output is None and self.diagnostic_hook is not None:
             self.diagnostic_hook("fallback_used", {"fallback_reason": "model_output_unavailable"})
+        self._planning_execution.result = result
         return result.output or self._fallback_turn_proposal(agent_input)
+
+    def last_planning_execution(self):
+        """Return diagnostics for the planning call completed on this request thread."""
+
+        return getattr(self._planning_execution, "result", None)
 
     def repair_action_contract(self, agent_input: GameNPCAgentInput, prior: GameNPCDecision, feedback: SafeActionRecoveryFeedback) -> GameNPCDecision:
         if prior.llm_attempts != 1:

@@ -44,6 +44,7 @@ xuanyi-mcp-stdio = "xuanyi_npc.mcp_server.stdio:main"
 xuanyi-play = "xuanyi_npc.cli.play:main"
 xuanyi-m5-acceptance = "xuanyi_npc.evaluation.m5_acceptance:main"
 xuanyi-clinic = "xuanyi_npc.clinic.server:main"
+yiwen-xinglu = "xuanyi_npc.clinic.server:main"
 xuanyi-product-acceptance = "xuanyi_npc.evaluation.product_acceptance:main"
 xuanyi-real-mentor-pilot = "xuanyi_npc.evaluation.real_mentor_pilot:main"
 

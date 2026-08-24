@@ -191,12 +191,21 @@ class CooperativeRuntime:
                 goal_changed=goal_changed,
                 plan_changed=plan_changed,
             )
+            planning_execution = None
+            planning_diagnostics = getattr(self.agent, "last_planning_execution", None)
+            if callable(planning_diagnostics):
+                planning_execution = planning_diagnostics()
             decision = GameNPCDecision(
                 decision_id=f"decision_{contribution.contribution_id}",
                 turn_id=contribution.contribution_id,
                 proposal=turn_proposal.decision,
-                llm_attempts=1,
-                used_fallback=False,
+                llm_attempts=(planning_execution.attempts if planning_execution else 1),
+                used_fallback=(planning_execution.output is None if planning_execution else False),
+                repair_kind=(
+                    planning_execution.repair_kind.value
+                    if planning_execution and planning_execution.repair_kind else None
+                ),
+                usages=(planning_execution.usages if planning_execution else ()),
             )
             decision = self._associate_decision(decision, state)
             if not self._action_matches_plan(decision, state):

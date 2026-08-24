@@ -173,21 +173,31 @@ observe
 
 ## Quick Start
 
-当前可复现环境为 Windows 和 Python 3.12。核心本地体验不需要 API Key、GPU、Torch 或 BGE。
+当前可复现环境为 Windows 和 Python 3.12。正式玩家入口默认运行受约束的 DeepSeek `GameNPCAgent`，需要 API Key 和显式付费授权；长期 Memory 与 Reflection 尚未接入该正式路径。无需 GPU、Torch 或 BGE。
 
 ```powershell
 py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -e .
 New-Item -ItemType Directory -Force .\runtime_data\clinic | Out-Null
-.\.venv\Scripts\xuanyi-clinic.exe --state-dir .\runtime_data\clinic
+.\.venv\Scripts\yiwen-xinglu.exe --state-dir .\runtime_data\clinic --npc-mode llm --confirm-paid-agent --agent-budget-cny 1.00
 ```
 
 终端会输出 `http://127.0.0.1:<port>/`。详细安装、存档与恢复说明见 [START_HERE.md](START_HERE.md) 和[医馆用户指南](docs/product/R5_CLINIC_USER_GUIDE.md)。
+
+显式离线、测试或调试模式不会调用语言模型：
+
+```powershell
+.\.venv\Scripts\yiwen-xinglu.exe --state-dir .\runtime_data\clinic --npc-mode offline
+```
+
+`xuanyi-clinic` 暂时保留为兼容别名；新的正式产品命令是 `yiwen-xinglu`。`--mentor-mode deepseek` 只控制保留的导师表达分支，不会启用或替代 Game NPC LLM。
 
 Secondary commands：
 
 | Command | Role |
 |---|---|
+| `yiwen-xinglu` | 《异闻行录》正式玩家入口；显式选择 `llm` 或 `offline` NPC mode |
+| `xuanyi-clinic` | deprecated compatibility alias，行为与 `yiwen-xinglu` 相同 |
 | `xuanyi-play` | manual、Fake、DeepSeek V0 与工程调试 CLI |
 | `xuanyi-mcp-stdio` | 本地 MCP stdio 集成 |
 | `xuanyi-m5-acceptance` | M5 确定性验收 |

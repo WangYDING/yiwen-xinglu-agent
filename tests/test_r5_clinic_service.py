@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 
 from xuanyi_npc.application.clinic import ClinicActionInput, ClinicError, ClinicService
+from xuanyi_npc.agents import DeterministicCooperativeNPC
 from xuanyi_npc.application.multicase import CaseCatalog
 from xuanyi_npc.domain.clinic import R5AcceptanceContract
 from xuanyi_npc.domain.permissions import PermissionLevel
@@ -18,6 +19,7 @@ def build_clinic(tmp_path):
         store=JsonStateStore(tmp_path), base_catalog=CaseCatalog(ROOT / "cases"),
         campaign_path=ROOT / "campaign" / "cross_episode_rules_v2.json",
         clock=FixedClock(), player_id_factory=FixedPlayerIds(), session_id_factory=FixedSessionIds(), legacy_auto_foundation=True,
+        game_npc_agent=DeterministicCooperativeNPC(),
     )
 
 

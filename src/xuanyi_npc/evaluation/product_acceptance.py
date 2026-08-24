@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse, hashlib, json, tempfile, time, tracemalloc
 from datetime import datetime, timezone
 from pathlib import Path
+from xuanyi_npc.agents import DeterministicCooperativeNPC
 from xuanyi_npc.application.clinic import ClinicService
 from xuanyi_npc.application.multicase import CaseCatalog, StartEpisodeInput, SubmitActionInput
 from xuanyi_npc.application.teaching import CreateTeachingSessionInput, TeachingRequest
@@ -34,7 +35,7 @@ def action(tool,args,index):
 
 class Harness:
     def __init__(self,root,resources):
-        self.clinic=ClinicService(store=JsonStateStore(root),base_catalog=CaseCatalog(resources.case_dir),campaign_path=resources.campaign_rules,clock=Clock(),player_id_factory=Ids("player_offline"),session_id_factory=Ids("session_offline"))
+        self.clinic=ClinicService(store=JsonStateStore(root),base_catalog=CaseCatalog(resources.case_dir),campaign_path=resources.campaign_rules,clock=Clock(),player_id_factory=Ids("player_offline"),session_id_factory=Ids("session_offline"),game_npc_agent=DeterministicCooperativeNPC())
     def player(self,name):
         player=self.clinic.create_player(name).player_summary.player_id
         for exercise in self.clinic.base_service.progression_policy.config.foundation_exercises:

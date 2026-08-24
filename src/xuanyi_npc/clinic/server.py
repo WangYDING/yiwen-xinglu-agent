@@ -15,7 +15,14 @@ from urllib.parse import parse_qs, urlencode, urlparse
 
 from pydantic import ValidationError
 
-from xuanyi_npc.agents import DeterministicFakeMentor
+from xuanyi_npc.agents import (
+    DeepSeekAdapterConfig,
+    DeepSeekChatAdapter,
+    DeepSeekConfigurationError,
+    DeterministicCooperativeNPC,
+    DeterministicFakeMentor,
+    GameNPCAgent,
+)
 from xuanyi_npc.application.clinic import ClinicActionInput, ClinicContributionInput, ClinicError, ClinicService
 from xuanyi_npc.domain.cooperation import PlayerContributionType
 from xuanyi_npc.domain.cooperative_planning import (
@@ -93,12 +100,47 @@ PLAN_EVALUATION_LABELS = {
 }
 
 
-def build_clinic_service(state_dir: Path, resources, mentor_runtime=None) -> ClinicService:
+def build_clinic_service(
+    state_dir: Path,
+    resources,
+    mentor_runtime=None,
+    *,
+    game_npc_agent,
+) -> ClinicService:
     return ClinicService(
         store=JsonStateStore(state_dir), base_catalog=CaseCatalog(resources.case_dir),
         campaign_path=resources.campaign_rules, clock=SystemEpisodeClock(), mentor_runtime=mentor_runtime,
         mentor_agent_factory=DeterministicFakeMentor,
+        game_npc_agent=game_npc_agent,
     )
+
+
+def build_game_npc(args):
+    """Build the explicitly selected production NPC mode and its owned adapter."""
+
+    if args.npc_mode == "offline":
+        return DeterministicCooperativeNPC(), None
+    if not args.confirm_paid_agent:
+        raise DeepSeekConfigurationError("LLM NPC requires explicit paid-run authorization")
+    try:
+        budget = Decimal(args.agent_budget_cny or "")
+    except InvalidOperation:
+        raise DeepSeekConfigurationError("LLM NPC budget is invalid") from None
+    if budget <= 0:
+        raise DeepSeekConfigurationError("LLM NPC budget must be positive")
+    base = DeepSeekAdapterConfig.from_env()
+    config = DeepSeekAdapterConfig.model_validate({
+        **base.model_dump(),
+        "max_output_tokens": max(base.max_output_tokens, 2048),
+        "pilot_max_cost_cny": budget,
+    })
+    adapter = DeepSeekChatAdapter(config)
+    try:
+        adapter.require_configured_model()
+    except Exception:
+        adapter.close()
+        raise
+    return GameNPCAgent(adapter), adapter
 
 
 class ClinicHTTPServer(ThreadingHTTPServer):
@@ -330,6 +372,9 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
                 "npc_tool_public":result.selected_public_target or "",
                 "npc_rationale":result.public_rationale,
                 "runtime_kind":result.runtime_kind.value,
+                "llm_attempts":str(result.decision.llm_attempts),
+                "llm_used_fallback":"1" if result.decision.used_fallback else "",
+                "llm_repair_kind":result.decision.repair_kind or "",
                 "debug_tool_name":result.selected_tool.value if result.selected_tool is not None else "",
                 "environment_feedback":result.environment_message or "",
                 "contribution_id":result.turn_id,
@@ -465,6 +510,18 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
         decision_id=query.get("decision_id","");authority_mode=query.get("authority_mode","")
         npc_tool_public=query.get("npc_tool_public","");npc_rationale=query.get("npc_rationale","")
         runtime_kind=query.get("runtime_kind","");debug_tool_name=query.get("debug_tool_name","")
+        llm_attempts=query.get("llm_attempts","");llm_used_fallback=query.get("llm_used_fallback","")=="1"
+        llm_repair_kind=query.get("llm_repair_kind","")
+        if runtime_kind=="deterministic_fallback":
+            npc_runtime_notice="离线确定性模式：本轮未调用语言模型。"
+        elif llm_used_fallback:
+            npc_runtime_notice="LLM 本轮未能产生有效决策，NPC 已安全停步，未执行工具。"
+        elif llm_repair_kind:
+            npc_runtime_notice="LLM 输出经结构化修复后通过验证。"
+        elif runtime_kind=="real_llm":
+            npc_runtime_notice="LLM Agent 已完成本轮受约束决策。"
+        else:
+            npc_runtime_notice="当前 NPC 运行状态未标识。"
         goal_changed=query.get("goal_changed","")=="1";plan_changed=query.get("plan_changed","")=="1"
         contribution_id=query.get("contribution_id","")
         memory_public_effect=query.get("memory_public_effect","")
@@ -534,13 +591,19 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
                 planning_card=f'''<section class="card npc-thinking"><h3>NPC 当前思路</h3><p><strong>当前目标：</strong>{_esc(goal.public_description)}</p><p><strong>方向：</strong>{_esc(goal_type)} · <strong>状态：</strong>{_esc(goal_status)}</p>{f'<h4>当前计划</h4><ul>{plan_items}</ul>' if plan_items else '<p>当前计划尚待形成。</p>'}{f'<p class="notice"><strong>NPC 当前准备：</strong>{_esc(current_step)}</p>' if current_step else ''}{changed_html}{memory_plan_html}{evaluation_html}<details><summary>开发信息</summary><p>goal ID：{_esc(goal.goal_id)}</p><p>goal revision：{goal.revision}</p>{plan_debug}{evaluation_debug}<p>runtime：{_esc(runtime_kind or 'unknown')}</p>{memory_debug_html}</details></section>'''
         cooperative_result=""
         if npc_reply or disposition or environment_feedback:
-            cooperative_result=f'''<section class="card"><h3>NPC 协作结果</h3>{f'<p><strong>建议评价：</strong>{_esc(disposition)} · {_esc(suggestion_explanation)}</p>' if disposition else ''}{f'<p><strong>NPC 回应：</strong>{_esc(npc_reply)}</p>' if npc_reply else ''}{memory_effect_html}{reflection_learning_html}{f'<p><strong>采取行动：</strong>{_esc(npc_tool_public)}</p>' if npc_tool_public else ''}{f'<p><strong>行动依据：</strong>{_esc(npc_rationale)}</p>' if npc_rationale else ''}{f'<p><strong>环境反馈：</strong>{_esc(environment_feedback)}</p>' if environment_feedback else ''}<details><summary>开发信息</summary><p>runtime：{_esc(runtime_kind or 'unknown')}</p><p>capability：{_esc(npc_action)}</p><p>raw tool：{_esc(debug_tool_name or 'none')}</p>{memory_debug_html}{reflection_debug_html}</details></section>'''
+            cooperative_result=f'''<section class="card"><h3>NPC 协作结果</h3><p class="notice"><strong>运行状态：</strong>{_esc(npc_runtime_notice)}</p>{f'<p><strong>建议评价：</strong>{_esc(disposition)} · {_esc(suggestion_explanation)}</p>' if disposition else ''}{f'<p><strong>NPC 回应：</strong>{_esc(npc_reply)}</p>' if npc_reply else ''}{memory_effect_html}{reflection_learning_html}{f'<p><strong>采取行动：</strong>{_esc(npc_tool_public)}</p>' if npc_tool_public else ''}{f'<p><strong>行动依据：</strong>{_esc(npc_rationale)}</p>' if npc_rationale else ''}{f'<p><strong>环境反馈：</strong>{_esc(environment_feedback)}</p>' if environment_feedback else ''}<details><summary>开发信息</summary><p>runtime：{_esc(runtime_kind or 'unknown')}</p><p>LLM attempts：{_esc(llm_attempts or 'none')}</p><p>repair：{_esc(llm_repair_kind or 'none')}</p><p>capability：{_esc(npc_action)}</p><p>raw tool：{_esc(debug_tool_name or 'none')}</p>{memory_debug_html}{reflection_debug_html}</details></section>'''
         confirmation=""
         if confirmation_id and decision_id:
             label="同意诊断提议" if authority_mode=="proposal_only" else "确认高风险处置"
             hidden=f'<input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="case_id" value="{_esc(case_id)}"><input type="hidden" name="session_id" value="{_esc(session_id)}"><input type="hidden" name="confirmation_id" value="{_esc(confirmation_id)}"><input type="hidden" name="decision_id" value="{_esc(decision_id)}">'
             confirmation=f'''<section class="card notice"><h3>需要玩家协商</h3><p>该行动尚未执行。NPC 会在你回应后依据最新案件状态再次判断。</p><form method="post" action="/cases/cooperate/respond">{hidden}<input type="hidden" name="operation_id" value="{self._token()}"><input type="hidden" name="response" value="approve"><button>{label}</button></form><form method="post" action="/cases/cooperate/respond">{hidden}<input type="hidden" name="operation_id" value="{self._token()}"><input type="hidden" name="response" value="reject"><button>拒绝并要求替代方案</button></form></section>'''
-        cooperative_form=(f'''<section class="card"><h3>与调查搭档协作</h3><form method="post" action="/cases/cooperate"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="case_id" value="{_esc(case_id)}"><input type="hidden" name="session_id" value="{_esc(session_id)}"><input type="hidden" name="operation_id" value="{self._token()}"><select name="contribution_type"><option value="suggestion">建议调查方向</option><option value="hypothesis">提出假设</option><option value="challenge">质疑 NPC</option><option value="evidence_interpretation">解释证据</option><option value="question">询问判断</option></select><textarea name="text" rows="3" required placeholder="表达你的假设或建议；NPC 会独立评价并决定具体行动。"></textarea><button>与 NPC 讨论并推进</button></form><small>你的输入是建议或判断，不会由页面直接转换为工具调用。Cooperative 主线不启用独立 Mentor teaching Agent。</small><p><a href="/cases?{urlencode({"player_id":player_id,"case_id":case_id,"session_id":session_id,"mode":"manual"})}">进入 retained manual / teaching 支线</a></p></section>''' if not manual_mode else f'<section class="card"><h3>Manual / teaching 模式（保留支线）</h3><p>这里保留旧师父教学与手动行动入口，不代表当前 Cooperative GameNPC 的主关系。</p><a href="/cases?{urlencode({"player_id":player_id,"case_id":case_id,"session_id":session_id})}">返回 cooperative 调查主线</a></section>')
+        configured_runtime=getattr(self.server.clinic_service.game_npc_agent,"runtime_kind",None)
+        configured_notice=(
+            "当前调查搭档：LLM GameNPCAgent（长期 Memory 与 Reflection 本阶段未启用）。"
+            if getattr(configured_runtime,"value",None)=="real_llm"
+            else "当前调查搭档：离线确定性 NPC（未调用语言模型）。"
+        )
+        cooperative_form=(f'''<section class="card"><h3>与调查搭档协作</h3><p class="notice">{_esc(configured_notice)}</p><form method="post" action="/cases/cooperate"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="case_id" value="{_esc(case_id)}"><input type="hidden" name="session_id" value="{_esc(session_id)}"><input type="hidden" name="operation_id" value="{self._token()}"><select name="contribution_type"><option value="suggestion">建议调查方向</option><option value="hypothesis">提出假设</option><option value="challenge">质疑 NPC</option><option value="evidence_interpretation">解释证据</option><option value="question">询问判断</option></select><textarea name="text" rows="3" required placeholder="表达你的假设或建议；NPC 会独立评价并决定具体行动。"></textarea><button>与 NPC 讨论并推进</button></form><small>你的输入是建议或判断，不会由页面直接转换为工具调用。Cooperative 主线不启用独立 Mentor teaching Agent。</small><p><a href="/cases?{urlencode({"player_id":player_id,"case_id":case_id,"session_id":session_id,"mode":"manual"})}">进入 retained manual / teaching 支线</a></p></section>''' if not manual_mode else f'<section class="card"><h3>Manual / teaching 模式（保留支线）</h3><p>这里保留旧师父教学与手动行动入口，不代表当前 Cooperative GameNPC 的主关系。</p><a href="/cases?{urlencode({"player_id":player_id,"case_id":case_id,"session_id":session_id})}">返回 cooperative 调查主线</a></section>')
         body=f'''{self._nav(player_id)}<h2>{_esc(observation.title)}</h2><p>{_esc(observation.synopsis)}</p>{cooperative_form}{planning_card}{cooperative_result}{confirmation}{chat}{drawers}'''
         if observation.can_submit_diagnosis:
             evidence = ",".join(item.clue_id for item in observation.discovered_clues)
@@ -615,11 +678,14 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
 
 
 def build_parser():
-    parser = argparse.ArgumentParser(prog="xuanyi-clinic", description="启动仅绑定 127.0.0.1 的本地异案调查入口。")
+    parser = argparse.ArgumentParser(prog="yiwen-xinglu", description="启动《异闻行录》本地异案调查入口（仅绑定 127.0.0.1）。")
     parser.add_argument("--state-dir", type=Path)
     parser.add_argument("--host", default="127.0.0.1", choices=("127.0.0.1",))
     parser.add_argument("--port", type=int, default=0)
     parser.add_argument("--mentor-mode",choices=("off","fake","deepseek"),default="fake")
+    parser.add_argument("--npc-mode",choices=("llm","offline"),default="llm")
+    parser.add_argument("--confirm-paid-agent",action="store_true")
+    parser.add_argument("--agent-budget-cny")
     parser.add_argument("--confirm-paid-run",action="store_true")
     parser.add_argument("--budget-cny")
     parser.add_argument("--dry-run",action="store_true")
@@ -654,17 +720,30 @@ def main(argv=None):
         transport=RealMentorDeepSeekTransport(SecretStr(key),ClinicMentorBudgetGuard(budget,pricing),timeout_seconds=30)
         runtime=ClinicMentorRuntime(mode,args.state_dir,transport,budget)
     elif mode is ClinicMentorMode.OFF: runtime=ClinicMentorRuntime(mode,args.state_dir)
-    with materialized_clinic_resources() as resources:
-        service = build_clinic_service(args.state_dir, resources,runtime)
-        server = ClinicHTTPServer((args.host, args.port), service)
-        host, port = server.server_address
-        print(f"异案调查入口已启动：http://{host}:{port}", flush=True)
-        try:
-            server.serve_forever(poll_interval=0.1)
-        except KeyboardInterrupt:
-            pass
-        finally:
-            server.server_close()
+    try:
+        game_npc_agent, game_npc_adapter = build_game_npc(args)
+    except Exception as exc:
+        code = getattr(exc, "code", type(exc).__name__)
+        print(f"启动失败：LLM 调查搭档不可用（{code}）。", file=sys.stderr)
+        return 2
+    try:
+        with materialized_clinic_resources() as resources:
+            service = build_clinic_service(
+                args.state_dir, resources, runtime, game_npc_agent=game_npc_agent
+            )
+            server = ClinicHTTPServer((args.host, args.port), service)
+            host, port = server.server_address
+            print(f"《异闻行录》已启动：http://{host}:{port}", flush=True)
+            print(f"NPC mode={args.npc_mode}", flush=True)
+            try:
+                server.serve_forever(poll_interval=0.1)
+            except KeyboardInterrupt:
+                pass
+            finally:
+                server.server_close()
+    finally:
+        if game_npc_adapter is not None:
+            game_npc_adapter.close()
     return 0
 
 
