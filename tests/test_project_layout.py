@@ -35,8 +35,10 @@ def test_first_time_reader_and_top_level_layout_are_explicit():
 
 def test_only_current_semantic_memory_evidence_is_retained():
     archive = ROOT / "docs" / "archive"
-    assert (archive / "M45_HOLDOUT_VALIDATION_PLAN.md").is_file()
-    assert (archive / "M45_REAL_MEMORY_VALIDATION_PLAN.md").is_file()
+    assert {path.name for path in archive.glob("*.md")} == {
+        "M45_SEMANTIC_MEMORY_EXPERIMENT.md",
+        "README.md",
+    }
     assert not (archive / "M2_EXIT_AUDIT.md").exists()
     assert not (archive / "R6_REAL_MENTOR_PILOT_V2_RESULT.md").exists()
 

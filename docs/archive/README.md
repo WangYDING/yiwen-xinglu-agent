@@ -1,5 +1,7 @@
 # Memory 实验归档
 
-本目录只保留与《异闻行录》当前长期 Memory 路径直接相关的 M4.5 BGE-M3、语义 Gold、Holdout、负结果与终止审计。
+本目录只保留与《异闻行录》当前长期 Memory 路径直接相关的最终实验总结：
 
-这些材料用于模型身份校验、检索质量回归和失败边界说明。旧导师、修习、考试、传承、DoctorAgent Pilot 与早期产品漂移材料已从当前项目删除。
+- [M4.5 语义 Memory 实验总结](M45_SEMANTIC_MEMORY_EXPERIMENT.md)
+
+阶段计划、启动停止记录和重复 Pilot 报告已经合并。冻结数据、配置与运行器继续位于 `tools/experiments/`，并由测试保护其字节身份。
