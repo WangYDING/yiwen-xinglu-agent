@@ -1,0 +1,22 @@
+{
+  "artifact_kind": "sanitized_episode_example",
+  "sample_id": "e6_success_01",
+  "case_id": "gray_hearth_inn",
+  "repeat_index": 1,
+  "turn_count": 11,
+  "terminal_status": "completed",
+  "diagnosis_correct": true,
+  "treatment_correct": true,
+  "success": true,
+  "failure_code": null,
+  "tool_call_count": 10,
+  "fallback_count": 0,
+  "repair_count": 2,
+  "confirmation_count": 2,
+  "executed_authority_violation_count": 0,
+  "memory_counts": {"candidate": 0, "selected": 0, "declared": 0, "accepted": 0},
+  "reflection_counts": {"trigger": 7, "write": 7},
+  "tokens": {"input": 133618, "output": 17885},
+  "provider_request_count": 20,
+  "estimated_cost_cny": 0.03695196
+}

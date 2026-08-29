@@ -1,0 +1,21 @@
+{
+  "artifact_kind": "sanitized_aggregate_example",
+  "benchmark_version": "agent_task_benchmark_v1",
+  "manifest_hash": "a8cc2490edfe99cfb0d096ecd44560996527bf9a02165cdfd87e63848e449270",
+  "total_episodes": 9,
+  "provider_completed_episodes": 9,
+  "provider_abort_count": 0,
+  "success_count": 8,
+  "success_rate": 0.8888888889,
+  "diagnosis_accuracy": 1.0,
+  "treatment_accuracy": 0.8888888889,
+  "executed_safety_violation_count": 0,
+  "infrastructure_failure_count": 0,
+  "repair_count": 14,
+  "fallback_count": 2,
+  "mean_turns": 11.89,
+  "total_tokens": 1403574,
+  "token_mean_per_episode": 155952.6667,
+  "estimated_cost_cny_total": 0.36987276,
+  "failure_distribution": {"max_turns_exceeded": 1}
+}

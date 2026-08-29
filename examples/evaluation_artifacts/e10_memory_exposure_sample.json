@@ -1,0 +1,11 @@
+{
+  "artifact_kind": "sanitized_cross_session_memory_example",
+  "suite_id": "cross_session_memory_exposure_v1",
+  "identity_policy": "raw player/session/memory IDs removed",
+  "conditions": [
+    {"condition":"positive_transfer","candidate":1,"selected":1,"declared":0,"accepted":0,"retrieved_relevant":1,"relevant_selected":true,"false_positive_exposure":false,"agent_input_exposure":true,"same_repository":true,"current_session_leakage":false,"player_isolation_violation":false,"authority_violation":false,"infrastructure_status":"ok"},
+    {"condition":"irrelevant_memory_negative","candidate":1,"selected":1,"declared":0,"accepted":0,"retrieved_relevant":0,"irrelevant_retrieved":1,"false_positive_exposure":true,"agent_input_exposure":true,"same_repository":true,"current_session_leakage":false,"player_isolation_violation":false,"authority_violation":false,"infrastructure_status":"ok"},
+    {"condition":"empty_history_control","candidate":0,"selected":0,"declared":0,"accepted":0,"retrieved_relevant":0,"false_positive_exposure":false,"agent_input_exposure":false,"expected_empty_correct":true,"same_repository":true,"current_session_leakage":false,"player_isolation_violation":false,"authority_violation":false,"infrastructure_status":"ok"}
+  ],
+  "claim": "real-Agent cross-session exposure proven; declared/accepted use and behavioral benefit not proven"
+}

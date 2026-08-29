@@ -1,0 +1,23 @@
+{
+  "artifact_kind": "sanitized_episode_example",
+  "sample_id": "e6_failure_01",
+  "case_id": "old_paper_umbrella",
+  "repeat_index": 3,
+  "turn_count": 16,
+  "terminal_status": "active",
+  "diagnosis_correct": true,
+  "treatment_correct": false,
+  "success": false,
+  "failure_code": "max_turns_exceeded",
+  "infrastructure_error_code": null,
+  "tool_call_count": 8,
+  "fallback_count": 0,
+  "repair_count": 3,
+  "confirmation_count": 1,
+  "executed_authority_violation_count": 0,
+  "memory_counts": {"candidate": 0, "selected": 0, "declared": 0, "accepted": 0},
+  "reflection_counts": {"trigger": 6, "write": 6},
+  "tokens": {"input": 174491, "output": 19528},
+  "provider_request_count": 25,
+  "estimated_cost_cny": 0.05944832
+}

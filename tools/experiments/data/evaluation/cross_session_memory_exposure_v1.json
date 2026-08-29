@@ -1,0 +1,31 @@
+{
+  "suite_id": "cross_session_memory_exposure_v1",
+  "evaluation_only": true,
+  "schema_version": "cross_session_memory_exposure_manifest_v1",
+  "scenarios": [
+    {
+      "scenario_id": "positive_transfer",
+      "condition": "positive_transfer",
+      "session_a_case_id": "old_paper_umbrella",
+      "session_a_investigation_id": "observe_scholar",
+      "session_b_case_id": "gray_hearth_inn",
+      "expected_relation": "Transfer the public strategy of separating ordinary fatigue from stable external evidence; never transfer an exact diagnosis."
+    },
+    {
+      "scenario_id": "irrelevant_negative",
+      "condition": "irrelevant_memory_negative",
+      "session_a_case_id": "lantern_alley_conflicting_testimony",
+      "session_a_investigation_id": "inspect_twin_lanterns",
+      "session_b_case_id": "gray_hearth_inn",
+      "expected_relation": "The public lantern-residue observation is unrelated to the target investigation and must not be accepted as used."
+    },
+    {
+      "scenario_id": "empty_history",
+      "condition": "empty_history_control",
+      "session_a_case_id": null,
+      "session_a_investigation_id": null,
+      "session_b_case_id": "gray_hearth_inn",
+      "expected_relation": "A fresh player and repository expose no historical memory."
+    }
+  ]
+}

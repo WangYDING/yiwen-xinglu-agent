@@ -1,5 +1,5 @@
-# 历史证据归档
+# Memory 实验归档
 
-本目录完整保留 M2～M6、M4.5、DoctorAgent Pilot、停止记录、负结果和旧方案。迁入归档不改变它们形成当时的事实，也不把历史工程证据解释为当前 MentorAgent 产品效果。
+本目录只保留与《异闻行录》当前长期 Memory 路径直接相关的 M4.5 BGE-M3、语义 Gold、Holdout、负结果与终止审计。
 
-历史文档中的旧路径和命令按形成时原文保留；当前入口以根目录 [`START_HERE.md`](../../START_HERE.md)、[`README.md`](../../README.md) 和 [`docs/INDEX.md`](../INDEX.md) 为准。
+这些材料用于模型身份校验、检索质量回归和失败边界说明。旧导师、修习、考试、传承、DoctorAgent Pilot 与早期产品漂移材料已从当前项目删除。

@@ -2,7 +2,7 @@
 
 ## 报告范围
 
-本报告封存 Cooperative Agent 的 M5 评测证据。这里的 M1～M5 指 Cooperation、Planning、Memory、Reflection 与 Benchmark 工作流，不是产品路线图中同名的多病例纵向切片阶段，也不是当前 MentorAgent 的产品效果评估。
+本报告记录《异闻行录》Cooperative Agent 的 M5 评测证据。M1～M5 指 Cooperation、Planning、Memory、Reflection 与 Benchmark 工作流。
 
 M5 不新增 Agent 能力。它验证已有机制在受控条件下是否产生可观察工程收益，并把模型 proposal reliability 与确定性 system safety 分开测量。证据来自 M5-1～M5-12 已完成的 deterministic paired ablations、真实模型小型 Pilot、sanitized telemetry 和失败诊断；M5-13 没有再次调用模型。
 
@@ -216,13 +216,13 @@ Paired observable difference：
 - 没有多模型比较；
 - deterministic fixtures 证明受控条件下的机制行为，不等同生产分布性能；
 - real Memory A/B 只是小样本描述性证据；
-- 本报告评测的是历史 Cooperative/DoctorAgent 工程路径，不是当前 MentorAgent 产品效果。
+- 本报告评测的是当前 Cooperative GameNPC 工程路径，不代表真人玩家收益。
 
 ## Reproducibility and preserved artifacts
 
 M5-12 的 sanitized artifacts 已长期保存：
 
-- [`m5_12_postfix_real_benchmark.json`](m5_12_postfix_real_benchmark.json)：9 个 run 的 sanitized telemetry、公开行为快照与 runner report；
+- `m5_12_postfix_real_benchmark.json`：9 个 run 的历史 sanitized telemetry、公开行为快照与 runner report；完整文件已移至本地 private research archive，不进入 public repository；
 - [`m5_12_pre_post_summary.json`](m5_12_pre_post_summary.json)：纠正后的 M5-3/M5-12 对比、Prompt Injection、Memory A/B 与 limitations 摘要。
 
 Artifacts 不含 API key、raw prompt、raw private response、hidden case truth、chain-of-thought 或 private system prompt。M5-13 未重新执行 provider calls。

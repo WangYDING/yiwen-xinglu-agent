@@ -1,0 +1,30 @@
+{
+  "benchmark_version": "agent_task_benchmark_v1",
+  "case_ids": [
+    "old_paper_umbrella",
+    "gray_hearth_inn",
+    "lantern_alley_conflicting_testimony"
+  ],
+  "allowed_repeats": [1, 3, 5],
+  "default_repeats": 3,
+  "max_turns": 16,
+  "model": "deepseek-v4-flash",
+  "temperature": 0.0,
+  "max_output_tokens": 2048,
+  "memory_mode": "semantic",
+  "reflection_mode": "enabled",
+  "approval_policy": "approve_current_owned_revision_matched_diagnosis_or_treatment_v1",
+  "success_rule_version": "completed_correct_diagnosis_resolved_treatment_v1",
+  "player_script_version": "public_state_conditional_cooperation_v1",
+  "manifest_frozen_at": "2026-08-26T00:00:00Z",
+  "runtime_hash_targets": [
+    "src/xuanyi_npc/clinic/server.py",
+    "src/xuanyi_npc/application/clinic.py",
+    "src/xuanyi_npc/application/cooperative_runtime.py",
+    "src/xuanyi_npc/agents/game_npc.py",
+    "src/xuanyi_npc/application/case_tools.py",
+    "src/xuanyi_npc/engine/case_engine.py",
+    "src/xuanyi_npc/application/game_npc_memory.py",
+    "src/xuanyi_npc/application/reflection_lifecycle.py"
+  ]
+}

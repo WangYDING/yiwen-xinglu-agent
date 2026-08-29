@@ -1,0 +1,22 @@
+{
+  "artifact_kind": "sanitized_manifest_example",
+  "benchmark_version": "agent_task_benchmark_v1",
+  "case_ids": ["old_paper_umbrella", "gray_hearth_inn", "lantern_alley_conflicting_testimony"],
+  "repeats": 3,
+  "max_turns": 16,
+  "model": "deepseek-v4-flash",
+  "temperature": 0.0,
+  "max_output_tokens": 2048,
+  "memory_mode": "semantic",
+  "reflection_mode": "enabled",
+  "approval_policy": "approve_current_owned_revision_matched_diagnosis_or_treatment_v1",
+  "success_rule_version": "completed_correct_diagnosis_resolved_treatment_v1",
+  "player_script_version": "public_state_conditional_cooperation_v1",
+  "configuration_hash": "c33fe891cb9ed533104942c88b7c2f433babfc592d2261477f26e5aea28aede7",
+  "runtime_hashes": {
+    "src/xuanyi_npc/clinic/server.py": "9f099fc12f4f8521df76d690d646bbae4353c0325b0988646880914955ad59bf",
+    "src/xuanyi_npc/application/cooperative_runtime.py": "0ca4161be7ca18dd653b9510933ad2c686188c26fac324dea94119451051f235",
+    "src/xuanyi_npc/agents/game_npc.py": "fc6f03d8d94da9c2069c41abdb0a5e0809bd6047ca1e27495172215dc9149693",
+    "src/xuanyi_npc/engine/case_engine.py": "bb84481e3d4de8d4e23d0d2c5e461b88da002d4d5313f4f24c10ad5ab4241390"
+  }
+}

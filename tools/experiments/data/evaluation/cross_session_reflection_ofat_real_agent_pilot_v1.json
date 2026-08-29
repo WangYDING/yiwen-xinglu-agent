@@ -1,0 +1,9 @@
+{
+  "pilot_id": "cross_session_reflection_ofat_real_agent_pilot_v1",
+  "model": "deepseek-v4-flash",
+  "max_output_tokens": 2048,
+  "hard_budget_cny": "0.05",
+  "memory_device": "cpu",
+  "repeats": 1,
+  "sequential_control_first": true
+}

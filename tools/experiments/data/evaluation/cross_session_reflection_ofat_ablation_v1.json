@@ -1,0 +1,10 @@
+{
+  "suite_id": "cross_session_reflection_ofat_v1",
+  "condition": "ablation",
+  "memory_mode": "semantic",
+  "reflection_mode": "disabled",
+  "scenario_id": "matched_reflection_transfer",
+  "model_placeholder": "production_agent_not_called_in_e11",
+  "memory_threshold": 0.35,
+  "player_script": "matched_public_session_a_b_v1"
+}

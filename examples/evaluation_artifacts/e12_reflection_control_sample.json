@@ -1,0 +1,14 @@
+{
+  "artifact_kind": "sanitized_reflection_control_example",
+  "suite_id": "cross_session_reflection_ofat_v1",
+  "condition": "control",
+  "memory_mode": "semantic",
+  "reflection_mode": "enabled",
+  "manifest_hash": "ef6ba3a0fc0f27804bb2e8a9926ad2ca647a524a2b4b38e3324fdea7a0fc0975",
+  "configuration_hash": "ef6ba3a0fc0f27804bb2e8a9926ad2ca647a524a2b4b38e3324fdea7a0fc0975",
+  "reflection": {"trigger_count":1,"generation_count":2,"write_count":0,"receipt_persisted":true,"indexed_count":0,"final_status":"no_write","initial_grounding_error":"required_action_evidence_missing","repair_attempted":true,"repair_succeeded":true},
+  "memory": {"ordinary_write_count":8,"reflection_derived_count":0,"declared_count":0,"accepted_count":0},
+  "provider": {"request_count":3,"input_tokens":15419,"output_tokens":1448,"estimated_cost_cny":0.0082798},
+  "safety": {"authority_violations":0,"infrastructure_failures":0,"repository_leakage":false,"player_isolation_violation":false,"current_session_leakage":false},
+  "claim": "mechanism and real generation observed; real-model derived-memory robustness and behavioral benefit not proven"
+}
