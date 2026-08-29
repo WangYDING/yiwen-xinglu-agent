@@ -8,4 +8,4 @@
 
 归契古祠以可信 Schema 声明六项必需调查要求。其中“核对被抹去的见证与原交接顺序”可由普通旧拓片调查，或权限过滤后加入的“溯契还因”调查满足。任一路径满足后，同组另一调查从公开选项消失；伪造调用会以 `investigation_requirement_already_satisfied` 零写入拒绝。未声明要求的五个病例在加载时规范化为单成员要求，原有诊断开放点不变。
 
-对应课程依次为 `cross_check_conflicting_testimony_v1`、`bounded_treatment_and_consequence_v1` 和 `integrated_causal_reasoning_v1`。课程只解释公开证据、反思、HintCard 和固定下一步，不改变病例答案与成长数值。
+对应的调查引导策略依次为 `cross_check_conflicting_testimony_v1`、`bounded_treatment_and_consequence_v1` 和 `integrated_causal_reasoning_v1`。这些策略只解释公开证据、Reflection、HintCard 和当前合法步骤，不改变病例答案或角色数值。

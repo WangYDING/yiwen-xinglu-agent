@@ -34,7 +34,6 @@ The E6 production-equivalent baseline used 3 frozen cases × 3 independent repea
 - [Task benchmark and results](task_benchmark_and_results.md): protocol, E6 results, telemetry, and claim boundaries.
 - [Memory evaluation](memory_evaluation.md): cross-session persistence, retrieval, exposure, and non-claims.
 - [Reflection evaluation](reflection_evaluation.md): deterministic mechanism proof and the bounded real-model result.
-- [Recruitment summary](../recruitment/evaluation_for_recruitment.md): concise resume and interview wording.
 - [Sanitized examples](../../examples/evaluation_artifacts/README.md): small public artifacts; complete raw artifacts remain private.
 
 ## Evidence boundaries

@@ -13,7 +13,7 @@
 ## 当前 Cooperative Agent 验证
 
 - [M5 Agent Benchmark 与失败分析](benchmarks/m5/agent_benchmark_report.md)
-- M5-12 post-fix raw artifact：已移至本地 private research archive，不进入 public repository。
+- M5-12 post-fix 完整原始材料因体积与数据边界不随仓库分发；仓库仅提供脱敏结果与可复现协议。
 - [M5-3 / M5-12 pre-post summary](benchmarks/m5/m5_12_pre_post_summary.json)
 
 M1–M5 分别覆盖 Human-Agent Cooperation、Planning/Replanning、Long-term Memory、Reflection 和 Agent Benchmark / Real LLM Validation。这是《异闻行录》自己的正式评测链。

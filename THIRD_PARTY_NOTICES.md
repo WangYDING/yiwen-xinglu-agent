@@ -1,10 +1,9 @@
 # Third-party software, service, and model notices
 
 This file records direct dependencies and optional integrations reviewed for
-the M6-P1 local release candidate on 2026-08-11. It is an attribution inventory,
-not a replacement for the upstream license texts or service terms. Transitive
-dependencies remain subject to their own terms and must be regenerated and
-rechecked at M6-P4.
+the local distribution. It is an attribution inventory, not a replacement for
+upstream license texts or service terms. Transitive dependencies remain subject
+to their own terms and should be reviewed for each release.
 
 ## Core Python dependencies
 
@@ -26,8 +25,8 @@ normal Python dependencies.
 | build | `>=1.2,<2` / `1.5.0` | MIT | <https://pypi.org/project/build/1.5.0/> |
 | wheel | `>=0.45,<1` / `0.47.0` | MIT | <https://pypi.org/project/wheel/0.47.0/> |
 
-The exact build environment and artifact identities are recorded in
-`docs/archive/M6_P1_DISTRIBUTION_VERIFICATION.md`.
+Exact dependency versions can vary within the declared project constraints and
+should be captured by the build environment used for each release.
 
 ## Optional local Embedding stack
 
@@ -37,7 +36,7 @@ not needed for manual/Fake play, MCP, or M5 acceptance.
 | Component | Optional constraint / locally verified version | License identity | Official source |
 |---|---|---|---|
 | NumPy | `2.4.6` | Compound expression recorded by PyPI metadata: BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0 | <https://pypi.org/project/numpy/2.4.6/> |
-| safetensors | `0.8.0` | Local distribution includes an upstream license file; SPDX field is absent and remains **to be rechecked at P4** | <https://pypi.org/project/safetensors/0.8.0/> |
+| safetensors | `0.8.0` | Local distribution includes the upstream license file; verify the installed distribution when preparing a release | <https://pypi.org/project/safetensors/0.8.0/> |
 | sentence-transformers | `5.7.0` | Apache-2.0 | <https://pypi.org/project/sentence-transformers/5.7.0/> |
 | PyTorch | `2.12.1` (`2.12.1+cu126` in the verified Windows environment) | BSD-3-Clause | <https://pypi.org/project/torch/2.12.1/> |
 | Transformers | `4.57.6` | Apache-2.0 | <https://pypi.org/project/transformers/4.57.6/> |
@@ -52,8 +51,8 @@ not needed for manual/Fake play, MCP, or M5 acceptance.
   `runtime_models/` directory and are **not** included in Git, wheel, or sdist.
 
 The fixed revision has no standalone `LICENSE` file in the downloaded project
-whitelist; its model-card license marker and redistribution requirements must
-be rechecked at M6-P4 before any instruction suggests redistributing weights.
+whitelist. Review the model card and applicable redistribution requirements
+before distributing model weights; this project does not distribute them.
 
 ## DeepSeek external service
 
@@ -64,8 +63,8 @@ governed by DeepSeek's current service terms, privacy terms, model availability,
 and pricing rather than this project's Apache-2.0 license.
 
 - API documentation: <https://api-docs.deepseek.com/>
-- Service terms and the right to publish experimental outputs remain **to be
-  rechecked at M6-P4** before public release.
+- Review the current service and privacy terms before publishing outputs from
+  new experiments.
 
 ## Scope boundary
 
