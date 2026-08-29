@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import ConfigDict, Field, StrictBool, ValidationError
+from pydantic import ConfigDict, Field, JsonValue, StrictBool, ValidationError
 
 from xuanyi_npc.domain import AgentAction, AgentActionType, CaseActionType, ToolName
 from xuanyi_npc.domain.base import DomainModel, Identifier, NonEmptyText
@@ -54,6 +54,26 @@ class PublicInvestigationAction(DomainModel):
     arguments: dict[Literal["investigation_id"], Identifier]
 
 
+class PublicDiagnosisAction(DomainModel):
+    """Exact public diagnosis proposal shape accepted by the same validator."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    tool_name: Literal[ToolName.SUBMIT_DIAGNOSIS] = ToolName.SUBMIT_DIAGNOSIS
+    diagnosis_id: Identifier
+    arguments: dict[str, JsonValue]
+
+
+class PublicTreatmentAction(DomainModel):
+    """Exact public treatment proposal shape accepted by the same validator."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    tool_name: Literal[ToolName.EXECUTE_TREATMENT] = ToolName.EXECUTE_TREATMENT
+    treatment_id: Identifier
+    arguments: dict[Literal["treatment_id"], Identifier]
+
+
 def project_public_investigation_actions(
     observation: CaseObservation,
 ) -> tuple[PublicInvestigationAction, ...]:
@@ -64,6 +84,40 @@ def project_public_investigation_actions(
             arguments={"investigation_id": item.investigation_id},
         )
         for item in observation.available_investigations
+    )
+
+
+def project_public_diagnosis_actions(
+    observation: CaseObservation,
+) -> tuple[PublicDiagnosisAction, ...]:
+    """Project every public candidate, never correctness or hidden case truth."""
+
+    if not observation.can_submit_diagnosis:
+        return ()
+    evidence_clue_ids = [item.clue_id for item in observation.discovered_clues]
+    return tuple(
+        PublicDiagnosisAction(
+            diagnosis_id=item.diagnosis_id,
+            arguments={
+                "diagnosis_id": item.diagnosis_id,
+                "evidence_clue_ids": evidence_clue_ids,
+            },
+        )
+        for item in observation.diagnosis_candidates
+    )
+
+
+def project_public_treatment_actions(
+    observation: CaseObservation,
+) -> tuple[PublicTreatmentAction, ...]:
+    """Project every currently public treatment, never correctness or hidden truth."""
+
+    return tuple(
+        PublicTreatmentAction(
+            treatment_id=item.treatment_id,
+            arguments={"treatment_id": item.treatment_id},
+        )
+        for item in observation.available_treatments
     )
 
 

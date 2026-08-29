@@ -17,7 +17,7 @@ class AgentMemorySourceType(str, Enum):
     DIAGNOSIS_SUBMITTED = "diagnosis_submitted"
     TREATMENT_EXECUTED = "treatment_executed"
     MEMORY_CORRECTION = "memory_correction"
-    STRUCTURED_TEACHING_FACT = "structured_teaching_fact"
+    STRUCTURED_EXPERIENCE = "structured_teaching_fact"
 
 
 class AgentMemoryItem(DomainModel):

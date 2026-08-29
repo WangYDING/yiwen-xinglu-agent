@@ -3,6 +3,7 @@
 from xuanyi_npc.application.views import CaseObservation
 from xuanyi_npc.application.action_contract import INVESTIGATION_TOOL_BY_ACTION
 from xuanyi_npc.domain.actions import ToolName
+from xuanyi_npc.domain.actions import AgentActionType
 from xuanyi_npc.domain.cases import CaseSessionStatus
 from xuanyi_npc.domain.cooperation import NPCAuthorityView, NPCCapability
 from xuanyi_npc.domain.cooperative_planning import (
@@ -13,6 +14,8 @@ from xuanyi_npc.domain.cooperative_planning import (
     AgentPlanStatus,
     GOAL_PLANNABLE_TOOLS,
     INVESTIGATION_TOOLS,
+    PlanStepIntent,
+    PlanStepStatus,
 )
 from xuanyi_npc.domain.planning_contract import (
     GameNPCTurnProposal,
@@ -36,6 +39,7 @@ class GoalPlanPolicy:
         current_plan: AgentPlan | None,
         observation: CaseObservation,
         authority_view: NPCAuthorityView,
+        pending_confirmation: bool = False,
     ) -> None:
         goal_type = self._goal_type(proposal, current_goal)
         if (
@@ -48,6 +52,37 @@ class GoalPlanPolicy:
         self._validate_goal_references(proposal, observation)
         self._validate_plan_operation(proposal, current_plan)
         self._validate_steps(proposal, goal_type, observation, authority_view)
+        self._validate_executable_step_commitment(
+            proposal, current_plan, pending_confirmation=pending_confirmation
+        )
+        self._validate_tool_decision_alignment(proposal, goal_type, current_plan)
+
+    @staticmethod
+    def _validate_executable_step_commitment(
+        proposal: GameNPCTurnProposal,
+        current_plan: AgentPlan | None,
+        *,
+        pending_confirmation: bool,
+    ) -> None:
+        """An executable active step must be acted on or explicitly changed."""
+
+        if pending_confirmation or current_plan is None or current_plan.status is not AgentPlanStatus.ACTIVE:
+            return
+        step = current_plan.steps[current_plan.current_step_index]
+        if (
+            step.status is not PlanStepStatus.ACTIVE
+            or step.suggested_tool is None
+            or step.public_target_id is None
+            or proposal.decision.action.action_type is not AgentActionType.RESPOND
+        ):
+            return
+        if proposal.goal_update.update in {GoalUpdateKind.BLOCK, GoalUpdateKind.ABANDON}:
+            return
+        if proposal.plan_update.update in {PlanUpdateKind.REVISE, PlanUpdateKind.ABANDON}:
+            return
+        raise GoalPlanPolicyError(
+            "executable active PlanStep requires its matching tool decision or explicit plan revision/block; plain RESPOND cannot keep it active"
+        )
 
     @staticmethod
     def _goal_type(
@@ -153,6 +188,20 @@ class GoalPlanPolicy:
         }
         for step in draft.steps:
             tool = step.suggested_tool
+            if (
+                step.intent is PlanStepIntent.PROPOSE_DIAGNOSIS
+                or step.capability is NPCCapability.PROPOSE_DIAGNOSIS
+            ) and tool is not ToolName.SUBMIT_DIAGNOSIS:
+                raise GoalPlanPolicyError(
+                    "propose_diagnosis PlanStep requires submit_diagnosis and a public target"
+                )
+            if (
+                step.intent is PlanStepIntent.PROPOSE_TREATMENT
+                or step.capability is NPCCapability.PROPOSE_TREATMENT
+            ) and tool is not ToolName.EXECUTE_TREATMENT:
+                raise GoalPlanPolicyError(
+                    "propose_treatment PlanStep requires execute_treatment and a public target"
+                )
             if tool is None:
                 if step.capability is NPCCapability.USE_TOOL:
                     raise GoalPlanPolicyError("use_tool step requires a suggested tool")
@@ -183,3 +232,40 @@ class GoalPlanPolicy:
             elif tool is ToolName.EXECUTE_TREATMENT:
                 if target not in public_treatments or step.capability is not NPCCapability.PROPOSE_TREATMENT:
                     raise GoalPlanPolicyError("treatment step must remain a public proposal")
+
+    @staticmethod
+    def _validate_tool_decision_alignment(
+        proposal: GameNPCTurnProposal,
+        goal_type: AgentGoalType,
+        current_plan: AgentPlan | None,
+    ) -> None:
+        """Require a model-authored proposal Plan and Decision to agree structurally."""
+
+        action = proposal.decision.action
+        contract = {
+            AgentGoalType.FORM_DIAGNOSIS: (ToolName.SUBMIT_DIAGNOSIS, "diagnosis_id", "diagnosis"),
+            AgentGoalType.SELECT_TREATMENT: (ToolName.EXECUTE_TREATMENT, "treatment_id", "treatment"),
+            AgentGoalType.DISCUSS_RISK: (ToolName.EXECUTE_TREATMENT, "treatment_id", "treatment"),
+        }.get(goal_type)
+        if contract is None or action.action_type is AgentActionType.RESPOND:
+            return
+        expected_tool, target_key, label = contract
+
+        if proposal.plan_update.update in {PlanUpdateKind.CREATE, PlanUpdateKind.REVISE}:
+            assert proposal.plan_update.draft is not None
+            step = proposal.plan_update.draft.steps[0]
+        elif proposal.plan_update.update is PlanUpdateKind.KEEP:
+            if current_plan is None or current_plan.status is not AgentPlanStatus.ACTIVE:
+                raise GoalPlanPolicyError(f"{label} decision requires an active plan step")
+            step = current_plan.steps[current_plan.current_step_index]
+        else:
+            raise GoalPlanPolicyError(f"{label} decision cannot align with an abandoned plan")
+
+        tool_call = action.tool_call
+        if tool_call is None or tool_call.name is not expected_tool:
+            raise GoalPlanPolicyError(f"{label} decision requires {expected_tool.value}")
+        target_id = tool_call.arguments.get(target_key)
+        if step.suggested_tool is not expected_tool:
+            raise GoalPlanPolicyError(f"{label} PlanStep requires {expected_tool.value}")
+        if step.public_target_id != target_id:
+            raise GoalPlanPolicyError(f"{label} PlanStep and Decision require the same public target")

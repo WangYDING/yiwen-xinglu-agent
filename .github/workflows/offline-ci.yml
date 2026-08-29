@@ -46,7 +46,7 @@ jobs:
             -c requirements\core-win-py312.txt $wheel
           Push-Location $env:RUNNER_TEMP
           try {
-            & "$verifyRoot\Scripts\python.exe" "$env:GITHUB_WORKSPACE\scripts\verify_installed_distribution.py"
+            & "$verifyRoot\Scripts\python.exe" "$env:GITHUB_WORKSPACE\tools\release\verify_installed_distribution.py"
           } finally {
             Pop-Location
           }

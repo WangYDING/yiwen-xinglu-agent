@@ -1,7 +1,0 @@
-{
-  "schema_version": "memory_gold_manifest_v1",
-  "suite_id": "m4_memory_gold_suite",
-  "scenario_input_sha256": "6d1233c6392d9f89eccf9abbc7c937a82319bb29e2591327c5e55fc51612e483",
-  "gold_expectation_sha256": "389b841f4f039c1fc076df7d9c206e6c040522bded3c471a8848ec5e8d732c49",
-  "retrieval_config_sha256": "b0afa7f9726631d5a0d9f256c3b7ce3c70692c1302e71b8a5c59299daa284b6c"
-}

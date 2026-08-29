@@ -1,29 +1,13 @@
-"""Public Agent API for the safe M2-V0 baseline."""
+"""Public Agent API for the 《异闻行录》 cooperative Game NPC."""
 
-from .action_recovery import ActionContractResolution, BoundedActionContractResolver
-from .doctor import (
-    FIXED_V0_LESSONS,
-    AgentDecision,
-    AgentRepairKind,
-    DoctorAgent,
-    DoctorAgentConfig,
-    DoctorAgentInput,
-    DoctorAgentInterface,
-    FixedV0Curriculum,
-)
 from .fake_llm import ScriptedFakeLLM
 from .game_npc import (
     GAME_NPC_M1_SYSTEM_PROMPT,
+    DeterministicCooperativeNPC,
     GameNPCAgent,
     GameNPCAgentConfig,
     GameNPCAgentInput,
     GameNPCAgentInterface,
-    DeterministicCooperativeNPC,
-)
-from .gameplay_fake import (
-    FakeReferenceScript,
-    REFERENCE_FAKE_SCRIPTS,
-    build_reference_fake_agent,
 )
 from .deepseek import (
     DeepSeekAdapterConfig,
@@ -47,106 +31,19 @@ from .deepseek import (
     DeepSeekTruncatedOutputError,
     DeepSeekUsageUnavailableError,
 )
-from .deepseek_gameplay import (
-    DeepSeekGameplayAuthorization,
-    build_authorized_deepseek_v0_agent,
-)
-from .llm import (
-    ChatMessage,
-    ChatRole,
-    LLMAdapter,
-    LLMAdapterError,
-    LLMRequest,
-    LLMResponse,
-)
-from .v1_doctor import (
-    V1_SYSTEM_PROMPT,
-    V1DoctorAgent,
-    V1DoctorAgentConfig,
-    V1DoctorAgentInput,
-    V1DoctorAgentInterface,
-    V1PromptContext,
-)
-from .mentor import (
-    DeterministicFakeMentor,
-    MentorAgent,
-    MentorAgentInput,
-    MentorAgentInterface,
-    MentorDecision,
-    RelationshipPublicView,
-    RelationshipExpressionTier,
-    RelationshipExpressionView,
-)
-from .mentor_contract import (
-    MentorActionContractError,
-    PHASE_ACTIONS,
-    validate_mentor_action,
-)
+from .llm import ChatMessage, ChatRole, LLMAdapter, LLMAdapterError, LLMRequest, LLMResponse
+from .model_usage import AgentRepairKind, ModelUsage
 
 __all__ = [
-    "ActionContractResolution",
-    "BoundedActionContractResolver",
-    "FIXED_V0_LESSONS",
-    "AgentDecision",
-    "AgentRepairKind",
-    "ChatMessage",
-    "ChatRole",
-    "DoctorAgent",
-    "DoctorAgentConfig",
-    "DoctorAgentInput",
-    "DoctorAgentInterface",
-    "FixedV0Curriculum",
-    "DeepSeekAdapterConfig",
-    "DeepSeekAdapterError",
-    "DeepSeekAuthenticationError",
-    "DeepSeekBudgetExceededError",
-    "DeepSeekChatAdapter",
-    "DeepSeekConfigurationError",
-    "DeepSeekEmptyContentError",
-    "DeepSeekInvalidJSONError",
-    "DeepSeekMissingAPIKeyError",
-    "DeepSeekModelDiscovery",
-    "DeepSeekModelUnavailableError",
-    "DeepSeekProviderError",
-    "DeepSeekRateLimitError",
-    "DeepSeekRequestBudgetGuard",
-    "DeepSeekRequestReservation",
-    "DeepSeekResponseFieldError",
-    "DeepSeekTimeoutError",
-    "DeepSeekTransportError",
-    "DeepSeekTruncatedOutputError",
-    "DeepSeekUsageUnavailableError",
-    "DeepSeekGameplayAuthorization",
-    "build_authorized_deepseek_v0_agent",
-    "LLMAdapter",
-    "LLMAdapterError",
-    "LLMRequest",
-    "LLMResponse",
-    "ScriptedFakeLLM",
-    "GAME_NPC_M1_SYSTEM_PROMPT",
-    "GameNPCAgent",
-    "GameNPCAgentConfig",
-    "GameNPCAgentInput",
-    "GameNPCAgentInterface",
-    "DeterministicCooperativeNPC",
-    "FakeReferenceScript",
-    "REFERENCE_FAKE_SCRIPTS",
-    "build_reference_fake_agent",
-    "V1_SYSTEM_PROMPT",
-    "V1DoctorAgent",
-    "V1DoctorAgentConfig",
-    "V1DoctorAgentInput",
-    "V1DoctorAgentInterface",
-    "V1PromptContext",
-    "DeterministicFakeMentor",
-    "MentorAgent",
-    "MentorAgentInput",
-    "MentorAgentInterface",
-    "MentorDecision",
-    "RelationshipPublicView",
-    "RelationshipExpressionTier",
-    "RelationshipExpressionView",
-    "MentorActionContractError",
-    "PHASE_ACTIONS",
-    "validate_mentor_action",
+    "ChatMessage", "ChatRole", "LLMAdapter", "LLMAdapterError", "LLMRequest", "LLMResponse",
+    "ScriptedFakeLLM", "GAME_NPC_M1_SYSTEM_PROMPT", "GameNPCAgent", "GameNPCAgentConfig",
+    "GameNPCAgentInput", "GameNPCAgentInterface", "DeterministicCooperativeNPC",
+    "DeepSeekAdapterConfig", "DeepSeekAdapterError", "DeepSeekAuthenticationError",
+    "DeepSeekBudgetExceededError", "DeepSeekChatAdapter", "DeepSeekConfigurationError",
+    "DeepSeekEmptyContentError", "DeepSeekInvalidJSONError", "DeepSeekMissingAPIKeyError",
+    "DeepSeekModelDiscovery", "DeepSeekModelUnavailableError", "DeepSeekProviderError",
+    "DeepSeekRateLimitError", "DeepSeekRequestBudgetGuard", "DeepSeekRequestReservation",
+    "DeepSeekResponseFieldError", "DeepSeekTimeoutError", "DeepSeekTransportError",
+    "DeepSeekTruncatedOutputError", "DeepSeekUsageUnavailableError",
+    "AgentRepairKind", "ModelUsage",
 ]

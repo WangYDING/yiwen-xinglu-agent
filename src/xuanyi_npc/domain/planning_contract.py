@@ -65,14 +65,29 @@ class PlanUpdateKind(str, Enum):
 
 
 class PlanStepDraft(DomainModel):
-    """One future candidate intent, never an executable ToolCallRequest."""
+    """One future candidate intent, never an executable ToolCallRequest.
+
+    Tool-backed proposal contract: propose_diagnosis uses submit_diagnosis and
+    a public diagnosis_id; propose_treatment uses execute_treatment and a public
+    treatment_id. Plan and same-turn Decision must reference the same target.
+    """
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    intent: PlanStepIntent
-    capability: NPCCapability
-    suggested_tool: ToolName | None = None
-    public_target_id: Identifier | None = None
+    intent: PlanStepIntent = Field(
+        description="Plan intent. propose_diagnosis requires submit_diagnosis plus a public diagnosis target; propose_treatment requires execute_treatment plus a public treatment target."
+    )
+    capability: NPCCapability = Field(
+        description="NPC capability. propose_diagnosis/propose_treatment require their matching proposal tool and public_target_id."
+    )
+    suggested_tool: ToolName | None = Field(
+        default=None,
+        description="Required as submit_diagnosis for propose_diagnosis and execute_treatment for propose_treatment; otherwise use the step tool or null for a non-tool step.",
+    )
+    public_target_id: Identifier | None = Field(
+        default=None,
+        description="For propose_diagnosis, required and must be a diagnosis_id from the public diagnosis candidates; it must equal Decision.tool_call.arguments.diagnosis_id. For propose_treatment, required and must be a public treatment_id; it must equal Decision.tool_call.arguments.treatment_id.",
+    )
     public_summary: NonEmptyText
     expected_information: ExpectedInformationKind | None = None
     completion_signal: GoalCondition
@@ -135,7 +150,16 @@ class MemoryUsageProposal(DomainModel):
 
 
 class GameNPCTurnProposal(DomainModel):
-    """One model proposal: planning intent plus exactly one M1 decision/action."""
+    """One model proposal: planning intent plus exactly one M1 decision/action.
+
+    Plan and Decision are one contract. A propose_diagnosis PlanStep must use
+    suggested_tool=submit_diagnosis and a public diagnosis candidate as
+    public_target_id. When Decision calls submit_diagnosis in the same turn,
+    its diagnosis_id must equal the resulting active PlanStep public_target_id.
+    PlanStep public_target_id must equal Decision.tool_call.arguments.diagnosis_id.
+    A propose_treatment PlanStep similarly uses execute_treatment and a public
+    treatment_id equal to the same-turn Decision treatment_id.
+    """
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 

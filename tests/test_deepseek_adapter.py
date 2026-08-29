@@ -481,6 +481,9 @@ def test_empty_final_content_is_classified() -> None:
 
     assert captured.value.usage is not None
     assert captured.value.usage.estimated_cost == Decimal("0.001004")
+    assert captured.value.failure_stage == "provider_content"
+    assert captured.value.finish_reason == "stop"
+    assert captured.value.configured_max_output_tokens == 512
 
 
 def test_length_finish_reason_is_classified_as_truncation() -> None:
@@ -498,6 +501,29 @@ def test_length_finish_reason_is_classified_as_truncation() -> None:
 
     assert captured.value.usage is not None
     assert captured.value.usage.output_tokens == 100
+    assert captured.value.failure_stage == "provider_finish"
+    assert captured.value.finish_reason == "length"
+    assert captured.value.configured_max_output_tokens == 512
+
+
+def test_abnormal_post_settlement_finish_preserves_failure_metadata() -> None:
+    payload = completion_payload()
+    payload["choices"] = [
+        {"finish_reason": "content_filter", "message": {"content": "{}"}}
+    ]
+    adapter = DeepSeekChatAdapter(
+        adapter_config(),
+        client=mock_client(lambda request: httpx.Response(200, json=payload)),
+    )
+
+    with pytest.raises(DeepSeekProviderError) as captured:
+        adapter.complete(llm_request())
+
+    assert captured.value.code == "deepseek_provider_error"
+    assert captured.value.failure_stage == "provider_finish"
+    assert captured.value.finish_reason == "content_filter"
+    assert captured.value.configured_max_output_tokens == 512
+    assert captured.value.usage is not None
 
 
 def test_missing_required_response_fields_are_classified() -> None:

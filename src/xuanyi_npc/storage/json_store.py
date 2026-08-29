@@ -11,33 +11,10 @@ from typing import TypeVar
 from pydantic import BaseModel, TypeAdapter, ValidationError
 
 from xuanyi_npc.domain.base import Identifier
-from xuanyi_npc.domain.apprenticeship import (
-    ApprenticeshipEventReplayer,
-    ApprenticeshipReplayError,
-    ApprenticeshipState,
-)
 from xuanyi_npc.domain.campaign import CampaignState
 from xuanyi_npc.domain.cases import CaseSessionState
 from xuanyi_npc.domain.cooperative_planning import CooperativeAgentState
 from xuanyi_npc.domain.player import PlayerState
-from xuanyi_npc.domain.teaching import (
-    TeachingEventReplayer,
-    TeachingReplayError,
-    TeachingSessionState,
-)
-from xuanyi_npc.domain.teaching_plan import (
-    TeachingPlanEventReplayer,
-    TeachingPlanReplayError,
-    TeachingPlanState,
-)
-from xuanyi_npc.domain.exams import ExamEventReplayer, ExamReplayError, ExamSessionState
-from xuanyi_npc.domain.permissions import (
-    PermissionEventReplayer,
-    PermissionPolicy,
-    PermissionReplayError,
-    PermissionState,
-)
-from xuanyi_npc.resources.runtime import read_runtime_text
 
 
 class StorageError(RuntimeError):
@@ -70,7 +47,25 @@ class JsonStateStore:
         return self._write("players", state.player_id, state)
 
     def load_player(self, player_id: str) -> PlayerState:
-        return self._read("players", player_id, PlayerState)
+        source = self._path("players", player_id)
+        try:
+            data = json.loads(source.read_text(encoding="utf-8"))
+        except FileNotFoundError as exc:
+            raise StateNotFoundError("players state does not exist") from exc
+        except OSError as exc:
+            raise StorageError("failed to read players state") from exc
+        except (json.JSONDecodeError, TypeError) as exc:
+            raise StateCorruptionError("players state is invalid") from exc
+
+        # Removed growth-system fields are ignored only at this persistence
+        # boundary, allowing pre-cleanup player snapshots to remain playable.
+        if isinstance(data, dict):
+            data.pop("teaching_stage", None)
+            data.pop("relationship", None)
+        try:
+            return PlayerState.model_validate(data)
+        except (ValidationError, ValueError) as exc:
+            raise StateCorruptionError("players state is invalid") from exc
 
     def save_case_session(self, state: CaseSessionState) -> Path:
         return self._write("case_sessions", state.session_id, state)
@@ -152,110 +147,6 @@ class JsonStateStore:
     def load_campaign(self, player_id: str) -> CampaignState:
         return self._read("campaigns", player_id, CampaignState)
 
-    def save_apprenticeship(self, state: ApprenticeshipState) -> Path:
-        replayed = ApprenticeshipEventReplayer().replay(state.events)
-        if replayed != state:
-            raise StateCorruptionError("apprenticeship snapshot does not match replay")
-        return self._write("apprenticeships", state.player_id, state)
-
-    def load_apprenticeship(self, player_id: str) -> ApprenticeshipState:
-        source=self._path("apprenticeships",player_id)
-        try: raw=json.loads(source.read_text(encoding="utf-8"))
-        except FileNotFoundError as exc: raise StateNotFoundError("apprenticeships state does not exist") from exc
-        except (OSError,ValueError) as exc: raise StateCorruptionError("apprenticeships state is invalid") from exc
-        migrated=False
-        if "observe_qi" not in raw.get("abilities",{}):
-            initial=raw["events"][0];initial["initial_abilities"].append({"ability_id":"observe_qi","proficiency":0,"level":"unlearned","evidence_count":0,"latest_evidence_at":None,"unlocked":False})
-            initial["schema_version"]="apprenticeship_state_v2";initial["progression_version"]="apprenticeship_progression_v2";raw["schema_version"]="apprenticeship_state_v2";raw["progression_version"]="apprenticeship_progression_v2"
-            try:
-                player=self.load_player(player_id);legacy=player.skills.get("observe_qi")
-                value=legacy.proficiency if legacy and legacy.unlocked else 0;unlocked=bool(legacy and legacy.unlocked)
-            except (StateNotFoundError,StateCorruptionError): value=0;unlocked=False
-            sources=["legacy_player_skill_observe_qi",*(f"legacy_session_{x}" for x in raw.get("completed_source_sessions",[]))] if unlocked else []
-            event={"event_type":"ability_schema_migrated","sequence":len(raw["events"])+1,"player_id":player_id,"occurred_at":raw["updated_at"],"from_schema_version":"six_ability_v1","added_ability_id":"observe_qi","migrated_proficiency":value,"migrated_unlocked":unlocked,"trusted_source_event_ids":sources,"public_description":"依据旧版玩家技能与已提交病例回执迁移观炁状态；未读取聊天内容。"}
-            raw["events"].append(event);raw["abilities"]["observe_qi"]={"ability_id":"observe_qi","proficiency":value,"level":("novice" if value>=10 else "introduced" if value else "unlearned"),"evidence_count":0,"latest_evidence_at":None,"unlocked":unlocked};raw["revision"]=len(raw["events"]);migrated=True
-        try: state=ApprenticeshipState.model_validate(raw)
-        except (ValidationError,ValueError) as exc: raise StateCorruptionError("apprenticeships state is invalid") from exc
-        try:
-            replayed = ApprenticeshipEventReplayer().replay(state.events)
-        except ApprenticeshipReplayError as exc:
-            raise StateCorruptionError("apprenticeship event stream is invalid") from exc
-        if replayed != state:
-            raise StateCorruptionError("apprenticeship snapshot does not match replay")
-        if migrated:self.save_apprenticeship(state)
-        return state
-
-    def save_teaching_session(self, state: TeachingSessionState) -> Path:
-        replayed = TeachingEventReplayer().replay(state.events)
-        if replayed != state:
-            raise StateCorruptionError("teaching snapshot does not match replay")
-        return self._write("teaching_sessions", state.teaching_session_id, state)
-
-    def load_teaching_session(self, teaching_session_id: str) -> TeachingSessionState:
-        state = self._read("teaching_sessions", teaching_session_id, TeachingSessionState)
-        try:
-            replayed = TeachingEventReplayer().replay(state.events)
-        except TeachingReplayError as exc:
-            raise StateCorruptionError("teaching event stream is invalid") from exc
-        if replayed != state:
-            raise StateCorruptionError("teaching snapshot does not match replay")
-        return state
-
-    def save_teaching_plan(self, state: TeachingPlanState) -> Path:
-        replayed = TeachingPlanEventReplayer().replay(state.events)
-        if replayed != state:
-            raise StateCorruptionError("teaching plan snapshot does not match replay")
-        return self._write("teaching_plans", state.player_id, state)
-
-    def load_teaching_plan(self, player_id: str) -> TeachingPlanState:
-        state = self._read("teaching_plans", player_id, TeachingPlanState)
-        try:
-            replayed = TeachingPlanEventReplayer().replay(state.events)
-        except TeachingPlanReplayError as exc:
-            raise StateCorruptionError("teaching plan event stream is invalid") from exc
-        if replayed != state:
-            raise StateCorruptionError("teaching plan snapshot does not match replay")
-        return state
-
-    def save_exam_session(self, state: ExamSessionState) -> Path:
-        replayed = ExamEventReplayer().replay(state.events)
-        if replayed != state:
-            raise StateCorruptionError("exam snapshot does not match replay")
-        return self._write("exam_sessions", state.exam_session_id, state)
-
-    def load_exam_session(self, exam_session_id: str) -> ExamSessionState:
-        state = self._read("exam_sessions", exam_session_id, ExamSessionState)
-        try:
-            replayed = ExamEventReplayer().replay(state.events)
-        except ExamReplayError as exc:
-            raise StateCorruptionError("exam event stream is invalid") from exc
-        if replayed != state:
-            raise StateCorruptionError("exam snapshot does not match replay")
-        return state
-
-    @staticmethod
-    def _permission_replayer() -> PermissionEventReplayer:
-        policy = PermissionPolicy.model_validate_json(
-            read_runtime_text("permissions/permission_policy_v1.json")
-        )
-        return PermissionEventReplayer(policy)
-
-    def save_permission_state(self, state: PermissionState) -> Path:
-        replayed = self._permission_replayer().replay(state.events)
-        if replayed != state:
-            raise StateCorruptionError("permission snapshot does not match replay")
-        return self._write("permissions", state.player_id, state)
-
-    def load_permission_state(self, player_id: str) -> PermissionState:
-        state = self._read("permissions", player_id, PermissionState)
-        try:
-            replayed = self._permission_replayer().replay(state.events)
-        except PermissionReplayError as exc:
-            raise StateCorruptionError("permission event stream is invalid") from exc
-        if replayed != state:
-            raise StateCorruptionError("permission snapshot does not match replay")
-        return state
-
     def list_players(self) -> tuple[PlayerState, ...]:
         """Return all validated player snapshots in stable ID order."""
 
@@ -270,57 +161,6 @@ class JsonStateStore:
         """Return all validated Campaign snapshots in stable player order."""
 
         return self._list("campaigns", CampaignState, "player_id")
-
-    def list_apprenticeships(self) -> tuple[ApprenticeshipState, ...]:
-        directory=self.root/"apprenticeships"
-        if not directory.exists():return ()
-        values=tuple(self.load_apprenticeship(path.stem) for path in sorted(directory.glob("*.json"),key=lambda item:item.name))
-        for value in values:
-            try:
-                replayed = ApprenticeshipEventReplayer().replay(value.events)
-            except ApprenticeshipReplayError as exc:
-                raise StateCorruptionError("apprenticeship event stream is invalid") from exc
-            if replayed != value:
-                raise StateCorruptionError("apprenticeship snapshot does not match replay")
-        return values
-
-    def list_teaching_sessions(self) -> tuple[TeachingSessionState, ...]:
-        values = self._list(
-            "teaching_sessions", TeachingSessionState, "teaching_session_id"
-        )
-        for value in values:
-            try:
-                replayed = TeachingEventReplayer().replay(value.events)
-            except TeachingReplayError as exc:
-                raise StateCorruptionError("teaching event stream is invalid") from exc
-            if replayed != value:
-                raise StateCorruptionError("teaching snapshot does not match replay")
-        return values
-
-    def list_teaching_plans(self) -> tuple[TeachingPlanState, ...]:
-        values = self._list("teaching_plans", TeachingPlanState, "player_id")
-        for value in values:
-            try:
-                replayed = TeachingPlanEventReplayer().replay(value.events)
-            except TeachingPlanReplayError as exc:
-                raise StateCorruptionError("teaching plan event stream is invalid") from exc
-            if replayed != value:
-                raise StateCorruptionError("teaching plan snapshot does not match replay")
-        return values
-
-    def list_exam_sessions(self) -> tuple[ExamSessionState, ...]:
-        values = self._list("exam_sessions", ExamSessionState, "exam_session_id")
-        for value in values:
-            if ExamEventReplayer().replay(value.events) != value:
-                raise StateCorruptionError("exam snapshot does not match replay")
-        return values
-
-    def list_permission_states(self) -> tuple[PermissionState, ...]:
-        values = self._list("permissions", PermissionState, "player_id")
-        for value in values:
-            if self._permission_replayer().replay(value.events) != value:
-                raise StateCorruptionError("permission snapshot does not match replay")
-        return values
 
     def _path(self, namespace: str, identifier: str) -> Path:
         try:

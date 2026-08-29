@@ -35,7 +35,7 @@ class DiagnosisReadinessPolicy(Protocol):
         """Return whether the current runtime permits a diagnosis proposal."""
 
 
-class FixedV0DiagnosisReadinessPolicy:
+class FixedDiagnosisReadinessPolicy:
     """Temporary M2 baseline: consume each currently available investigation."""
 
     policy_id = "fixed_v0"

@@ -25,6 +25,7 @@ from xuanyi_npc.domain.cooperative_planning import (
     GoalCondition,
     GoalConditionType,
     PlanEvaluationOutcome,
+    PlanEvaluationReason,
     PlanStep,
     PlanStepIntent,
     PlanStepStatus,
@@ -38,7 +39,7 @@ from xuanyi_npc.domain.planning_contract import (
     PlanUpdateKind,
     PlanUpdateProposal,
 )
-from xuanyi_npc.evaluation.m5_p4b_runner import build_service
+from tests.cooperative_runtime_helpers import build_service
 
 
 class PlanningAgent:
@@ -193,6 +194,33 @@ def test_runtime_initializes_state_executes_one_step_and_keeps_plan(tmp_path: Pa
     assert len(agent.inputs) == 1
 
 
+def test_completed_goal_is_replaced_before_next_agent_proposal(tmp_path: Path) -> None:
+    service, player_id, opened = opened_case(tmp_path)
+    first_agent = PlanningAgent([create_plan_proposal()])
+    CooperativeRuntime(service=service, agent=first_agent).handle(
+        CooperativeTurnInput(contribution=contribution(player_id, opened.session_id))
+    )
+    prior = service.state_store.load_cooperative_agent_state(opened.session_id)
+    terminal = CooperativeRuntime._complete_satisfied_goal(
+        prior, opened.observation, "turn_goal_completed"
+    ).model_copy(update={"revision": prior.revision + 1})
+    service.state_store.save_cooperative_agent_state(
+        terminal, expected_revision=prior.revision
+    )
+    next_agent = PlanningAgent([create_plan_proposal()])
+
+    result = CooperativeRuntime(service=service, agent=next_agent).handle(
+        CooperativeTurnInput(contribution=contribution(
+            player_id, opened.session_id, turn_id="turn_after_completed_goal"
+        ))
+    )
+
+    assert result.error_code != "goal_plan_policy_error"
+    assert next_agent.inputs[0].current_goal.status is AgentGoalStatus.ACTIVE
+    assert next_agent.inputs[0].current_goal.goal_id != terminal.current_goal.goal_id
+    assert next_agent.inputs[0].current_plan is None
+
+
 def test_world_commit_survives_agent_projection_failure(tmp_path: Path, monkeypatch) -> None:
     service, player_id, opened = opened_case(tmp_path)
     agent = PlanningAgent([create_plan_proposal()])
@@ -315,3 +343,165 @@ def test_goal_completion_is_deterministic_and_does_not_create_next_goal(tmp_path
     assert transition.goal.goal_id == goal.goal_id
     assert transition.goal.status is AgentGoalStatus.COMPLETED
     assert transition.plan.status is AgentPlanStatus.COMPLETED
+
+
+def _two_tool_plan_proposal(value):
+    options = value.case_observation.available_investigations[:2]
+    steps = tuple(
+        PlanStepDraft(
+            intent=PlanStepIntent.INVESTIGATE,
+            capability=NPCCapability.USE_TOOL,
+            suggested_tool=INVESTIGATION_TOOL_BY_ACTION[option.action_type],
+            public_target_id=option.investigation_id,
+            public_summary=f"执行公开调查步骤 {index + 1}。",
+            completion_signal=GoalCondition(
+                condition_type=GoalConditionType.INVESTIGATION_COMPLETED,
+                reference_id=option.investigation_id,
+            ),
+        )
+        for index, option in enumerate(options)
+    )
+    first = options[0]
+    return GameNPCTurnProposal(
+        goal_update=GoalUpdateProposal(update=GoalUpdateKind.KEEP, public_rationale="继续取证。"),
+        plan_update=PlanUpdateProposal(
+            update=PlanUpdateKind.CREATE,
+            draft=PlanDraft(steps=steps),
+            public_rationale="建立两个公开调查步骤。",
+        ),
+        decision=_tool_decision(
+            value,
+            INVESTIGATION_TOOL_BY_ACTION[first.action_type],
+            first.investigation_id,
+        ),
+    )
+
+
+def _tool_decision(value, tool, investigation_id):
+    return GameNPCDecisionProposal(
+        contribution_evaluation=PlayerContributionEvaluation(
+            contribution_id=value.player_contribution.contribution_id,
+            disposition=SuggestionDisposition.ACCEPT,
+            reason_code="public_direction",
+            explanation="依据公开状态选择行动。",
+        ),
+        capability=NPCCapability.USE_TOOL,
+        action=AgentAction(
+            action_id=f"npc_{value.turn_id}",
+            action_type=AgentActionType.USE_TOOL,
+            dialogue="执行公开调查。",
+            tool_call=ToolCallRequest(
+                name=tool,
+                arguments={"investigation_id": investigation_id},
+            ),
+            confidence=0.7,
+        ),
+        explanation="执行当前公开行动。",
+    )
+
+
+def _keep_plan_action(*, match):
+    def build(value):
+        step = value.current_plan.steps[value.current_plan.current_step_index]
+        if match:
+            target = next(
+                item for item in value.case_observation.available_investigations
+                if item.investigation_id == step.public_target_id
+            )
+        else:
+            target = next(
+                item for item in value.case_observation.available_investigations
+                if item.investigation_id != step.public_target_id
+            )
+        return GameNPCTurnProposal(
+            goal_update=GoalUpdateProposal(update=GoalUpdateKind.KEEP, public_rationale="保持目标。"),
+            plan_update=PlanUpdateProposal(update=PlanUpdateKind.KEEP, public_rationale="保持计划。"),
+            decision=_tool_decision(
+                value,
+                INVESTIGATION_TOOL_BY_ACTION[target.action_type],
+                target.investigation_id,
+            ),
+        )
+    return build
+
+
+def test_outside_plan_rejection_persists_bounded_public_recovery_and_repeats_safely(tmp_path: Path) -> None:
+    service, player_id, opened = opened_case(tmp_path)
+    agent = PlanningAgent([
+        _two_tool_plan_proposal,
+        _keep_plan_action(match=False),
+        _keep_plan_action(match=False),
+    ])
+    runtime = CooperativeRuntime(service=service, agent=agent)
+    runtime.handle(CooperativeTurnInput(contribution=contribution(player_id, opened.session_id, "turn_seed")))
+    session_before = service.state_store.load_case_session(opened.session_id)
+    plan_before = service.state_store.load_cooperative_agent_state(opened.session_id).current_plan
+
+    first = runtime.handle(CooperativeTurnInput(contribution=contribution(player_id, opened.session_id, "turn_bad_1")))
+    state_first = service.state_store.load_cooperative_agent_state(opened.session_id)
+    second = runtime.handle(CooperativeTurnInput(contribution=contribution(player_id, opened.session_id, "turn_bad_2")))
+    state_second = service.state_store.load_cooperative_agent_state(opened.session_id)
+    session_after = service.state_store.load_case_session(opened.session_id)
+
+    assert first.error_code == second.error_code == "action_outside_active_plan"
+    assert first.event_sequences == second.event_sequences == ()
+    assert first.written_memory_ids == second.written_memory_ids == ()
+    assert session_after == session_before
+    assert state_first.current_goal.status is AgentGoalStatus.ACTIVE
+    assert state_first.current_plan == plan_before
+    assert all(step.status is not PlanStepStatus.COMPLETED for step in plan_before.steps[1:])
+    assert state_first.last_plan_evaluation.reason_code is PlanEvaluationReason.ACTION_OUTSIDE_ACTIVE_PLAN
+    assert state_first.last_plan_evaluation.outcome is PlanEvaluationOutcome.REVISE_PLAN
+    assert state_first.last_plan_evaluation.observation_revision_before == session_before.revision
+    assert state_first.last_plan_evaluation.observation_revision_after == session_before.revision
+    feedback = agent.inputs[2].last_environment_feedback
+    assert feedback == state_first.last_plan_evaluation.public_summary
+    assert "未执行" in feedback and "active Plan" in feedback and "Plan revision" in feedback
+    assert plan_before.steps[1].suggested_tool.value not in feedback
+    assert plan_before.steps[1].public_target_id not in feedback
+    assert len(feedback) < 200
+    assert state_second.last_plan_evaluation.public_summary == feedback
+    assert state_second.last_plan_evaluation.evaluated_turn_id == "turn_bad_2"
+
+
+def test_matching_action_after_alignment_rejection_executes_and_overwrites_recovery(tmp_path: Path) -> None:
+    service, player_id, opened = opened_case(tmp_path)
+    agent = PlanningAgent([
+        _two_tool_plan_proposal,
+        _keep_plan_action(match=False),
+        _keep_plan_action(match=True),
+    ])
+    runtime = CooperativeRuntime(service=service, agent=agent)
+    runtime.handle(CooperativeTurnInput(contribution=contribution(player_id, opened.session_id, "turn_seed")))
+    rejected = runtime.handle(CooperativeTurnInput(contribution=contribution(player_id, opened.session_id, "turn_bad")))
+    before = service.state_store.load_case_session(opened.session_id)
+    recovered = runtime.handle(CooperativeTurnInput(contribution=contribution(player_id, opened.session_id, "turn_good")))
+    state = service.state_store.load_cooperative_agent_state(opened.session_id)
+    after = service.state_store.load_case_session(opened.session_id)
+
+    assert rejected.error_code == "action_outside_active_plan"
+    assert recovered.status.value == "action_executed"
+    assert recovered.event_sequences
+    assert after.revision == before.revision + 1
+    assert state.last_plan_evaluation.reason_code is not PlanEvaluationReason.ACTION_OUTSIDE_ACTIVE_PLAN
+
+
+def test_legal_plan_revision_after_alignment_rejection_executes_normally(tmp_path: Path) -> None:
+    service, player_id, opened = opened_case(tmp_path)
+    agent = PlanningAgent([
+        _two_tool_plan_proposal,
+        _keep_plan_action(match=False),
+        revise_plan_proposal,
+    ])
+    runtime = CooperativeRuntime(service=service, agent=agent)
+    runtime.handle(CooperativeTurnInput(contribution=contribution(player_id, opened.session_id, "turn_seed")))
+    runtime.handle(CooperativeTurnInput(contribution=contribution(player_id, opened.session_id, "turn_bad")))
+    before = service.state_store.load_case_session(opened.session_id)
+    result = runtime.handle(CooperativeTurnInput(contribution=contribution(player_id, opened.session_id, "turn_revise")))
+    state = service.state_store.load_cooperative_agent_state(opened.session_id)
+
+    assert agent.inputs[2].last_plan_evaluation.reason_code is PlanEvaluationReason.ACTION_OUTSIDE_ACTIVE_PLAN
+    assert result.status.value == "action_executed"
+    assert service.state_store.load_case_session(opened.session_id).revision == before.revision + 1
+    assert state.current_plan.revision > agent.inputs[2].current_plan.revision
+    assert state.last_plan_evaluation.reason_code is not PlanEvaluationReason.ACTION_OUTSIDE_ACTIVE_PLAN

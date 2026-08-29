@@ -1,8 +1,0 @@
-{
-  "lesson_id":"cross_check_conflicting_testimony_v1","version":"v1","title":"证词须与物证相互印证",
-  "public_description":"调查双灯巷的相悖证词，用时间、灯油、脚印和物件位置区分记忆偏差、观察角度与主动欺瞒。",
-  "learning_objectives":[{"objective_id":"compare_testimony","description":"并列记录相互冲突的证词。"},{"objective_id":"corroborate_with_traces","description":"用客观痕迹核对证词。"},{"objective_id":"separate_error_from_deceit","description":"区分记忆偏差、视角差异与主动说谎。"},{"objective_id":"protect_innocent_witness","description":"不因笃定语气惩罚无辜证人。"}],
-  "assigned_case_id":"lantern_alley_conflicting_testimony","reflection_checkpoint":{"minimum_investigation_categories":3,"question":"哪些分歧能由观察角度解释，哪些陈述又与时间和物证直接冲突？"},
-  "maximum_hints":2,"public_hint_cards":[{"hint_id":"testimony_hint_1","text":"把两份证词拆成时间、位置和动作三列，再逐项核对。"},{"hint_id":"testimony_hint_2","text":"笃定程度不是证据；注意灯油消耗、脚印方向和物件落点。"}],
-  "completion_condition":"绑定病例已完成、R1成长已投影、结构化师评与导师回顾均已保存。","fixed_next_step":"继续雾渡客船课程或完成规则指定补课。"
-}

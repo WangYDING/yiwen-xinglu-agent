@@ -96,9 +96,6 @@ def build_service(
 def create_player(service: MultiCaseEpisodeService, name: str = "R1学徒") -> str:
     result = service.create_player(CreatePlayerInput(display_name=name))
     assert result.ok and result.player_id is not None
-    for exercise in service.progression_policy.config.foundation_exercises:
-        completed=service.complete_foundation_exercise(result.player_id,exercise.exercise_id,exercise.required_action_id)
-        assert completed.ok
     return result.player_id
 
 

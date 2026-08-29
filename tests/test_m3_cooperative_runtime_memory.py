@@ -43,7 +43,7 @@ from xuanyi_npc.domain.planning_contract import (
     PlanUpdateKind,
     PlanUpdateProposal,
 )
-from xuanyi_npc.evaluation.m5_p4b_runner import build_service
+from tests.cooperative_runtime_helpers import build_service
 from xuanyi_npc.memory import (
     DeterministicFakeEmbedding,
     DeterministicMemoryProjector,

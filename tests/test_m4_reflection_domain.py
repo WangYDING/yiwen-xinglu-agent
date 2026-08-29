@@ -128,10 +128,17 @@ def test_reusable_lesson_requires_enough_provenance_and_allowed_memory_type() ->
             _evidence(EvidenceRefType.ASSESSMENT, "assessment_alpha"),
         ),
         confidence=ReflectionConfidence.HIGH,
-        proposed_memory_type=MemoryType.REFLECTION,
+        proposed_memory_type=MemoryType.LEARNING,
     )
 
-    assert lesson.proposed_memory_type is MemoryType.REFLECTION
+    assert lesson.proposed_memory_type is MemoryType.LEARNING
+
+    episodic = lesson.model_copy(
+        update={"proposed_memory_type": MemoryType.EPISODIC}
+    )
+    assert ReusableLessonProposal.model_validate(
+        episodic.model_dump()
+    ).proposed_memory_type is MemoryType.EPISODIC
 
     with pytest.raises(ValidationError):
         ReusableLessonProposal(
@@ -140,21 +147,47 @@ def test_reusable_lesson_requires_enough_provenance_and_allowed_memory_type() ->
             applicability_scope=_scope(),
             evidence_refs=(_evidence(EvidenceRefType.TOOL_OUTCOME, "tool_alpha"),),
             confidence=ReflectionConfidence.LOW,
-            proposed_memory_type=MemoryType.REFLECTION,
+                proposed_memory_type=MemoryType.LEARNING,
         )
 
-    with pytest.raises(ValidationError, match="not allowed"):
-        ReusableLessonProposal(
-            lesson_type=ReusableLessonType.OUTCOME,
-            public_safe_summary="Relationship memories are not reflection lesson write targets.",
-            applicability_scope=_scope(),
-            evidence_refs=(
-                _evidence(EvidenceRefType.TOOL_OUTCOME, "tool_alpha"),
-                _evidence(EvidenceRefType.ASSESSMENT, "assessment_alpha"),
-            ),
-            confidence=ReflectionConfidence.LOW,
-            proposed_memory_type=MemoryType.RELATIONSHIP,
-        )
+    for forbidden in (
+        MemoryType.RELATIONSHIP,
+        MemoryType.COMMITMENT,
+        MemoryType.REFLECTION,
+    ):
+        with pytest.raises(ValidationError):
+            ReusableLessonProposal(
+                lesson_type=ReusableLessonType.OUTCOME,
+                public_safe_summary="Disallowed memories are not reflection lesson write targets.",
+                applicability_scope=_scope(),
+                evidence_refs=(
+                    _evidence(EvidenceRefType.TOOL_OUTCOME, "tool_alpha"),
+                    _evidence(EvidenceRefType.ASSESSMENT, "assessment_alpha"),
+                ),
+                confidence=ReflectionConfidence.LOW,
+                proposed_memory_type=forbidden,
+            )
+
+    bypassed_field_validation = ReusableLessonProposal.model_construct(
+        **{
+            **lesson.model_dump(),
+            "proposed_memory_type": MemoryType.RELATIONSHIP,
+        }
+    )
+    with pytest.raises(ValueError, match="not allowed"):
+        bypassed_field_validation.validate_lesson()
+
+
+def test_reflection_schema_exposes_only_writable_memory_types() -> None:
+    schema = ReflectionProposal.model_json_schema()
+    lesson = schema["$defs"]["ReusableLessonProposal"]
+    memory_type = lesson["properties"]["proposed_memory_type"]
+    assert memory_type == {
+        "enum": ["episodic", "learning"],
+        "title": "Proposed Memory Type",
+        "type": "string",
+    }
+    assert memory_type.get("$ref") is None
 
 
 @pytest.mark.parametrize(
@@ -197,7 +230,7 @@ def test_lesson_type_requires_matching_evidence(
                 _evidence(bad_evidence[1], "bad_beta"),
             ),
             confidence=ReflectionConfidence.LOW,
-            proposed_memory_type=MemoryType.REFLECTION,
+            proposed_memory_type=MemoryType.LEARNING,
         )
 
     lesson = ReusableLessonProposal(
@@ -209,7 +242,7 @@ def test_lesson_type_requires_matching_evidence(
             _evidence(good_evidence[1], "good_beta"),
         ),
         confidence=ReflectionConfidence.MEDIUM,
-        proposed_memory_type=MemoryType.REFLECTION,
+        proposed_memory_type=MemoryType.LEARNING,
     )
 
     assert lesson.lesson_type is lesson_type

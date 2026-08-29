@@ -41,7 +41,7 @@ from .reflection_lifecycle import ReflectionLifecycleService
 from .diagnosis_readiness import (
     DiagnosisReadinessDecision,
     DiagnosisReadinessPolicy,
-    FixedV0DiagnosisReadinessPolicy,
+    FixedDiagnosisReadinessPolicy,
 )
 from .campaign import (
     CampaignCaseContext,
@@ -67,25 +67,7 @@ from .memory_retrieval import (
     MemoryIndexService,
     MemoryVectorRepository,
 )
-from .progression import (
-    AbilityChangeView,
-    AbilityPublicView,
-    ApprenticeshipCoordinator,
-    ApprenticeshipView,
-    ProgressionConfig,
-    ProgressionConfigError,
-    ProgressionError,
-    ProgressionPolicy,
-    ProgressionProjectionResult,
-    ProgressionProjector,
-    ProgressionSourceConflictError,
-    ProgressionSourceError,
-    ProgressionSourceMissingError,
-    RelationshipChangeView,
-)
 from .multicase import (
-    ApprenticeshipPlayerInput,
-    ApprenticeshipProjectionStatus,
     CaseCatalog,
     CaseCatalogEntry,
     CaseCatalogError,
@@ -129,33 +111,8 @@ from .views import (
     TreatmentOptionView,
     ViewContextError,
 )
-from .assessment import AssessmentBuilder, AssessmentSourceError
-from .curriculum import CurriculumCatalog, CurriculumSelector, TeachingPlanService
-from .structured_memory import (
-    StructuredMentorMemorySelector,
-    StructuredTeachingMemoryProjector,
-)
-from .teaching import (
-    CreateTeachingSessionInput,
-    MentorTeachingService,
-    SubmitReflectionInput,
-    TeachingRequest,
-    TeachingServiceResult,
-    TeachingSessionIdFactory,
-    UUIDTeachingSessionIdFactory,
-)
-from .exams import ExamService, ExamServiceError, ExamServiceResult, PublicExamQuestion, PublicExamResult
-from .permissions import PermissionAccessError, PermissionCoordinator, PermissionPublicView, RestrictedKnowledgeView
-from .inheritance import InheritanceApplicationResult, InheritanceDecisionPolicy, InheritanceService, InheritanceServiceError
-from .curriculum_v2 import CurriculumV2Recommendation, CurriculumV2Selector
 
 __all__ = [
-    "ApprenticeshipPlayerInput",
-    "ApprenticeshipProjectionStatus",
-    "AbilityChangeView",
-    "AbilityPublicView",
-    "ApprenticeshipCoordinator",
-    "ApprenticeshipView",
     "PublicActionContractError",
     "PublicActionContractValidator",
     "GoalPlanPolicy",
@@ -205,7 +162,7 @@ __all__ = [
     "RecommendedCaseView",
     "DiagnosisReadinessDecision",
     "DiagnosisReadinessPolicy",
-    "FixedV0DiagnosisReadinessPolicy",
+    "FixedDiagnosisReadinessPolicy",
     "MCPApplicationResult",
     "MCPApplicationService",
     "MemoryProjectionRepository",
@@ -229,19 +186,9 @@ __all__ = [
     "PlayerIdFactory",
     "PublicActionOptions",
     "PublicEpisodeResult",
-    "ProgressionConfig",
-    "ProgressionConfigError",
-    "ProgressionError",
-    "ProgressionPolicy",
-    "ProgressionProjectionResult",
-    "ProgressionProjector",
-    "ProgressionSourceConflictError",
-    "ProgressionSourceError",
-    "ProgressionSourceMissingError",
     "QuitInput",
     "ReconcileCampaignInput",
     "ResumeEpisodeInput",
-    "RelationshipChangeView",
     "StartEpisodeInput",
     "SubmitActionInput",
     "SessionIdFactory",
@@ -264,33 +211,4 @@ __all__ = [
     "PlayerView",
     "TreatmentOptionView",
     "ViewContextError",
-    "AssessmentBuilder",
-    "AssessmentSourceError",
-    "CurriculumCatalog",
-    "CurriculumSelector",
-    "TeachingPlanService",
-    "StructuredMentorMemorySelector",
-    "StructuredTeachingMemoryProjector",
-    "CreateTeachingSessionInput",
-    "MentorTeachingService",
-    "SubmitReflectionInput",
-    "TeachingRequest",
-    "TeachingServiceResult",
-    "TeachingSessionIdFactory",
-    "UUIDTeachingSessionIdFactory",
-    "ExamService",
-    "ExamServiceError",
-    "ExamServiceResult",
-    "PublicExamQuestion",
-    "PublicExamResult",
-    "PermissionAccessError",
-    "PermissionCoordinator",
-    "PermissionPublicView",
-    "RestrictedKnowledgeView",
-    "InheritanceApplicationResult",
-    "InheritanceDecisionPolicy",
-    "InheritanceService",
-    "InheritanceServiceError",
-    "CurriculumV2Recommendation",
-    "CurriculumV2Selector",
 ]

@@ -7,7 +7,6 @@ from xuanyi_npc.domain import (
     ExecuteTreatmentCommand,
     InvestigationCommand,
     PlayerState,
-    RelationshipState,
     SkillState,
     SubmitDiagnosisCommand,
 )
@@ -21,7 +20,7 @@ CASE_RESOURCE = "cases/old_paper_umbrella.json"
 def build_demo_player() -> PlayerState:
     return PlayerState(
         player_id="player_demo_apprentice",
-        display_name="演示学徒",
+        display_name="演示调查者",
         skills={
             "observe_form": SkillState(
                 skill_id="observe_form", proficiency=30, unlocked=True
@@ -42,7 +41,6 @@ def build_demo_player() -> PlayerState:
                 prerequisite_ids={"observe_form", "inspect_object"},
             ),
         },
-        relationship=RelationshipState(affinity=10, trust=5, recognition=0),
     )
 
 

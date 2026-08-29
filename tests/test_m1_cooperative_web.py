@@ -14,8 +14,7 @@ from xuanyi_npc.domain.cooperation import (
     PlayerContributionEvaluation,
     SuggestionDisposition,
 )
-from tests.test_r5_clinic_http import request
-from tests.test_r5_clinic_service import build_clinic
+from tests.clinic_helpers import build_clinic, request
 
 
 TOOL_BY_ACTION = {
@@ -264,7 +263,7 @@ def test_treatment_is_not_executed_until_web_confirmation(tmp_path):
     assert agent.inputs[1].player_contribution.contribution_type.value == "approval"
 
 
-def test_case_page_marks_direct_action_route_as_manual_baseline(tmp_path):
+def test_case_page_exposes_only_cooperative_product_route(tmp_path):
     clinic = build_clinic(tmp_path)
     player = clinic.create_player("兼容玩家").player_summary.player_id
     opened = clinic.start_case(player, "old_paper_umbrella")
@@ -273,46 +272,9 @@ def test_case_page_marks_direct_action_route_as_manual_baseline(tmp_path):
         _, _, page = request(server.server_address[1], "GET", f"/cases?player_id={player}&case_id={opened.case_id}&session_id={opened.session_id}")
         assert 'action="/cases/cooperate"' in page
         assert "不会由页面直接转换为工具调用" in page
-        assert "Cooperative 主线不启用独立 Mentor teaching Agent" in page
-        assert "retained manual / teaching 支线" in page
+        assert 'mode=manual' not in page
         assert "与案中人物交谈；与调查搭档协作请使用上方协作框" in page
         assert "案中人物" in page and "病例参与者" not in page
         assert "当前求医者" not in page and "向病例角色说话" not in page
     finally:
         stop(server, thread)
-
-
-def test_cooperative_mode_suppresses_independent_mentor_but_manual_keeps_it(tmp_path):
-    clinic = build_clinic(tmp_path)
-    player = clinic.create_player("主体边界玩家").player_summary.player_id
-    cooperative = clinic.start_case(player, "old_paper_umbrella", cooperative=True)
-    dialogue = clinic.case_dialogues.load(cooperative.session_id, player, cooperative.case_id)
-    assert not any(item.message_type == "mentor_private" for item in dialogue.recent_messages)
-
-    response, _ = clinic.case_chat_message(
-        player, cooperative.case_id, cooperative.session_id,
-        "op_coop_mentor_block", "@师父 请提示", allow_mentor=False,
-    )
-    assert response.speaker_id == "system"
-    assert "案中人物聊天只用于普通人物问答" in response.public_text
-
-    before = clinic.store.load_case_session(cooperative.session_id)
-    response, _ = clinic.case_chat_message(
-        player, cooperative.case_id, cooperative.session_id,
-        "op_coop_action_block", "检查纸伞上的水痕", allow_mentor=False,
-    )
-    after = clinic.store.load_case_session(cooperative.session_id)
-    assert response.speaker_id == "system"
-    assert "与调查搭档协作" in response.public_text
-    assert after.action_history == before.action_history
-
-    response, _ = clinic.case_chat_message(
-        player, cooperative.case_id, cooperative.session_id,
-        "op_coop_agent_alias_block", "@调查搭档 请继续调查", allow_mentor=False,
-    )
-    assert response.speaker_id == "system"
-    assert "本案没有这位可交谈人物" in response.public_text
-
-    manual = clinic.start_case(player, "gray_hearth_inn", cooperative=False)
-    manual_dialogue = clinic.case_dialogues.load(manual.session_id, player, manual.case_id)
-    assert any(item.message_type == "mentor_private" for item in manual_dialogue.recent_messages)

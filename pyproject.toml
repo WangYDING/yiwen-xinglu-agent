@@ -38,15 +38,9 @@ dependencies = [
 ]
 
 [project.scripts]
-xuanyi-case-demo = "xuanyi_npc.demo_case:main"
-xuanyi-deepseek-models = "xuanyi_npc.agents.deepseek_cli:model_discovery_main"
 xuanyi-mcp-stdio = "xuanyi_npc.mcp_server.stdio:main"
-xuanyi-play = "xuanyi_npc.cli.play:main"
-xuanyi-m5-acceptance = "xuanyi_npc.evaluation.m5_acceptance:main"
 xuanyi-clinic = "xuanyi_npc.clinic.server:main"
 yiwen-xinglu = "xuanyi_npc.clinic.server:main"
-xuanyi-product-acceptance = "xuanyi_npc.evaluation.product_acceptance:main"
-xuanyi-real-mentor-pilot = "xuanyi_npc.evaluation.real_mentor_pilot:main"
 
 [project.optional-dependencies]
 dev = [
@@ -73,18 +67,9 @@ include-package-data = false
     "campaign/*.json",
     "cases/*.json",
     "pilot/*.json",
-    "progression/*.json",
-    "mentor/*.json",
-    "curriculum/*.json",
-    "exams/*.json",
-    "permissions/*.json",
-    "inheritance/*.json",
     "clinic/*.json",
     "clinic/*.css",
     "clinic/*.js",
-    "release/*.json",
-    "acceptance/*.json",
-    "presentation/*.json",
 ]
 
 [tool.pytest.ini_options]

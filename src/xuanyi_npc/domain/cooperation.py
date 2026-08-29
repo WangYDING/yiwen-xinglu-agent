@@ -11,6 +11,7 @@ from .base import DomainModel, Identifier, NonEmptyText
 from .cooperative_memory import MemoryRetrievalStatus, MemoryUsageTrace
 from .reflection import ReflectionTriggerType
 from .reflection_lifecycle import ReflectionLifecycleStatus, ReflectionProposalStatus
+from .reflection_memory import ReflectionMemoryIndexStatus
 
 
 class PlayerContributionType(str, Enum):
@@ -158,6 +159,31 @@ class CooperativeTurnResult(DomainModel):
     authority_mode: AuthorityMode | None = None
     selected_tool: ToolName | None = None
     selected_public_target: NonEmptyText | None = None
+    proposed_action_type: str | None = None
+    proposed_tool: ToolName | None = None
+    proposed_public_target_id: NonEmptyText | None = None
+    proposed_argument_keys: tuple[NonEmptyText, ...] = ()
+    active_plan_step_id: Identifier | None = None
+    active_plan_step_intent: str | None = None
+    active_plan_step_tool: ToolName | None = None
+    active_plan_step_public_target_id: NonEmptyText | None = None
+    alignment_reason_code: str | None = None
+    initial_validation_error_code: str | None = None
+    initial_validation_error_path: str | None = None
+    repair_validation_error_code: str | None = None
+    repair_validation_error_path: str | None = None
+    initial_plan_first_step_intent: str | None = None
+    initial_plan_first_step_tool: str | None = None
+    initial_plan_first_step_public_target: str | None = None
+    initial_decision_action_type: str | None = None
+    initial_decision_tool: str | None = None
+    initial_decision_public_target: str | None = None
+    repaired_plan_first_step_intent: str | None = None
+    repaired_plan_first_step_tool: str | None = None
+    repaired_plan_first_step_public_target: str | None = None
+    repaired_decision_action_type: str | None = None
+    repaired_decision_tool: str | None = None
+    repaired_decision_public_target: str | None = None
     public_rationale: NonEmptyText
     pending_action: PendingActionConfirmation | None = None
     environment_message: NonEmptyText | None = None
@@ -176,6 +202,9 @@ class CooperativeTurnResult(DomainModel):
     selected_memory_count: Annotated[StrictInt, Field(ge=0)] = 0
     memory_usage_trace: MemoryUsageTrace | None = None
     public_memory_effect_summary: NonEmptyText | None = None
+    memory_commit_status: Identifier | None = None
+    memory_commit_error_code: Identifier | None = None
+    written_memory_ids: tuple[Identifier, ...] = ()
     reflection_triggered: StrictBool = False
     reflection_trigger_type: ReflectionTriggerType | None = None
     reflection_trigger_id: Identifier | None = None
@@ -186,4 +215,6 @@ class CooperativeTurnResult(DomainModel):
     reflection_write_outcomes: tuple[Identifier, ...] = ()
     reflection_rejection_reasons: tuple[Identifier, ...] = ()
     reflection_provenance_ref_ids: tuple[Identifier, ...] = ()
+    reflection_index_status: ReflectionMemoryIndexStatus | None = None
+    reflection_error_code: Identifier | None = None
     public_consolidation_summary: NonEmptyText | None = None

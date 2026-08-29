@@ -17,7 +17,6 @@ REQUIRED_RESOURCES = {
     "xuanyi_npc/resources/cases/moon_well_echo.json",
     "xuanyi_npc/resources/cases/old_paper_umbrella.json",
     "xuanyi_npc/resources/pilot/deepseek_v4_flash_pilot_policy_2026-08-07.json",
-    "xuanyi_npc/resources/release/m5_history_evidence_v1.json",
 }
 REQUIRED_LICENSE_FILES = {
     "CONTENT_RIGHTS.md",

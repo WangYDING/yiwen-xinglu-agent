@@ -239,6 +239,75 @@ def test_query_builder_uses_only_public_cooperative_state(
     assert case_definition.root_cause not in query.text
 
 
+def test_query_builder_bounds_long_context_without_validation_failure(
+    case_definition: CaseDefinition,
+    qualified_player_state: PlayerState,
+) -> None:
+    long_text = "公开语义锚点" * 140
+    observation = current_observation(case_definition, qualified_player_state).model_copy(
+        update={"synopsis": long_text, "patient_public_profile": long_text}
+    )
+    long_goal = goal().model_copy(update={"public_description": "目标优先保留" + long_text})
+    long_plan = plan().model_copy(update={
+        "steps": tuple(
+            item.model_copy(update={"public_summary": f"当前步骤优先保留{index}" + long_text})
+            for index, item in enumerate(plan().steps)
+        )
+    })
+    long_evaluation = evaluation().model_copy(
+        update={"public_summary": "低优先级评价" + long_text}
+    )
+    long_contribution = contribution().model_copy(
+        update={"public_text": "玩家当前意图优先保留" + long_text}
+    )
+
+    query = GameNPCMemoryQueryBuilder().build(
+        turn_id="turn_long_context",
+        observation=observation,
+        current_goal=long_goal,
+        current_plan=long_plan,
+        player_contribution=long_contribution,
+        last_plan_evaluation=long_evaluation,
+    )
+
+    assert len(query.text) <= 2000
+
+
+def test_query_budget_preserves_player_goal_and_current_step_before_history(
+    case_definition: CaseDefinition,
+    qualified_player_state: PlayerState,
+) -> None:
+    filler = "次要公开历史" * 180
+    value = plan().model_copy(update={
+        "steps": tuple(
+            item.model_copy(update={"public_summary": "CURRENT_STEP_SENTINEL" + filler})
+            if index == plan().current_step_index else item.model_copy(update={"public_summary": filler})
+            for index, item in enumerate(plan().steps)
+        )
+    })
+    query = GameNPCMemoryQueryBuilder(max_query_chars=1200).build(
+        turn_id="turn_priority",
+        observation=current_observation(case_definition, qualified_player_state).model_copy(
+            update={"synopsis": filler, "patient_public_profile": filler}
+        ),
+        current_goal=goal().model_copy(update={"public_description": "GOAL_SENTINEL" + filler}),
+        current_plan=value,
+        player_contribution=contribution().model_copy(
+            update={"public_text": "PLAYER_INTENT_SENTINEL" + filler}
+        ),
+        last_plan_evaluation=evaluation().model_copy(update={"public_summary": filler}),
+    )
+    payload = json.loads(query.text)
+
+    assert len(query.text) <= 1200
+    assert payload["player_belief"]["text"].startswith("PLAYER_INTENT_SENTINEL")
+    assert payload["current_goal"]["public_description"].startswith("GOAL_SENTINEL")
+    assert payload["current_plan"]["steps"][0]["public_summary"].startswith(
+        "CURRENT_STEP_SENTINEL"
+    )
+    assert "last_plan_evaluation" not in payload
+
+
 def test_retrieval_projects_bounded_context_without_raw_records(
     tmp_path: Path,
     case_definition: CaseDefinition,

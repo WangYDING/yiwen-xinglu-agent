@@ -15,7 +15,7 @@ from xuanyi_npc.domain.cases import (
     CaseSessionState,
     CaseSessionStatus,
 )
-from xuanyi_npc.domain.player import PlayerState, TeachingStage
+from xuanyi_npc.domain.player import PlayerState
 from xuanyi_npc.domain.memory import MemoryType
 
 if TYPE_CHECKING:
@@ -40,7 +40,6 @@ class PlayerView(AgentViewModel):
 
     player_id: Identifier
     display_name: NonEmptyText
-    teaching_stage: TeachingStage
     available_skills: tuple[AvailableSkillView, ...] = Field(default_factory=tuple)
 
 
@@ -150,7 +149,6 @@ class AgentContextFilter:
         return PlayerView(
             player_id=player.player_id,
             display_name=player.display_name,
-            teaching_stage=player.teaching_stage,
             available_skills=skills,
         )
 
@@ -291,7 +289,7 @@ class AgentContextFilter:
             return True
         skill = player.skills.get(skill_id)
         # Case data historically called the public 验物 ability
-        # ``inspect_object``.  AbilityState v2 uses the unified public id
+        # ``inspect_object``. The player skill map uses the unified public id
         # ``inspect_evidence``; read projections must apply the same alias as
         # the authoritative engine so stale case definitions cannot disagree
         # with execution.

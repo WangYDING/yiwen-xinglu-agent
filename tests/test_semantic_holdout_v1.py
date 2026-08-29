@@ -275,7 +275,7 @@ def test_gold_is_not_imported_by_product_retrieval_modules() -> None:
         ROOT / "src" / "xuanyi_npc" / "application" / "retrieval_query.py",
         ROOT / "src" / "xuanyi_npc" / "application" / "memory_retrieval.py",
         ROOT / "src" / "xuanyi_npc" / "memory" / "representations.py",
-        ROOT / "src" / "xuanyi_npc" / "application" / "memory_context.py",
+        ROOT / "src" / "xuanyi_npc" / "application" / "game_npc_memory.py",
     )
     for path in product_files:
         text = path.read_text(encoding="utf-8")

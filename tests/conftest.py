@@ -1,11 +1,15 @@
+import os
 from pathlib import Path
 
 import pytest
 
+
+_SRC = str(Path(__file__).parents[1] / "src")
+os.environ["PYTHONPATH"] = _SRC + os.pathsep + os.environ.get("PYTHONPATH", "")
+
 from xuanyi_npc.domain import (
     CaseDefinition,
     PlayerState,
-    RelationshipState,
     SkillState,
 )
 
@@ -54,7 +58,6 @@ def player_state() -> PlayerState:
                 prerequisite_ids={"observe_form", "inspect_object"},
             ),
         },
-        relationship=RelationshipState(affinity=10, trust=5, recognition=0),
     )
 
 

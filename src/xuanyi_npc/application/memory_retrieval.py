@@ -210,10 +210,35 @@ class MemoryIndexService:
 
     def index_player(self, *, player_id: str) -> MemoryIndexBuildResult:
         active = self._active_memories(player_id)
-        records = self._embed_memories(player_id=player_id, memories=active)
-        writes = self.repository.write_embeddings(
+        current = self.repository.list_embeddings(
             player_id=player_id,
-            records=records,
+            embedding_space_id=self.adapter.embedding_space_id,
+        )
+        by_memory_id = {record.memory_id: record for record in current}
+        reconciliation: list[AuthoritativeMemoryRecord] = []
+        for memory in active:
+            embedding = by_memory_id.get(memory.memory_id)
+            if embedding is None:
+                reconciliation.append(memory)
+                continue
+            if embedding.dimension != self.adapter.dimension:
+                raise EmbeddingContractError(
+                    "stored embedding dimension does not match adapter space"
+                )
+            if embedding.content_hash != memory.content_hash:
+                reconciliation.append(memory)
+
+        records = self._embed_memories(
+            player_id=player_id,
+            memories=tuple(reconciliation),
+        )
+        writes = (
+            self.repository.write_embeddings(
+                player_id=player_id,
+                records=records,
+            )
+            if records
+            else ()
         )
         state = self.inspect_index(player_id=player_id)
         return MemoryIndexBuildResult(

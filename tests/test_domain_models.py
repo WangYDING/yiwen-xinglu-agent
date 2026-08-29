@@ -11,20 +11,18 @@ from xuanyi_npc.domain import (
     MemoryEvent,
     MemoryType,
     PlayerState,
-    RelationshipState,
     SkillState,
     ToolName,
 )
 
 
-def test_all_seven_core_models_round_trip(
+def test_core_models_round_trip(
     player_state: PlayerState,
     case_definition: CaseDefinition,
 ) -> None:
     models = [
         player_state,
         SkillState(skill_id="observe_form", proficiency=25, unlocked=True),
-        RelationshipState(affinity=10, trust=5, recognition=0),
         case_definition,
         CaseSessionState(
             session_id="session_umbrella",
@@ -49,26 +47,6 @@ def test_all_seven_core_models_round_trip(
     for model in models:
         restored = type(model).model_validate_json(model.model_dump_json())
         assert restored == model
-
-
-@pytest.mark.parametrize("field", ["affinity", "trust", "recognition"])
-@pytest.mark.parametrize("invalid_value", [-1, 101, "10"])
-def test_relationship_rejects_out_of_range_or_coerced_values(
-    field: str,
-    invalid_value: object,
-) -> None:
-    values: dict[str, object] = {"affinity": 0, "trust": 0, "recognition": 0}
-    values[field] = invalid_value
-
-    with pytest.raises(ValidationError):
-        RelationshipState.model_validate(values)
-
-
-def test_models_reject_unknown_fields() -> None:
-    with pytest.raises(ValidationError):
-        RelationshipState.model_validate(
-            {"affinity": 0, "trust": 0, "recognition": 0, "favor": 99}
-        )
 
 
 def test_locked_skill_cannot_hold_proficiency() -> None:

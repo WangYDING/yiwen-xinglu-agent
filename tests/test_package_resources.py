@@ -10,7 +10,6 @@ import pytest
 from xuanyi_npc.application import CampaignRuleSet, CaseCatalog
 from xuanyi_npc.resources.runtime import (
     CASE_RESOURCE_NAMES,
-    M5_HISTORY_RESOURCE_NAME,
     PackageResourceError,
     materialized_runtime_resources,
     read_runtime_text,
@@ -31,8 +30,6 @@ def test_packaged_runtime_resources_load_the_three_cases_and_campaign() -> None:
         )
         rules = CampaignRuleSet.load(paths.campaign_rules, catalog)
         assert rules.config.rules_version == "cross_episode_rules_v1"
-        assert paths.m5_history_evidence.is_file()
-        assert paths.deepseek_policy.is_file()
 
 
 def test_runtime_resource_allowlist_rejects_experiments_and_traversal() -> None:
@@ -57,20 +54,6 @@ def test_package_resource_tree_is_the_single_runtime_authority() -> None:
     }
     assert not any(path.startswith("evaluation/") for path in packaged_files)
     assert not any(path.endswith((".safetensors", ".pt", ".db", ".sqlite")) for path in packaged_files)
-
-
-def test_public_history_manifest_is_strictly_sanitized() -> None:
-    payload = json.loads(read_runtime_text(f"release/{M5_HISTORY_RESOURCE_NAME}"))
-    assert payload["schema_version"] == "m5_public_history_evidence_v1"
-    serialized = json.dumps(payload, sort_keys=True)
-    for forbidden in (
-        "provider_request_id",
-        "Authorization",
-        "DEEPSEEK_API_KEY",
-        "root_cause",
-        "valid_diagnosis_ids",
-    ):
-        assert forbidden not in serialized
 
 
 def test_importing_resource_module_has_no_filesystem_or_model_side_effect(

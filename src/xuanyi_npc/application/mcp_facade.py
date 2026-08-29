@@ -29,8 +29,8 @@ from xuanyi_npc.domain.base import DomainModel, Identifier, NonEmptyText
 from xuanyi_npc.engine import CaseEngine, RuleViolation
 from xuanyi_npc.storage import JsonStateStore, StorageError
 
-from .diagnosis_readiness import FixedV0DiagnosisReadinessPolicy
-from .v0_tools import ToolCallError, V0ToolExecutor
+from .diagnosis_readiness import FixedDiagnosisReadinessPolicy
+from .case_tools import CaseToolExecutor, ToolCallError
 from .views import AgentContextFilter, CaseObservation, PlayerView, ViewContextError
 
 
@@ -104,17 +104,17 @@ class MCPApplicationService:
         case_root: Path | str,
         engine: CaseEngine | None = None,
         context_filter: AgentContextFilter | None = None,
-        diagnosis_policy: FixedV0DiagnosisReadinessPolicy | None = None,
+        diagnosis_policy: FixedDiagnosisReadinessPolicy | None = None,
         clock: MCPClock | None = None,
     ) -> None:
         self.state_store = state_store
         self.case_root = Path(case_root)
         self.context_filter = context_filter or AgentContextFilter()
-        self.tool_executor = V0ToolExecutor(
+        self.tool_executor = CaseToolExecutor(
             engine=engine or CaseEngine(),
             context_filter=self.context_filter,
             diagnosis_readiness_policy=(
-                diagnosis_policy or FixedV0DiagnosisReadinessPolicy()
+                diagnosis_policy or FixedDiagnosisReadinessPolicy()
             ),
         )
         self.clock = clock or SystemMCPClock()
@@ -127,7 +127,7 @@ class MCPApplicationService:
         session_id: str,
         tool_arguments: dict[str, JsonValue],
     ) -> MCPApplicationResult:
-        """Execute one existing V0 tool and persist only accepted event changes."""
+        """Execute one case tool and persist only accepted event changes."""
 
         try:
             player, session, case = self._load_context(player_id, session_id)

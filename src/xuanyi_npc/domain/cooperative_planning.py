@@ -234,6 +234,7 @@ class PlanEvaluationReason(str, Enum):
     GOAL_BLOCKED = "goal_blocked"
     PLAN_NO_LONGER_VALID = "plan_no_longer_valid"
     STEP_COMPLETED = "step_completed"
+    ACTION_OUTSIDE_ACTIVE_PLAN = "action_outside_active_plan"
 
 
 class PlanEvaluation(DomainModel):

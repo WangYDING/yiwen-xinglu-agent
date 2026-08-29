@@ -16,6 +16,7 @@ from xuanyi_npc.agents import (
 from xuanyi_npc.application.action_contract import INVESTIGATION_TOOL_BY_ACTION
 from xuanyi_npc.application.clinic import ClinicContributionInput, ClinicService
 from xuanyi_npc.application.multicase import CaseCatalog
+from xuanyi_npc.application.memory_retrieval import MemoryIndexService
 from xuanyi_npc.clinic import server as clinic_server
 from xuanyi_npc.clinic.server import ClinicHTTPServer
 from xuanyi_npc.domain import AgentAction, AgentActionType, ToolCallRequest
@@ -37,9 +38,10 @@ from xuanyi_npc.domain.planning_contract import (
     PlanUpdateKind,
     PlanUpdateProposal,
 )
-from xuanyi_npc.storage import JsonStateStore
+from xuanyi_npc.memory import DeterministicFakeEmbedding
+from xuanyi_npc.storage import JsonStateStore, SQLiteMemoryRepository
 from tests.r1_helpers import FixedClock, FixedPlayerIds, FixedSessionIds
-from tests.test_r5_clinic_http import request
+from tests.clinic_helpers import request
 
 
 ROOT = Path(__file__).parents[1] / "src" / "xuanyi_npc" / "resources"
@@ -58,7 +60,6 @@ def clinic_at(tmp_path, agent) -> ClinicService:
         player_id_factory=FixedPlayerIds(),
         session_id_factory=FixedSessionIds(),
         game_npc_agent=agent,
-        legacy_auto_foundation=True,
     )
 
 
@@ -155,6 +156,80 @@ def test_build_clinic_service_injects_selected_agent(tmp_path):
         game_npc_agent=agent,
     )
     assert service.game_npc_agent is agent
+
+
+def test_semantic_startup_reconciles_receipts_only_after_player_index(
+    tmp_path, qualified_player_state
+):
+    events = []
+    store = JsonStateStore(tmp_path)
+    player = qualified_player_state.model_copy(update={"player_id": "player_startup"})
+    store.save_player(player)
+
+    class Index:
+        adapter = SimpleNamespace(
+            embedding_space_id="startup_space",
+            dimension=1024,
+        )
+
+        def index_player(self, *, player_id):
+            events.append(("index", player_id))
+
+    class Reflection:
+        def reconcile_pending_indexes(self, **kwargs):
+            events.append(("receipt", kwargs))
+
+    clinic_server.build_clinic_service(
+        tmp_path,
+        SimpleNamespace(
+            case_dir=ROOT / "cases",
+            campaign_rules=ROOT / "campaign" / "cross_episode_rules_v2.json",
+        ),
+        game_npc_agent=DeterministicCooperativeNPC(),
+        store=store,
+        memory_coordinator=SimpleNamespace(),
+        memory_index_service=Index(),
+        memory_mode="semantic",
+        reflection_service=Reflection(),
+    )
+
+    assert events == [
+        ("index", "player_startup"),
+        (
+            "receipt",
+            {
+                "player_id": "player_startup",
+                "embedding_space_id": "startup_space",
+                "embedding_dimension": 1024,
+            },
+        ),
+    ]
+
+
+def test_production_reflection_reuses_agent_adapter_repository_and_index(tmp_path):
+    class Adapter:
+        def complete(self, request):
+            raise AssertionError("composition test must not call the model")
+
+    adapter = Adapter()
+    repository = SQLiteMemoryRepository(tmp_path / "memories.sqlite3")
+    repository.initialize()
+    index = MemoryIndexService(
+        repository=repository,
+        adapter=DeterministicFakeEmbedding(),
+    )
+    args = parsed_args("--npc-mode", "llm")
+    reflection = clinic_server.build_production_reflection(
+        args,
+        game_npc_adapter=adapter,
+        memory_mode="semantic",
+        memory_repository=repository,
+        memory_index_service=index,
+    )
+    assert reflection.generator.output.adapter is adapter
+    assert reflection.consolidation_service.repository is repository
+    assert reflection.consolidation_service.index_service is index
+    assert reflection.receipt_repository is repository
 
 
 def test_clinic_service_rejects_implicit_agent_mode(tmp_path):
@@ -273,7 +348,10 @@ def test_server_shutdown_closes_game_npc_adapter(tmp_path, monkeypatch):
     monkeypatch.setattr(clinic_server, "build_clinic_service", lambda *args, **kwargs: object())
     monkeypatch.setattr(clinic_server, "ClinicHTTPServer", Server)
 
-    assert clinic_server.main(["--state-dir", str(tmp_path), "--npc-mode", "llm"]) == 0
+    assert clinic_server.main([
+        "--state-dir", str(tmp_path), "--npc-mode", "llm",
+        "--memory-mode", "disabled",
+    ]) == 0
     assert closed == [True]
 
 
@@ -348,12 +426,6 @@ def test_query_exposes_distinct_llm_and_offline_statuses(tmp_path):
     assert llm_query["llm_attempts"] == "1"
 
 
-def test_mentor_mode_does_not_select_npc_mode():
-    args = parsed_args("--mentor-mode", "deepseek", "--npc-mode", "offline")
-    agent, _ = clinic_server.build_game_npc(args)
-    assert isinstance(agent, DeterministicCooperativeNPC)
-
-
 def test_player_page_distinguishes_offline_and_llm_fallback(tmp_path):
     clinic, player_id, opened = opened_clinic(tmp_path, DeterministicCooperativeNPC())
     server = ClinicHTTPServer(("127.0.0.1", 0), clinic)
@@ -389,7 +461,7 @@ def test_player_page_distinguishes_offline_and_llm_fallback(tmp_path):
         assert "LLM 本轮未能产生有效决策" in fallback_page
         assert "已安全停步，未执行工具" in fallback_page
         assert "当前调查搭档：LLM GameNPCAgent" in fallback_page
-        assert "长期 Memory 与 Reflection 本阶段未启用" in fallback_page
+        assert "长期 Memory 已禁用；Reflection 未启用" in fallback_page
     finally:
         server.shutdown()
         server.server_close()

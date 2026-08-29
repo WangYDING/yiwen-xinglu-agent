@@ -1,29 +1,19 @@
 """Player aggregate state."""
 
-from enum import Enum
 from typing import Annotated
 
 from pydantic import Field, StrictInt, model_validator
 
 from .base import DomainModel, Identifier, NonEmptyText
-from .relationship import RelationshipState
 from .skills import SkillState
-
-
-class TeachingStage(str, Enum):
-    NOVICE = "novice"
-    ADVANCED = "advanced"
-    EXAM = "exam"
 
 
 class PlayerState(DomainModel):
     player_id: Identifier
     display_name: NonEmptyText
     revision: Annotated[StrictInt, Field(ge=0)] = 0
-    teaching_stage: TeachingStage = TeachingStage.NOVICE
     handled_case_ids: frozenset[Identifier] = Field(default_factory=frozenset)
     skills: dict[Identifier, SkillState] = Field(default_factory=dict)
-    relationship: RelationshipState = Field(default_factory=RelationshipState)
 
     @model_validator(mode="after")
     def validate_skill_graph(self) -> "PlayerState":

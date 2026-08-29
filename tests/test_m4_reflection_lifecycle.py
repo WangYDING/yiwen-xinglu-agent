@@ -1,6 +1,16 @@
 from datetime import datetime, timezone
+import json
+import sqlite3
 
+import pytest
+
+from xuanyi_npc.agents.deepseek import (
+    DeepSeekEmptyContentError,
+    DeepSeekProviderError,
+    DeepSeekTruncatedOutputError,
+)
 from xuanyi_npc.agents.llm import LLMResponse
+from xuanyi_npc.agents.model_usage import ModelUsage
 from xuanyi_npc.application.reflection import (
     PublicAssessmentEvidence,
     PublicOutcomeEvidence,
@@ -40,6 +50,16 @@ class ScriptedAdapter:
         return LLMResponse(content=self.outputs.pop(0))
 
 
+class FailingAdapter:
+    def __init__(self, error):
+        self.error = error
+        self.requests = []
+
+    def complete(self, request):
+        self.requests.append(request)
+        raise self.error
+
+
 def lifecycle_trigger(kind=ReflectionTriggerType.EPISODE_COMPLETED):
     return ReflectionTrigger.create(
         trigger_type=kind,
@@ -77,7 +97,7 @@ def public_inputs(trigger):
                 public_safe_summary=outcome_ref.public_summary,
                 applicability_scope=ApplicabilityScope(
                     scope_type=ApplicabilityScopeType.SIMILAR_TOOL_OUTCOME_PATTERN,
-                    public_pattern_tags=("question_before_treatment",),
+                    public_pattern_tags=(outcome_ref.ref_id,),
                     limitation="Only when the same public evidence gap is present.",
                 ),
                 evidence_refs=(outcome_ref, assessment_ref),
@@ -125,10 +145,163 @@ def test_lifecycle_valid_proposal_writes_and_replay_does_not_attempt_again(tmp_p
     assert first.status is ReflectionLifecycleStatus.COMPLETED
     assert first.write_decisions[0].outcome is ReflectionMemoryWriteOutcome.WRITE_NEW
     assert len(first.written_memory_ids) == 1
+    assert first.generation_attempt_count == 1
+    assert first.repair_attempted is False
+    assert first.generation_failure_code is None
     assert replay.status is ReflectionLifecycleStatus.IDEMPOTENT_REPLAY
     assert replay.reflection_attempt_count == 0
     assert replay.written_memory_ids == ()
     assert len(adapter.requests) == 1
+
+
+def test_restart_replay_uses_persisted_receipt_without_llm_call(tmp_path):
+    trigger = lifecycle_trigger()
+    outcome, assessment, proposal = public_inputs(trigger)
+    repository = repository_at(tmp_path)
+    first_adapter = ScriptedAdapter(proposal.model_dump_json())
+    first = ReflectionLifecycleService(
+        generator=ReflectionProposalGenerator(first_adapter),
+        consolidation_service=ReflectionMemoryConsolidationService(repository=repository),
+        receipt_repository=repository,
+    ).process(
+        trigger=trigger,
+        player_id="player_lifecycle",
+        tool_outcomes=(outcome,),
+        assessments=(assessment,),
+    )
+    replay_adapter = ScriptedAdapter()
+    replay = ReflectionLifecycleService(
+        generator=ReflectionProposalGenerator(replay_adapter),
+        consolidation_service=ReflectionMemoryConsolidationService(repository=repository),
+        receipt_repository=repository,
+    ).process(
+        trigger=trigger,
+        player_id="player_lifecycle",
+        tool_outcomes=(outcome,),
+        assessments=(assessment,),
+    )
+    assert first.status is ReflectionLifecycleStatus.COMPLETED
+    assert replay.status is ReflectionLifecycleStatus.IDEMPOTENT_REPLAY
+    assert replay.reflection_attempt_count == 0
+    assert replay_adapter.requests == []
+    assert len(repository.list_memories(player_id="player_lifecycle")) == 1
+
+
+def test_restart_receipt_preserves_generation_failure_telemetry(tmp_path):
+    trigger = lifecycle_trigger(ReflectionTriggerType.GOAL_COMPLETED)
+    outcome, assessment, _ = public_inputs(trigger)
+    repository = repository_at(tmp_path)
+    usage = ModelUsage(
+        provider_model="DeepSeek-V4-Flash-0731",
+        input_tokens=1900,
+        output_tokens=512,
+        cache_hit_input_tokens=0,
+        cache_miss_input_tokens=1900,
+        reasoning_tokens=0,
+        latency_ms=250.0,
+        estimated_cost="0.001",
+        cost_currency="CNY",
+        provider_request_id="request_reflection_truncated",
+    )
+    error = DeepSeekTruncatedOutputError("truncated", usage=usage)
+    error.failure_stage = "provider_finish"
+    error.finish_reason = "length"
+    error.configured_max_output_tokens = 512
+    first_adapter = FailingAdapter(error)
+    first = ReflectionLifecycleService(
+        generator=ReflectionProposalGenerator(first_adapter),
+        consolidation_service=ReflectionMemoryConsolidationService(repository=repository),
+        receipt_repository=repository,
+    ).process(
+        trigger=trigger,
+        player_id="player_lifecycle",
+        tool_outcomes=(outcome,),
+        assessments=(assessment,),
+    )
+
+    with sqlite3.connect(repository.database_path) as connection:
+        stored = json.loads(
+            connection.execute(
+                "SELECT result_json FROM reflection_lifecycle_receipts WHERE trigger_id = ?",
+                (trigger.trigger_id,),
+            ).fetchone()[0]
+        )
+
+    assert first.generation_failure_stage == "provider_finish"
+    assert stored["generation_failure_code"] == "deepseek_output_truncated"
+    assert stored["generation_exception_class"] == "DeepSeekTruncatedOutputError"
+    assert stored["finish_reason"] == "length"
+    assert stored["provider_request_id"] == "request_reflection_truncated"
+    assert stored["input_tokens"] == 1900
+    assert stored["output_tokens"] == 512
+    assert stored["configured_max_output_tokens"] == 512
+    assert stored["generation_attempt_count"] == 1
+    assert stored["repair_attempted"] is False
+
+    replay = ReflectionLifecycleService(
+        generator=ReflectionProposalGenerator(ScriptedAdapter()),
+        consolidation_service=ReflectionMemoryConsolidationService(repository=repository),
+        receipt_repository=repository,
+    ).process(
+        trigger=trigger,
+        player_id="player_lifecycle",
+        tool_outcomes=(outcome,),
+        assessments=(assessment,),
+    )
+    assert replay.status is ReflectionLifecycleStatus.IDEMPOTENT_REPLAY
+    assert replay.generation_failure_code == "deepseek_output_truncated"
+    assert replay.provider_request_id == "request_reflection_truncated"
+
+
+@pytest.mark.parametrize(
+    ("error_type", "error_code", "stage", "finish_reason"),
+    (
+        (DeepSeekEmptyContentError, "deepseek_empty_content", "provider_content", "stop"),
+        (DeepSeekProviderError, "deepseek_provider_error", "provider_finish", "content_filter"),
+    ),
+)
+def test_other_post_settlement_failure_codes_are_persisted(
+    tmp_path, error_type, error_code, stage, finish_reason
+):
+    trigger = lifecycle_trigger(ReflectionTriggerType.GOAL_BLOCKED)
+    outcome, assessment, _ = public_inputs(trigger)
+    repository = repository_at(tmp_path)
+    usage = ModelUsage(
+        provider_model="DeepSeek-V4-Flash-0731",
+        input_tokens=800,
+        output_tokens=0,
+        cache_hit_input_tokens=0,
+        cache_miss_input_tokens=800,
+        reasoning_tokens=0,
+        latency_ms=100.0,
+        estimated_cost="0.0001",
+        cost_currency="CNY",
+        provider_request_id="request_other_failure",
+    )
+    error = error_type("post-settlement failure", usage=usage)
+    error.failure_stage = stage
+    error.finish_reason = finish_reason
+    error.configured_max_output_tokens = 512
+    ReflectionLifecycleService(
+        generator=ReflectionProposalGenerator(FailingAdapter(error)),
+        consolidation_service=ReflectionMemoryConsolidationService(repository=repository),
+        receipt_repository=repository,
+    ).process(
+        trigger=trigger,
+        player_id="player_lifecycle",
+        tool_outcomes=(outcome,),
+        assessments=(assessment,),
+    )
+    with sqlite3.connect(repository.database_path) as connection:
+        stored = json.loads(
+            connection.execute(
+                "SELECT result_json FROM reflection_lifecycle_receipts WHERE trigger_id = ?",
+                (trigger.trigger_id,),
+            ).fetchone()[0]
+        )
+    assert stored["generation_failure_code"] == error_code
+    assert stored["generation_failure_stage"] == stage
+    assert stored["finish_reason"] == finish_reason
 
 
 def test_lifecycle_invalid_repairs_once_then_writes(tmp_path):
@@ -162,8 +335,53 @@ def test_lifecycle_failed_repair_is_safe_fallback_without_write(tmp_path):
         assessments=(assessment,),
     )
     assert result.status is ReflectionLifecycleStatus.FALLBACK
+    assert result.repair_attempted is True
+    assert result.repair_succeeded is False
+    assert result.repaired is False
     assert result.written_memory_ids == ()
     assert repository.list_memories(player_id="player_lifecycle") == ()
+
+
+def test_restart_receipt_preserves_both_validation_attempts(tmp_path):
+    trigger = lifecycle_trigger(ReflectionTriggerType.GOAL_COMPLETED)
+    outcome, assessment, valid = public_inputs(trigger)
+    invalid = valid.model_copy(update={"trigger_id": "rtr_wrong"})
+    lesson = valid.reusable_lesson_candidates[0]
+    invalid_scope = lesson.applicability_scope.model_copy(
+        update={"public_pattern_tags": ("invented_tag",)}
+    )
+    repair_lesson = lesson.model_copy(update={"applicability_scope": invalid_scope})
+    repair_invalid = valid.model_copy(update={"reusable_lesson_candidates": (repair_lesson,)})
+    repository = repository_at(tmp_path)
+    first = ReflectionLifecycleService(
+        generator=ReflectionProposalGenerator(
+            ScriptedAdapter(invalid.model_dump_json(), repair_invalid.model_dump_json())
+        ),
+        consolidation_service=ReflectionMemoryConsolidationService(repository=repository),
+        receipt_repository=repository,
+    ).process(
+        trigger=trigger,
+        player_id="player_lifecycle",
+        tool_outcomes=(outcome,),
+        assessments=(assessment,),
+    )
+    replay = ReflectionLifecycleService(
+        generator=ReflectionProposalGenerator(ScriptedAdapter()),
+        consolidation_service=ReflectionMemoryConsolidationService(repository=repository),
+        receipt_repository=repository,
+    ).process(
+        trigger=trigger,
+        player_id="player_lifecycle",
+        tool_outcomes=(outcome,),
+        assessments=(assessment,),
+    )
+    assert first.repair_attempted is True
+    assert first.repair_succeeded is False
+    assert len(first.generation_attempts) == 2
+    assert first.generation_attempts[0].failure_code == "trigger_id_mismatch"
+    assert first.generation_attempts[1].failure_code == "lesson_scope_invalid"
+    assert replay.status is ReflectionLifecycleStatus.IDEMPOTENT_REPLAY
+    assert replay.generation_attempts == first.generation_attempts
 
 
 def test_weak_lesson_is_rejected_and_metrics_treat_rejection_as_auditable(tmp_path):

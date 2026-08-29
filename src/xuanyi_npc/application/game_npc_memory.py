@@ -26,7 +26,7 @@ from xuanyi_npc.memory.contracts import (
     InvestigationPublicPayload,
     MemoryStatus,
     PublicMemoryPayload,
-    StructuredTeachingPublicPayload,
+    StructuredExperiencePublicPayload,
     TreatmentPublicPayload,
     VerifiedMemorySource,
 )
@@ -35,6 +35,7 @@ from xuanyi_npc.memory.embeddings import InternalMemorySearchHit, MemoryRetrieva
 
 GAME_NPC_MEMORY_QUERY_TEMPLATE_VERSION = "game_npc_memory_query_v1"
 GAME_NPC_MEMORY_PROJECTION_VERSION = "game_npc_memory_projection_v1"
+GAME_NPC_MEMORY_QUERY_MAX_CHARS = 2000
 _WHITESPACE = re.compile(r"\s+")
 
 
@@ -78,6 +79,11 @@ class GameNPCMemoryRetrievalConfig(DomainModel):
 class GameNPCMemoryQueryBuilder:
     """Build a public-only retrieval query from current cooperative state."""
 
+    def __init__(self, *, max_query_chars: int = GAME_NPC_MEMORY_QUERY_MAX_CHARS) -> None:
+        if max_query_chars < 1200 or max_query_chars > GAME_NPC_MEMORY_QUERY_MAX_CHARS:
+            raise ValueError("memory query character budget is outside the supported range")
+        self.max_query_chars = max_query_chars
+
     def build(
         self,
         *,
@@ -88,47 +94,34 @@ class GameNPCMemoryQueryBuilder:
         player_contribution: PlayerContribution | None,
         last_plan_evaluation: PlanEvaluation | None,
     ) -> GameNPCMemoryQuery:
+        current_step = None
+        if current_plan is not None:
+            item = current_plan.steps[current_plan.current_step_index]
+            current_step = {
+                "intent": item.intent.value,
+                "capability": item.capability.value,
+                "suggested_tool": (
+                    item.suggested_tool.value if item.suggested_tool is not None else None
+                ),
+                "public_target_id": item.public_target_id,
+                "public_summary": _bounded_query_text(item.public_summary, 120),
+                "status": item.status.value,
+            }
+        # Required semantic anchors are individually bounded and always retained.
         payload = {
             "template_version": GAME_NPC_MEMORY_QUERY_TEMPLATE_VERSION,
             "case": {
                 "case_id": observation.case_id,
-                "title": observation.title,
-                "synopsis": observation.synopsis,
-                "patient_profile": observation.patient_public_profile,
+                "title": _bounded_query_text(observation.title, 160),
                 "session_status": observation.session_status.value,
                 "session_revision": observation.session_revision,
             },
-            "discovered_clues": [
-                {"clue_id": item.clue_id, "description": item.description}
-                for item in observation.discovered_clues
-            ],
-            "available_investigations": [
-                {
-                    "investigation_id": item.investigation_id,
-                    "action_type": item.action_type.value,
-                    "target_id": item.target_id,
-                    "public_description": item.public_description,
-                }
-                for item in observation.available_investigations
-            ],
-            "diagnosis_candidates": [
-                {
-                    "diagnosis_id": item.diagnosis_id,
-                    "public_description": item.public_description,
-                }
-                for item in observation.diagnosis_candidates
-            ],
-            "available_treatments": [
-                {
-                    "treatment_id": item.treatment_id,
-                    "public_description": item.public_description,
-                }
-                for item in observation.available_treatments
-            ],
             "current_goal": (
                 {
                     "goal_type": current_goal.goal_type.value,
-                    "public_description": current_goal.public_description,
+                    "public_description": _bounded_query_text(
+                        current_goal.public_description, 120
+                    ),
                     "status": current_goal.status.value,
                     "priority": current_goal.priority,
                 }
@@ -139,21 +132,7 @@ class GameNPCMemoryQueryBuilder:
                 {
                     "status": current_plan.status.value,
                     "current_step_index": current_plan.current_step_index,
-                    "steps": [
-                        {
-                            "intent": item.intent.value,
-                            "capability": item.capability.value,
-                            "suggested_tool": (
-                                item.suggested_tool.value
-                                if item.suggested_tool is not None
-                                else None
-                            ),
-                            "public_target_id": item.public_target_id,
-                            "public_summary": item.public_summary,
-                            "status": item.status.value,
-                        }
-                        for item in current_plan.steps
-                    ],
+                    "steps": [current_step],
                 }
                 if current_plan is not None
                 else None
@@ -161,23 +140,63 @@ class GameNPCMemoryQueryBuilder:
             "player_belief": (
                 {
                     "contribution_type": player_contribution.contribution_type.value,
-                    "text": player_contribution.public_text,
+                    "text": _bounded_query_text(player_contribution.public_text, 160),
                 }
                 if player_contribution is not None
                 else None
             ),
-            "last_plan_evaluation": (
+        }
+        optional_fields = (
+            ("case_synopsis", _bounded_query_text(observation.synopsis, 240)),
+            ("patient_profile", _bounded_query_text(observation.patient_public_profile, 200)),
+            ("discovered_clues", [
+                {"clue_id": item.clue_id, "description": _bounded_query_text(item.description, 160)}
+                for item in observation.discovered_clues[-3:]
+            ]),
+            ("available_investigations", [
+                {
+                    "investigation_id": item.investigation_id,
+                    "action_type": item.action_type.value,
+                    "public_description": _bounded_query_text(item.public_description, 120),
+                }
+                for item in observation.available_investigations[:3]
+            ]),
+            ("diagnosis_candidates", [
+                {"diagnosis_id": item.diagnosis_id, "public_description": _bounded_query_text(item.public_description, 120)}
+                for item in observation.diagnosis_candidates[:2]
+            ]),
+            ("available_treatments", [
+                {"treatment_id": item.treatment_id, "public_description": _bounded_query_text(item.public_description, 120)}
+                for item in observation.available_treatments[:2]
+            ]),
+            ("last_plan_evaluation", (
                 {
                     "outcome": last_plan_evaluation.outcome.value,
                     "reason_code": last_plan_evaluation.reason_code.value,
-                    "public_summary": last_plan_evaluation.public_summary,
+                    "public_summary": _bounded_query_text(last_plan_evaluation.public_summary, 160),
                 }
-                if last_plan_evaluation is not None
-                else None
-            ),
-        }
-        text = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+                if last_plan_evaluation is not None else None
+            )),
+        )
+        for key, value in optional_fields:
+            candidate = {**payload, key: value}
+            if len(_query_json(candidate)) <= self.max_query_chars:
+                payload = candidate
+        text = _query_json(payload)
+        if len(text) > self.max_query_chars:
+            raise AssertionError("required memory query anchors exceed the configured budget")
         return GameNPCMemoryQuery(query_id=f"memory_query_{turn_id}", text=text)
+
+
+def _bounded_query_text(value: str, max_chars: int) -> str:
+    normalized = _WHITESPACE.sub(" ", value).strip()
+    if len(normalized) <= max_chars:
+        return normalized
+    return normalized[: max_chars - 1].rstrip() + "…"
+
+
+def _query_json(payload: dict[str, object]) -> str:
+    return json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
 
 
 @dataclass(frozen=True)
@@ -393,7 +412,7 @@ def _payload_summary(payload: PublicMemoryPayload, *, fallback: str) -> str:
         return f"过去病例《{payload.case_title}》中提交过诊断假设：{payload.public_hypothesis_description}，{suffix}。"
     if isinstance(payload, TreatmentPublicPayload):
         return f"过去病例《{payload.case_title}》中执行过处置：{payload.public_action_description}，公开结果：{payload.public_result}。"
-    if isinstance(payload, StructuredTeachingPublicPayload):
+    if isinstance(payload, StructuredExperiencePublicPayload):
         return payload.public_summary
     return fallback
 
@@ -404,13 +423,13 @@ def _payload_case_id(payload: PublicMemoryPayload) -> str | None:
         (InvestigationPublicPayload, DiagnosisPublicPayload, TreatmentPublicPayload),
     ):
         return payload.case_id
-    if isinstance(payload, StructuredTeachingPublicPayload):
+    if isinstance(payload, StructuredExperiencePublicPayload):
         return payload.source_case_id
     return None
 
 
 def _reason_code(payload: PublicMemoryPayload) -> str:
-    if isinstance(payload, StructuredTeachingPublicPayload):
+    if isinstance(payload, StructuredExperiencePublicPayload):
         return payload.reason_code
     return payload.payload_type
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sqlite3
+import struct
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -14,6 +15,7 @@ from xuanyi_npc.memory import (
     DerivedEmbeddingRecord,
     EmbeddedItem,
     EmbeddingBatchResult,
+    EmbeddingContractError,
     EmbeddingRequest,
     EmbeddingSpaceMismatchError,
     EmbeddingWriteDisposition,
@@ -48,9 +50,11 @@ class ConstantEmbedding:
 
     def __init__(self) -> None:
         self.calls = 0
+        self.requests: list[EmbeddingRequest] = []
 
     def embed(self, request: EmbeddingRequest) -> EmbeddingBatchResult:
         self.calls += 1
+        self.requests.append(request)
         if request.embedding_space_id != self.embedding_space_id:
             raise EmbeddingSpaceMismatchError("wrong constant test space")
         return EmbeddingBatchResult(
@@ -82,6 +86,11 @@ class OrthogonalQueryEmbedding(ConstantEmbedding):
                 for item in request.items
             ),
         )
+
+
+class AlternateSpaceEmbedding(ConstantEmbedding):
+    algorithm_version = "alternate_space_test_v1"
+    embedding_space_id = "alternate_space_test_v1_d2"
 
 
 class FailingVectorRepository(SQLiteMemoryRepository):
@@ -200,9 +209,8 @@ def test_index_is_idempotent_and_top_k_uses_similarity_then_memory_id(
     assert {item.disposition for item in first.write_results} == {
         EmbeddingWriteDisposition.CREATED
     }
-    assert {item.disposition for item in second.write_results} == {
-        EmbeddingWriteDisposition.IDEMPOTENT
-    }
+    assert second.write_results == ()
+    assert adapter.calls == 1
     memories = repository.list_memories(
         player_id=qualified_player_state.player_id,
         include_inactive=False,
@@ -219,6 +227,111 @@ def test_index_is_idempotent_and_top_k_uses_similarity_then_memory_id(
     )
     assert tuple(hit.memory_id for hit in result.hits) == tuple(sorted(memory_ids))[:2]
     assert all(hit.similarity == pytest.approx(1.0) for hit in result.hits)
+
+
+def test_incremental_index_embeds_only_the_missing_memory(
+    tmp_path: Path,
+    case_definition: CaseDefinition,
+    qualified_player_state: PlayerState,
+) -> None:
+    repository = repository_at(tmp_path / "memory.sqlite3")
+    first_ids = write_reference_memories(
+        repository,
+        case_definition,
+        qualified_player_state,
+        count=2,
+        session_id="session_incremental",
+    )
+    adapter = ConstantEmbedding()
+    index = MemoryIndexService(repository=repository, adapter=adapter)
+    index.index_player(player_id=qualified_player_state.player_id)
+    before = {
+        memory_id: repository.get_embedding(
+            player_id=qualified_player_state.player_id,
+            memory_id=memory_id,
+            embedding_space_id=adapter.embedding_space_id,
+        )
+        for memory_id in first_ids
+    }
+
+    all_ids = write_reference_memories(
+        repository,
+        case_definition,
+        qualified_player_state,
+        count=3,
+        session_id="session_incremental",
+    )
+    missing_id = all_ids[2]
+    result = index.index_player(player_id=qualified_player_state.player_id)
+
+    assert adapter.calls == 2
+    assert tuple(item.item_id for item in adapter.requests[1].items) == (missing_id,)
+    assert tuple(item.memory_id for item in result.write_results) == (missing_id,)
+    assert result.write_results[0].disposition is EmbeddingWriteDisposition.CREATED
+    assert result.state.status is MemoryIndexStatus.COMPLETE
+    for memory_id in first_ids:
+        assert repository.get_embedding(
+            player_id=qualified_player_state.player_id,
+            memory_id=memory_id,
+            embedding_space_id=adapter.embedding_space_id,
+        ) == before[memory_id]
+
+
+def test_embedding_in_another_space_does_not_satisfy_current_space(
+    tmp_path: Path,
+    case_definition: CaseDefinition,
+    qualified_player_state: PlayerState,
+) -> None:
+    repository = repository_at(tmp_path / "memory.sqlite3")
+    memory_id = write_reference_memories(
+        repository,
+        case_definition,
+        qualified_player_state,
+        count=1,
+        session_id="session_other_space",
+    )[0]
+    MemoryIndexService(
+        repository=repository,
+        adapter=ConstantEmbedding(),
+    ).index_player(player_id=qualified_player_state.player_id)
+    alternate = AlternateSpaceEmbedding()
+
+    result = MemoryIndexService(
+        repository=repository,
+        adapter=alternate,
+    ).index_player(player_id=qualified_player_state.player_id)
+
+    assert tuple(item.item_id for item in alternate.requests[0].items) == (memory_id,)
+    assert result.write_results[0].disposition is EmbeddingWriteDisposition.CREATED
+    assert result.state.status is MemoryIndexStatus.COMPLETE
+
+
+def test_incremental_index_rejects_current_space_dimension_mismatch(
+    tmp_path: Path,
+    case_definition: CaseDefinition,
+    qualified_player_state: PlayerState,
+) -> None:
+    database_path = tmp_path / "memory.sqlite3"
+    repository = repository_at(database_path)
+    write_reference_memories(
+        repository,
+        case_definition,
+        qualified_player_state,
+        count=1,
+        session_id="session_bad_dimension",
+    )
+    adapter = ConstantEmbedding()
+    index = MemoryIndexService(repository=repository, adapter=adapter)
+    index.index_player(player_id=qualified_player_state.player_id)
+    with sqlite3.connect(database_path) as connection:
+        connection.execute(
+            "UPDATE memory_embeddings SET dimension=3, vector_blob=?, l2_norm=1.0",
+            (struct.pack("<3f", 1.0, 0.0, 0.0),),
+        )
+
+    with pytest.raises(EmbeddingContractError):
+        index.index_player(player_id=qualified_player_state.player_id)
+    assert adapter.calls == 1
 
 
 def test_complete_index_with_no_score_at_threshold_returns_true_empty(

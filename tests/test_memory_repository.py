@@ -161,7 +161,7 @@ def test_repository_requires_explicit_initialization_and_creates_schema_v2_table
             )
         }
 
-    assert repository.schema_version() == MEMORY_SCHEMA_VERSION == 2
+    assert repository.schema_version() == MEMORY_SCHEMA_VERSION == 3
     assert repository.REQUIRED_TABLES.issubset(tables)
     assert "memory_embeddings" in tables
 

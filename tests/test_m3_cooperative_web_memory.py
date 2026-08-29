@@ -3,8 +3,7 @@ from urllib.parse import urlencode
 
 from tests.test_m1_cooperative_web import serve, stop
 from tests.test_m2_cooperative_web_planning import planning_state
-from tests.test_r5_clinic_http import request
-from tests.test_r5_clinic_service import build_clinic
+from tests.clinic_helpers import build_clinic, request
 from xuanyi_npc.domain.cooperative_planning import PlanEvaluationOutcome
 
 
@@ -118,4 +117,3 @@ def test_web_debug_shows_memory_layers_without_raw_payload_or_cot(tmp_path: Path
     assert "rejected memory IDs：memory_rejected" in page
     forbidden = ("raw SQLite", "embedding vector", "hidden payload", "raw prompt", "chain-of-thought")
     assert not any(item.lower() in page.lower() for item in forbidden)
-    assert "师父已提醒" not in page

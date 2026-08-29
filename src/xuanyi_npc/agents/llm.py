@@ -1,4 +1,4 @@
-"""Replaceable language-model boundary used by the V0 DoctorAgent."""
+"""Replaceable language-model boundary used by cooperative agents."""
 
 from enum import Enum
 from typing import Annotated, Protocol, runtime_checkable
@@ -6,7 +6,7 @@ from typing import Annotated, Protocol, runtime_checkable
 from pydantic import ConfigDict, Field, JsonValue, StrictStr, StringConstraints
 
 from xuanyi_npc.domain.base import DomainModel
-from xuanyi_npc.evaluation import ModelUsage
+from .model_usage import ModelUsage
 
 
 PromptText = Annotated[
@@ -39,7 +39,7 @@ class LLMRequest(DomainModel):
 
 
 class LLMResponse(DomainModel):
-    """Raw provider response; DoctorAgent validates its content as AgentAction."""
+    """Raw provider response validated before any action can execute."""
 
     model_config = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
 

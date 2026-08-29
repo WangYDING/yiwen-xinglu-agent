@@ -28,7 +28,7 @@ Player
 
 ## 总体原则
 
-- 当前主 Agent 是 `GameNPCAgent`；`MentorAgent` 是 retained teaching / presentation branch；`DoctorAgent` 是 V0 baseline。
+- 当前唯一产品 Agent 是 `GameNPCAgent`。
 - 普通病例角色不是 Agent；当前系统不是 Multi-Agent system。
 - 玩家文本被建模为 `PlayerContribution`，不能直接转换为 `ToolCall`。
 - Agent 只能读取权限过滤后的公开 Observation、Goal/Plan 与受限历史；隐藏真值和未发现线索不能进入决策上下文。
@@ -81,24 +81,17 @@ Case、Player、Campaign、Cooperative Agent state 与 Memory 各自具有明确
 
 | 入口 | 定位 |
 |---|---|
-| `xuanyi-clinic` | 当前正式本地 Clinic Web 入口，承载六病例 Cooperative Investigation |
-| `xuanyi-play` | 保留的 manual/Fake/DeepSeek V0 CLI 与工程调试入口 |
+| `yiwen-xinglu` | 当前正式本地 Web 入口，承载六异案 Cooperative Investigation |
+| `xuanyi-clinic` | deprecated compatibility alias，与 `yiwen-xinglu` 共用组合根 |
 | `xuanyi-mcp-stdio` | 本地 MCP 集成入口；不是规则捷径 |
-| acceptance / pilot commands | 离线验收或显式授权的历史工程验证入口，不是玩家入口 |
 
 所有入口必须调用相同应用服务和确定性规则，不能让自然语言、浏览器、CLI 或 MCP 绕过权限与状态边界。
 
-## Retained Teaching / Presentation Branch
+## Memory 工程依据
 
-R-series 的 Mentor teaching、curriculum、progression、assessment、exam、permission 与 inheritance 能力继续保留。它们读取确定性规则已经形成的公开事实，提供教学、提示、评价和角色表达，但不替代当前 Cooperative Investigation 主链。
+M4.5 语义检索实验继续作为当前 Memory 实现的回归、benchmark 与失败分析证据。
 
-`MentorAgent` 只读取过滤后的教学与展示上下文，不替玩家或 `GameNPCAgent` 调用病例 Tool，不写病例、成长、关系、课程、考试、权限、传承或记忆状态。表达失败不得回滚或改写已经提交的游戏事实。
-
-## Historical Baseline
-
-`DoctorAgent`、V0/V1 Doctor 输入、旧 Pilot、M4.5 语义检索实验和三病例历史切片继续作为回归、benchmark 与失败分析证据。原始结论按形成时身份保留，不代表当前 `GameNPCAgent` 的产品能力、统计成功率或玩家收益。
-
-普通案件角色不是 Agent，Mentor 保留分支与 Doctor baseline 也不构成同一回合中的并行 Agent 协作。**This is not a Multi-Agent system.**
+普通案件角色不是 Agent；每个合作回合只有一个 `GameNPCAgent` 参与决策。**This is not a Multi-Agent system.**
 
 ## 评测与可观测性
 
@@ -128,6 +121,4 @@ R-series 的 Mentor teaching、curriculum、progression、assessment、exam、pe
 - 不承诺 Agent 未获授权的 Observation；
 - 不改变 Agent、Player 与 deterministic system 的既有权责；
 - 不把工程策略或评测限制写成世界物理规律；
-- 不把 `MentorAgent` 重新描述成 Cooperative 主 Agent；
-- 不把 R-series 描述成替代 M1–M5 的唯一当前产品主线；
-- 不把普通角色、保留分支和历史 baseline 包装成 Multi-Agent 协作。
+- 不把普通案件角色包装成 Multi-Agent 协作。

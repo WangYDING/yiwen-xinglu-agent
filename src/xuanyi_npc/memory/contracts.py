@@ -18,9 +18,9 @@ from pydantic import (
 
 from xuanyi_npc.domain.base import DomainModel, Identifier, NonEmptyText
 from xuanyi_npc.domain.cases import CaseActionType
-from xuanyi_npc.domain.curriculum import (
+from xuanyi_npc.domain.memory_taxonomy import (
     StructuredMemorySourceType,
-    StructuredTeachingMemoryType,
+    StructuredMemoryType,
 )
 from xuanyi_npc.domain.memory import MemoryType, RelationshipImpact
 
@@ -61,7 +61,7 @@ class MemoryWriteReason(str, Enum):
     VERIFIED_DIAGNOSIS_SUBMISSION = "verified_diagnosis_submission"
     VERIFIED_TREATMENT_OBSERVATION = "verified_treatment_observation"
     VERIFIED_MEMORY_CORRECTION = "verified_memory_correction"
-    VERIFIED_STRUCTURED_TEACHING_FACT = "verified_structured_teaching_fact"
+    VERIFIED_STRUCTURED_EXPERIENCE = "verified_structured_teaching_fact"
 
 
 class MemorySourceEventType(str, Enum):
@@ -69,7 +69,7 @@ class MemorySourceEventType(str, Enum):
     DIAGNOSIS_SUBMITTED = "diagnosis_submitted"
     TREATMENT_EXECUTED = "treatment_executed"
     MEMORY_CORRECTION = "memory_correction"
-    STRUCTURED_TEACHING_FACT = "structured_teaching_fact"
+    STRUCTURED_EXPERIENCE = "structured_teaching_fact"
 
 
 class PublicClueFact(StrictMemoryModel):
@@ -128,9 +128,10 @@ class CorrectionPublicPayload(StrictMemoryModel):
     reason: NonEmptyText
 
 
-class StructuredTeachingPublicPayload(StrictMemoryModel):
+class StructuredExperiencePublicPayload(StrictMemoryModel):
+    # Wire value retained so existing SQLite memories remain readable.
     payload_type: Literal["structured_teaching_fact"] = "structured_teaching_fact"
-    structured_memory_type: StructuredTeachingMemoryType
+    structured_memory_type: StructuredMemoryType
     source_type: StructuredMemorySourceType
     source_reference_id: Identifier
     public_summary: NonEmptyText
@@ -145,7 +146,7 @@ PublicMemoryPayload: TypeAlias = Annotated[
     | DiagnosisPublicPayload
     | TreatmentPublicPayload
     | CorrectionPublicPayload
-    | StructuredTeachingPublicPayload,
+    | StructuredExperiencePublicPayload,
     Field(discriminator="payload_type"),
 ]
 
@@ -268,8 +269,8 @@ class AuthoritativeMemoryRecord(StrictMemoryModel):
             MemorySourceEventType.MEMORY_CORRECTION: (
                 MemoryWriteReason.VERIFIED_MEMORY_CORRECTION
             ),
-            MemorySourceEventType.STRUCTURED_TEACHING_FACT: (
-                MemoryWriteReason.VERIFIED_STRUCTURED_TEACHING_FACT
+            MemorySourceEventType.STRUCTURED_EXPERIENCE: (
+                MemoryWriteReason.VERIFIED_STRUCTURED_EXPERIENCE
             ),
         }
         if self.write_reason is not expected_reasons[self.source_event_type]:

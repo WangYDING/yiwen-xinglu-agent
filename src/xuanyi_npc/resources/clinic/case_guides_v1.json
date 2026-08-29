@@ -1,8 +1,388 @@
 {
-  "mist_ferry_borrowed_lantern":{"learning_goal":"核对人物变化、契纸措辞、契物痕迹与炁息流向，建立可复核的因果链。","stages":[{"stage_id":"people","title":"确认受影响者","public_purpose":"确认谁受到影响，以及虚弱出现的先后。","suggested_questions":["谁最先虚弱？当时坐在哪里？"],"suggested_investigation_types":["observe_patient","question_patient"],"completion_requirement_ids":["observe_ferryman","question_passengers"],"mentor_prompt":"先核对人物变化。","off_track_prompt":"先别猜灯中有什么，核对发作先后。"},{"stage_id":"contract_object","title":"追查借灯与契物","public_purpose":"询问青灯来源、契纸措辞，并检查灯芯与灯座痕迹。","suggested_questions":["这盏灯从何处借来，契纸如何写？"],"suggested_investigation_types":["question_patient","inspect_object"],"completion_requirement_ids":["question_lantern_borrower","inspect_borrowed_lantern"],"mentor_prompt":"把口供与物证对照。","off_track_prompt":"回到借灯过程和实物痕迹。"},{"stage_id":"causal","title":"整理流向与记录","public_purpose":"对照人物变化、灯影、炁息流向和归还记录。","suggested_questions":["炁息从何处起、经过何物、落向何人？"],"suggested_investigation_types":["observe_qi","investigate_location"],"completion_requirement_ids":["observe_ferry_qi","investigate_ferry_registry"],"mentor_prompt":"整理起点、媒介与承受者。","off_track_prompt":"用已发现事实补全因果链。"}],"diagnosis_review_questions":["异象从何而起、经何物传递、最终落在谁身上？"],"treatment_review_questions":["你的方案是在压制、转移代价，还是解除根因？"]},
-  "old_paper_umbrella":{"learning_goal":"从书生变化、旧伞痕迹与承诺证词中区分表象和契因。","stages":[{"stage_id":"person","title":"核对书生变化","public_purpose":"比较神色、影子、记忆与日常变化。","suggested_questions":["变化从何时开始？"],"suggested_investigation_types":["observe_patient","question_patient"],"completion_requirement_ids":["observe_scholar","ask_about_memory"],"mentor_prompt":"先确定变化边界。","off_track_prompt":"先核对书生可观察的变化。"},{"stage_id":"object","title":"检查旧伞与旧物","public_purpose":"检查纸伞痕迹并寻找能核对来历的旧物。","suggested_questions":["伞柄和破损处留下了什么痕迹？"],"suggested_investigation_types":["inspect_object","investigate_location"],"completion_requirement_ids":["inspect_umbrella","search_book_chest"],"mentor_prompt":"让物证与口供互证。","off_track_prompt":"回到旧伞和随身旧物。"},{"stage_id":"cause","title":"核对契痕与承诺","public_purpose":"观察异常联系，并依据已有物证追问承诺。","suggested_questions":["已有物证能支持追问哪段承诺？"],"suggested_investigation_types":["observe_qi","question_patient"],"completion_requirement_ids":["observe_contract_trace","ask_about_promise"],"mentor_prompt":"整理承诺、契物和变化。","off_track_prompt":"不要越过物证直接猜承诺。"}],"diagnosis_review_questions":["人物、契物和承诺如何连成因果？"],"treatment_review_questions":["方案是否处理了造成异象的联系？"]},
-  "gray_hearth_inn":{"learning_goal":"通过人物烟迹、灶契结构和烟道现场判断无火炊烟的传播路径。","stages":[{"stage_id":"testimony","title":"核对人和修灶经过","public_purpose":"比较掌勺人变化与店主所述异常时间。","suggested_questions":["修灶前后发生了什么变化？"],"suggested_investigation_types":["observe_patient","question_patient"],"completion_requirement_ids":["observe_cook","question_innkeeper"],"mentor_prompt":"先建立时间线。","off_track_prompt":"先问清修灶和异常先后。"},{"stage_id":"hearth","title":"检查灶体契痕","public_purpose":"核对柴薪、灶砖、契槽与拆装痕迹。","suggested_questions":["哪些痕迹是后来移动形成的？"],"suggested_investigation_types":["inspect_object"],"completion_requirement_ids":["inspect_fuel_and_hearth","inspect_hearth_contract"],"mentor_prompt":"区分旧痕与新痕。","off_track_prompt":"回到灶体可验证痕迹。"},{"stage_id":"path","title":"追踪冷炁与烟道","public_purpose":"对照冷炁走向和烟道折返位置。","suggested_questions":["烟与炁最终折返到哪里？"],"suggested_investigation_types":["observe_qi","investigate_location"],"completion_requirement_ids":["observe_flue_qi","investigate_smoke_passage"],"mentor_prompt":"整理传播路径。","off_track_prompt":"沿现场路径核对，不要先定性。"}],"diagnosis_review_questions":["异象起于何处、沿何路径传播？"],"treatment_review_questions":["处置是否只移走烟，还是处理传播结构？"]},
-  "moon_well_echo":{"learning_goal":"核对行程、木简改动、见证证词与井中回响所跟随的对象。","stages":[{"stage_id":"route","title":"建立行程与回声时间线","public_purpose":"观察送信人并询问交接顺序。","suggested_questions":["回声何时开始，经过哪些交接？"],"suggested_investigation_types":["observe_patient","question_patient"],"completion_requirement_ids":["observe_courier","question_route"],"mentor_prompt":"先排清时间线。","off_track_prompt":"回到行程与交接先后。"},{"stage_id":"slip","title":"检查木简与系绳","public_purpose":"核对正文、边角、绳孔和重新穿结痕迹。","suggested_questions":["正文、木签和系绳是否属于同一次交接？"],"suggested_investigation_types":["inspect_object"],"completion_requirement_ids":["inspect_wooden_slip","inspect_binding_cord"],"mentor_prompt":"比较各部分是否一致。","off_track_prompt":"先查木简本身的可见矛盾。"},{"stage_id":"echo","title":"核对回响与见证","public_purpose":"观察回响炁息并核对井边见证人的证词。","suggested_questions":["回响究竟跟随人、井水还是刻痕？"],"suggested_investigation_types":["observe_qi","question_patient"],"completion_requirement_ids":["observe_well_echo_qi","question_lantern_witness"],"mentor_prompt":"把炁息与见证互证。","off_track_prompt":"回到回声实际跟随的对象。"}],"diagnosis_review_questions":["错位发生在哪次交接，回响依附什么传播？"],"treatment_review_questions":["方案是否修正错位来源而非仅让回声安静？"]},
-  "lantern_alley_conflicting_testimony":{"learning_goal":"用站位、物证和时间线校验相悖证词，而非凭直觉选择可信者。","stages":[{"stage_id":"accounts","title":"分别核对证词","public_purpose":"记录两名见证人的站位、路线与所见。","suggested_questions":["你当时站在哪里，能看见什么？"],"suggested_investigation_types":["question_patient","observe_patient"],"completion_requirement_ids":["question_witness_yu","question_witness_shao","observe_lantern_keeper"],"mentor_prompt":"分开记录，不急着裁断。","off_track_prompt":"先核对每人的观察条件。"},{"stage_id":"traces","title":"检查双灯与巷道","public_purpose":"核对油面、提梁、灯座、脚印和视角。","suggested_questions":["哪些痕迹能独立验证移动路线？"],"suggested_investigation_types":["inspect_object","investigate_location"],"completion_requirement_ids":["inspect_twin_lanterns","inspect_alley_traces"],"mentor_prompt":"让现场检验证词。","off_track_prompt":"回到不会说谎的物证。"},{"stage_id":"timeline","title":"重建交接时间线","public_purpose":"综合油耗、脚印与余炁核对交接。","suggested_questions":["各证据对应哪一个更次？"],"suggested_investigation_types":["investigate_location"],"completion_requirement_ids":["investigate_lantern_timeline"],"mentor_prompt":"按时间排列证据。","off_track_prompt":"不要选边，先重建时间线。"}],"diagnosis_review_questions":["哪些证词被哪些独立物证支持或限制？"],"treatment_review_questions":["方案是否建立在已核实的交接关系上？"]},
-  "returning_contract_nameless_shrine":{"learning_goal":"核对姓名变化、契册顺序、碑面层次与见证记录，辨明归契折返。","stages":[{"stage_id":"ritual","title":"核对人物与仪式顺序","public_purpose":"观察姓名变化并询问历代归契流程。","suggested_questions":["姓名淡化发生在仪式哪一步？"],"suggested_investigation_types":["observe_patient","question_patient"],"completion_requirement_ids":["observe_shrine_visitor","question_shrine_keeper"],"mentor_prompt":"先建立仪式顺序。","off_track_prompt":"回到姓名变化与仪式先后。"},{"stage_id":"records","title":"检查碑与契册","public_purpose":"核对碑面层次、压印、抄本和归还顺序。","suggested_questions":["碑面与契册哪些位置对应不上？"],"suggested_investigation_types":["inspect_object"],"completion_requirement_ids":["inspect_nameless_stele","inspect_return_ledger"],"mentor_prompt":"比较原件与抄本。","off_track_prompt":"先查碑与契册的对应关系。"},{"stage_id":"return","title":"追踪折返与见证","public_purpose":"观察契炁折返并核对旧拓片和交接记录。","suggested_questions":["契炁在姓名、契册与碑之间如何折返？"],"suggested_investigation_types":["observe_qi","investigate_location"],"completion_requirement_ids":["observe_shrine_qi","investigate_hidden_witness_mark"],"mentor_prompt":"整理折返链条。","off_track_prompt":"回到公开记录和炁息路径。"}],"diagnosis_review_questions":["归契从何处折返，缺失的环节影响了谁？"],"treatment_review_questions":["方案是否恢复完整归还次序并避免代价转嫁？"]}
+  "mist_ferry_borrowed_lantern": {
+    "investigation_goal": "核对人物变化、契纸措辞、契物痕迹与炁息流向，建立可复核的因果链。",
+    "stages": [
+      {
+        "stage_id": "people",
+        "title": "确认受影响者",
+        "public_purpose": "确认谁受到影响，以及虚弱出现的先后。",
+        "suggested_questions": [
+          "谁最先虚弱？当时坐在哪里？"
+        ],
+        "suggested_investigation_types": [
+          "observe_patient",
+          "question_patient"
+        ],
+        "completion_requirement_ids": [
+          "observe_ferryman",
+          "question_passengers"
+        ],
+        "guide_prompt": "先核对人物变化。",
+        "off_track_prompt": "先别猜灯中有什么，核对发作先后。"
+      },
+      {
+        "stage_id": "contract_object",
+        "title": "追查借灯与契物",
+        "public_purpose": "询问青灯来源、契纸措辞，并检查灯芯与灯座痕迹。",
+        "suggested_questions": [
+          "这盏灯从何处借来，契纸如何写？"
+        ],
+        "suggested_investigation_types": [
+          "question_patient",
+          "inspect_object"
+        ],
+        "completion_requirement_ids": [
+          "question_lantern_borrower",
+          "inspect_borrowed_lantern"
+        ],
+        "guide_prompt": "把口供与物证对照。",
+        "off_track_prompt": "回到借灯过程和实物痕迹。"
+      },
+      {
+        "stage_id": "causal",
+        "title": "整理流向与记录",
+        "public_purpose": "对照人物变化、灯影、炁息流向和归还记录。",
+        "suggested_questions": [
+          "炁息从何处起、经过何物、落向何人？"
+        ],
+        "suggested_investigation_types": [
+          "observe_qi",
+          "investigate_location"
+        ],
+        "completion_requirement_ids": [
+          "observe_ferry_qi",
+          "investigate_ferry_registry"
+        ],
+        "guide_prompt": "整理起点、媒介与承受者。",
+        "off_track_prompt": "用已发现事实补全因果链。"
+      }
+    ],
+    "diagnosis_review_questions": [
+      "异象从何而起、经何物传递、最终落在谁身上？"
+    ],
+    "treatment_review_questions": [
+      "你的方案是在压制、转移代价，还是解除根因？"
+    ]
+  },
+  "old_paper_umbrella": {
+    "investigation_goal": "从书生变化、旧伞痕迹与承诺证词中区分表象和契因。",
+    "stages": [
+      {
+        "stage_id": "person",
+        "title": "核对书生变化",
+        "public_purpose": "比较神色、影子、记忆与日常变化。",
+        "suggested_questions": [
+          "变化从何时开始？"
+        ],
+        "suggested_investigation_types": [
+          "observe_patient",
+          "question_patient"
+        ],
+        "completion_requirement_ids": [
+          "observe_scholar",
+          "ask_about_memory"
+        ],
+        "guide_prompt": "先确定变化边界。",
+        "off_track_prompt": "先核对书生可观察的变化。"
+      },
+      {
+        "stage_id": "object",
+        "title": "检查旧伞与旧物",
+        "public_purpose": "检查纸伞痕迹并寻找能核对来历的旧物。",
+        "suggested_questions": [
+          "伞柄和破损处留下了什么痕迹？"
+        ],
+        "suggested_investigation_types": [
+          "inspect_object",
+          "investigate_location"
+        ],
+        "completion_requirement_ids": [
+          "inspect_umbrella",
+          "search_book_chest"
+        ],
+        "guide_prompt": "让物证与口供互证。",
+        "off_track_prompt": "回到旧伞和随身旧物。"
+      },
+      {
+        "stage_id": "cause",
+        "title": "核对契痕与承诺",
+        "public_purpose": "观察异常联系，并依据已有物证追问承诺。",
+        "suggested_questions": [
+          "已有物证能支持追问哪段承诺？"
+        ],
+        "suggested_investigation_types": [
+          "observe_qi",
+          "question_patient"
+        ],
+        "completion_requirement_ids": [
+          "observe_contract_trace",
+          "ask_about_promise"
+        ],
+        "guide_prompt": "整理承诺、契物和变化。",
+        "off_track_prompt": "不要越过物证直接猜承诺。"
+      }
+    ],
+    "diagnosis_review_questions": [
+      "人物、契物和承诺如何连成因果？"
+    ],
+    "treatment_review_questions": [
+      "方案是否处理了造成异象的联系？"
+    ]
+  },
+  "gray_hearth_inn": {
+    "investigation_goal": "通过人物烟迹、灶契结构和烟道现场判断无火炊烟的传播路径。",
+    "stages": [
+      {
+        "stage_id": "testimony",
+        "title": "核对人和修灶经过",
+        "public_purpose": "比较掌勺人变化与店主所述异常时间。",
+        "suggested_questions": [
+          "修灶前后发生了什么变化？"
+        ],
+        "suggested_investigation_types": [
+          "observe_patient",
+          "question_patient"
+        ],
+        "completion_requirement_ids": [
+          "observe_cook",
+          "question_innkeeper"
+        ],
+        "guide_prompt": "先建立时间线。",
+        "off_track_prompt": "先问清修灶和异常先后。"
+      },
+      {
+        "stage_id": "hearth",
+        "title": "检查灶体契痕",
+        "public_purpose": "核对柴薪、灶砖、契槽与拆装痕迹。",
+        "suggested_questions": [
+          "哪些痕迹是后来移动形成的？"
+        ],
+        "suggested_investigation_types": [
+          "inspect_object"
+        ],
+        "completion_requirement_ids": [
+          "inspect_fuel_and_hearth",
+          "inspect_hearth_contract"
+        ],
+        "guide_prompt": "区分旧痕与新痕。",
+        "off_track_prompt": "回到灶体可验证痕迹。"
+      },
+      {
+        "stage_id": "path",
+        "title": "追踪冷炁与烟道",
+        "public_purpose": "对照冷炁走向和烟道折返位置。",
+        "suggested_questions": [
+          "烟与炁最终折返到哪里？"
+        ],
+        "suggested_investigation_types": [
+          "observe_qi",
+          "investigate_location"
+        ],
+        "completion_requirement_ids": [
+          "observe_flue_qi",
+          "investigate_smoke_passage"
+        ],
+        "guide_prompt": "整理传播路径。",
+        "off_track_prompt": "沿现场路径核对，不要先定性。"
+      }
+    ],
+    "diagnosis_review_questions": [
+      "异象起于何处、沿何路径传播？"
+    ],
+    "treatment_review_questions": [
+      "处置是否只移走烟，还是处理传播结构？"
+    ]
+  },
+  "moon_well_echo": {
+    "investigation_goal": "核对行程、木简改动、见证证词与井中回响所跟随的对象。",
+    "stages": [
+      {
+        "stage_id": "route",
+        "title": "建立行程与回声时间线",
+        "public_purpose": "观察送信人并询问交接顺序。",
+        "suggested_questions": [
+          "回声何时开始，经过哪些交接？"
+        ],
+        "suggested_investigation_types": [
+          "observe_patient",
+          "question_patient"
+        ],
+        "completion_requirement_ids": [
+          "observe_courier",
+          "question_route"
+        ],
+        "guide_prompt": "先排清时间线。",
+        "off_track_prompt": "回到行程与交接先后。"
+      },
+      {
+        "stage_id": "slip",
+        "title": "检查木简与系绳",
+        "public_purpose": "核对正文、边角、绳孔和重新穿结痕迹。",
+        "suggested_questions": [
+          "正文、木签和系绳是否属于同一次交接？"
+        ],
+        "suggested_investigation_types": [
+          "inspect_object"
+        ],
+        "completion_requirement_ids": [
+          "inspect_wooden_slip",
+          "inspect_binding_cord"
+        ],
+        "guide_prompt": "比较各部分是否一致。",
+        "off_track_prompt": "先查木简本身的可见矛盾。"
+      },
+      {
+        "stage_id": "echo",
+        "title": "核对回响与见证",
+        "public_purpose": "观察回响炁息并核对井边见证人的证词。",
+        "suggested_questions": [
+          "回响究竟跟随人、井水还是刻痕？"
+        ],
+        "suggested_investigation_types": [
+          "observe_qi",
+          "question_patient"
+        ],
+        "completion_requirement_ids": [
+          "observe_well_echo_qi",
+          "question_lantern_witness"
+        ],
+        "guide_prompt": "把炁息与见证互证。",
+        "off_track_prompt": "回到回声实际跟随的对象。"
+      }
+    ],
+    "diagnosis_review_questions": [
+      "错位发生在哪次交接，回响依附什么传播？"
+    ],
+    "treatment_review_questions": [
+      "方案是否修正错位来源而非仅让回声安静？"
+    ]
+  },
+  "lantern_alley_conflicting_testimony": {
+    "investigation_goal": "用站位、物证和时间线校验相悖证词，而非凭直觉选择可信者。",
+    "stages": [
+      {
+        "stage_id": "accounts",
+        "title": "分别核对证词",
+        "public_purpose": "记录两名见证人的站位、路线与所见。",
+        "suggested_questions": [
+          "你当时站在哪里，能看见什么？"
+        ],
+        "suggested_investigation_types": [
+          "question_patient",
+          "observe_patient"
+        ],
+        "completion_requirement_ids": [
+          "question_witness_yu",
+          "question_witness_shao",
+          "observe_lantern_keeper"
+        ],
+        "guide_prompt": "分开记录，不急着裁断。",
+        "off_track_prompt": "先核对每人的观察条件。"
+      },
+      {
+        "stage_id": "traces",
+        "title": "检查双灯与巷道",
+        "public_purpose": "核对油面、提梁、灯座、脚印和视角。",
+        "suggested_questions": [
+          "哪些痕迹能独立验证移动路线？"
+        ],
+        "suggested_investigation_types": [
+          "inspect_object",
+          "investigate_location"
+        ],
+        "completion_requirement_ids": [
+          "inspect_twin_lanterns",
+          "inspect_alley_traces"
+        ],
+        "guide_prompt": "让现场检验证词。",
+        "off_track_prompt": "回到不会说谎的物证。"
+      },
+      {
+        "stage_id": "timeline",
+        "title": "重建交接时间线",
+        "public_purpose": "综合油耗、脚印与余炁核对交接。",
+        "suggested_questions": [
+          "各证据对应哪一个更次？"
+        ],
+        "suggested_investigation_types": [
+          "investigate_location"
+        ],
+        "completion_requirement_ids": [
+          "investigate_lantern_timeline"
+        ],
+        "guide_prompt": "按时间排列证据。",
+        "off_track_prompt": "不要选边，先重建时间线。"
+      }
+    ],
+    "diagnosis_review_questions": [
+      "哪些证词被哪些独立物证支持或限制？"
+    ],
+    "treatment_review_questions": [
+      "方案是否建立在已核实的交接关系上？"
+    ]
+  },
+  "returning_contract_nameless_shrine": {
+    "investigation_goal": "核对姓名变化、契册顺序、碑面层次与见证记录，辨明归契折返。",
+    "stages": [
+      {
+        "stage_id": "ritual",
+        "title": "核对人物与仪式顺序",
+        "public_purpose": "观察姓名变化并询问历代归契流程。",
+        "suggested_questions": [
+          "姓名淡化发生在仪式哪一步？"
+        ],
+        "suggested_investigation_types": [
+          "observe_patient",
+          "question_patient"
+        ],
+        "completion_requirement_ids": [
+          "observe_shrine_visitor",
+          "question_shrine_keeper"
+        ],
+        "guide_prompt": "先建立仪式顺序。",
+        "off_track_prompt": "回到姓名变化与仪式先后。"
+      },
+      {
+        "stage_id": "records",
+        "title": "检查碑与契册",
+        "public_purpose": "核对碑面层次、压印、抄本和归还顺序。",
+        "suggested_questions": [
+          "碑面与契册哪些位置对应不上？"
+        ],
+        "suggested_investigation_types": [
+          "inspect_object"
+        ],
+        "completion_requirement_ids": [
+          "inspect_nameless_stele",
+          "inspect_return_ledger"
+        ],
+        "guide_prompt": "比较原件与抄本。",
+        "off_track_prompt": "先查碑与契册的对应关系。"
+      },
+      {
+        "stage_id": "return",
+        "title": "追踪折返与见证",
+        "public_purpose": "观察契炁折返并核对旧拓片和交接记录。",
+        "suggested_questions": [
+          "契炁在姓名、契册与碑之间如何折返？"
+        ],
+        "suggested_investigation_types": [
+          "observe_qi",
+          "investigate_location"
+        ],
+        "completion_requirement_ids": [
+          "observe_shrine_qi",
+          "investigate_hidden_witness_mark"
+        ],
+        "guide_prompt": "整理折返链条。",
+        "off_track_prompt": "回到公开记录和炁息路径。"
+      }
+    ],
+    "diagnosis_review_questions": [
+      "归契从何处折返，缺失的环节影响了谁？"
+    ],
+    "treatment_review_questions": [
+      "方案是否恢复完整归还次序并避免代价转嫁？"
+    ]
+  }
 }

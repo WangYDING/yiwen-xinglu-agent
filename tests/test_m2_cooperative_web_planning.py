@@ -21,8 +21,7 @@ from xuanyi_npc.domain.cooperative_planning import (
     PlanStepStatus,
 )
 from tests.test_m1_cooperative_web import serve, stop
-from tests.test_r5_clinic_http import request
-from tests.test_r5_clinic_service import build_clinic
+from tests.clinic_helpers import build_clinic, request
 
 
 def planning_state(player_id, opened, outcome: PlanEvaluationOutcome):

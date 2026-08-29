@@ -308,6 +308,7 @@ assert before_env == dict(os.environ)
     completed = subprocess.run(
         [sys.executable, "-c", script],
         cwd=tmp_path,
+        env={**os.environ, "PYTHONPATH": str(Path(__file__).parents[1] / "src")},
         capture_output=True,
         text=True,
         timeout=20,
@@ -317,40 +318,3 @@ assert before_env == dict(os.environ)
     assert completed.returncode == 0, completed.stderr
     assert completed.stdout == ""
     assert tuple(tmp_path.iterdir()) == ()
-
-
-def test_v0_path_does_not_load_or_call_local_adapter(
-    monkeypatch: pytest.MonkeyPatch,
-    case_definition,
-    qualified_player_state,
-) -> None:
-    from tests.test_v0_episode_runner import (
-        StepClock,
-        completed_case_script,
-        initial_session,
-    )
-    from xuanyi_npc.agents import DoctorAgent, DoctorAgentConfig, ScriptedFakeLLM
-    from xuanyi_npc.application.v0_runner import V0EpisodeConfig, V0EpisodeRunner
-
-    def forbidden(*args: object, **kwargs: object) -> None:
-        raise AssertionError("V0 must not access the local embedding adapter")
-
-    monkeypatch.setattr(BgeM3LocalEmbeddingAdapter, "load", forbidden)
-    monkeypatch.setattr(BgeM3LocalEmbeddingAdapter, "embed", forbidden)
-    fake = ScriptedFakeLLM(completed_case_script())
-    runner = V0EpisodeRunner(
-        DoctorAgent(fake, DoctorAgentConfig(recent_message_limit=4)),
-        clock=StepClock(),
-        config=V0EpisodeConfig(max_steps=8),
-    )
-
-    episode = runner.run(
-        "episode_local_adapter_zero_calls",
-        case_definition,
-        qualified_player_state,
-        initial_session(case_definition, qualified_player_state, "local_adapter_zero"),
-        "按固定课程完成病例。",
-    )
-
-    assert episode.final_session.score == 100
-    assert len(episode.events) == 8

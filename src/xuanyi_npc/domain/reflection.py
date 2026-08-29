@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from enum import Enum
 from hashlib import sha256
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import ConfigDict, Field, StrictInt, computed_field, model_validator
 
@@ -237,7 +237,6 @@ REFLECTION_MEMORY_TYPE_ALLOWLIST = frozenset(
     {
         MemoryType.EPISODIC,
         MemoryType.LEARNING,
-        MemoryType.REFLECTION,
     }
 )
 
@@ -252,7 +251,7 @@ class ReusableLessonProposal(DomainModel):
     applicability_scope: ApplicabilityScope
     evidence_refs: tuple[EvidenceRef, ...] = Field(min_length=2)
     confidence: ReflectionConfidence
-    proposed_memory_type: MemoryType
+    proposed_memory_type: Literal[MemoryType.EPISODIC, MemoryType.LEARNING]
 
     @model_validator(mode="after")
     def validate_lesson(self) -> "ReusableLessonProposal":

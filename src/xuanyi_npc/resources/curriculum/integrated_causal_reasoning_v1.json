@@ -1,8 +1,0 @@
-{
-  "lesson_id":"integrated_causal_reasoning_v1","version":"v1","title":"综合因果与传承应用",
-  "public_description":"调查归契古祠，综合人物、物证、地点与炁息，谨慎迁移前案知识，并在获准时使用传承的等价公开路径。",
-  "learning_objectives":[{"objective_id":"integrate_four_sources","description":"综合人物、物证、地点与炁息。"},{"objective_id":"compare_causal_chains","description":"比较至少两条看似合理的因果链。"},{"objective_id":"transfer_without_overfit","description":"迁移历史知识但不机械套用。"},{"objective_id":"use_inheritance_safely","description":"把传承用于核对而不是代替判断。"}],
-  "assigned_case_id":"returning_contract_nameless_shrine","reflection_checkpoint":{"minimum_investigation_categories":4,"question":"哪条因果链能同时解释碑、契册、来访者和祠中炁息，前案经验在哪一步可能误导你？"},
-  "maximum_hints":2,"public_hint_cards":[{"hint_id":"integrated_hint_1","text":"分别记录人物陈述、碑面痕迹、契册顺序和炁息走向。"},{"hint_id":"integrated_hint_2","text":"传承只能帮助核对交接链；最终判断仍需全部公开证据支持。"}],
-  "completion_condition":"绑定病例已完成、R1成长已投影、结构化师评与导师回顾均已保存。","fixed_next_step":"查看六课程、能力、关系、考试与传承总结。"
-}

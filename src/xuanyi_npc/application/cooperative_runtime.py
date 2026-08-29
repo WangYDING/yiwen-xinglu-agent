@@ -125,6 +125,7 @@ class CooperativeRuntime:
         pending = self._validated_pending(request.pending_action, contribution, session.revision)
         state, expected_revision = self._load_or_initialize(contribution, observation)
         state = self._mark_invalid_plan(state, observation, contribution.contribution_id)
+        state = self._prepare_next_goal(state, observation, contribution.contribution_id)
         memory_context, memory_trace = self._retrieve_memory_context(
             contribution=contribution,
             observation=observation,
@@ -166,12 +167,14 @@ class CooperativeRuntime:
                 if state.last_plan_evaluation is not None else None
             ),
             memory_context=memory_context,
+            pending_confirmation_id=pending.decision_id if pending is not None else None,
         )
 
         planning_supported = callable(getattr(self.agent, "propose_turn", None))
         goal_changed = False
         plan_changed = False
         turn_proposal = None
+        alignment_telemetry = {}
         if planning_supported:
             turn_proposal = self.agent.propose_turn(agent_input)
             self.goal_plan_policy.validate(
@@ -180,6 +183,7 @@ class CooperativeRuntime:
                 current_plan=state.current_plan,
                 observation=observation,
                 authority_view=agent_input.authority_view,
+                pending_confirmation=pending is not None,
             )
             state, goal_changed, plan_changed = self._apply_proposal(
                 state, turn_proposal, contribution.contribution_id, observation.session_revision,
@@ -208,7 +212,15 @@ class CooperativeRuntime:
                 usages=(planning_execution.usages if planning_execution else ()),
             )
             decision = self._associate_decision(decision, state)
+            alignment_telemetry = self._alignment_telemetry(decision, state, observation)
             if not self._action_matches_plan(decision, state):
+                state = state.model_copy(update={
+                    "last_plan_evaluation": self._alignment_recovery_evaluation(
+                        state=state,
+                        observation=observation,
+                        turn_id=contribution.contribution_id,
+                    ),
+                })
                 state = self._advance_state_revision(state, contribution.contribution_id, expected_revision)
                 self._save_state(state, expected_revision)
                 base = self._result(
@@ -218,6 +230,7 @@ class CooperativeRuntime:
                     memory_usage_trace=self._reject_decision_memory_trace(memory_trace),
                     error_code="action_outside_active_plan",
                     public_rationale="本轮行动与当前计划步骤不一致，未执行。",
+                    **alignment_telemetry,
                 )
                 return self._attach_reflection(
                     base, contribution=contribution, state=state,
@@ -251,6 +264,7 @@ class CooperativeRuntime:
                 selected_tool=selected_tool,
                 selected_public_target=selected_public_target,
                 memory_usage_trace=memory_trace,
+                **alignment_telemetry,
             )
             return self._attach_reflection(
                 base, contribution=contribution, state=state,
@@ -294,6 +308,7 @@ class CooperativeRuntime:
                 selected_tool=selected_tool, selected_public_target=selected_public_target,
                 pending_action=pending_action,
                 memory_usage_trace=memory_trace,
+                **alignment_telemetry,
             )
             return self._attach_reflection(
                 base, contribution=contribution, state=state,
@@ -310,6 +325,7 @@ class CooperativeRuntime:
                 authority_mode=authority.mode, error_code=authority.reason_code,
                 selected_tool=selected_tool, selected_public_target=selected_public_target,
                 memory_usage_trace=memory_trace,
+                **alignment_telemetry,
             )
             return self._attach_reflection(
                 base, contribution=contribution, state=state,
@@ -354,6 +370,7 @@ class CooperativeRuntime:
                 error_code=result.error_code, selected_tool=selected_tool,
                 selected_public_target=selected_public_target,
                 memory_usage_trace=memory_trace,
+                **alignment_telemetry,
             )
             return self._attach_reflection(
                 base, contribution=contribution, state=state,
@@ -409,7 +426,13 @@ class CooperativeRuntime:
             event_sequences=result.event_sequences, error_code=projection_error,
             selected_tool=selected_tool, selected_public_target=selected_public_target,
             memory_usage_trace=memory_trace,
+            **alignment_telemetry,
         )
+        base = base.model_copy(update={
+            "memory_commit_status": receipt.memory_commit_status,
+            "memory_commit_error_code": receipt.memory_error_code,
+            "written_memory_ids": receipt.memory_ids,
+        })
         return self._attach_reflection(
             base, contribution=contribution, state=state,
             observation=post_observation, pre_observation=observation,
@@ -536,6 +559,7 @@ class CooperativeRuntime:
                     "reflection_trigger_id": trigger.trigger_id,
                     "reflection_status": ReflectionLifecycleStatus.FAILED_SAFE,
                     "reflection_proposal_status": ReflectionProposalStatus.FAILED_SAFE,
+                    "reflection_error_code": "reflection_runtime_failed_safe",
                 }
             )
         rejected = tuple(
@@ -557,6 +581,8 @@ class CooperativeRuntime:
                 ),
                 "reflection_rejection_reasons": rejected,
                 "reflection_provenance_ref_ids": lifecycle.provenance_ref_ids,
+                "reflection_index_status": lifecycle.index_status,
+                "reflection_error_code": lifecycle.error_code,
                 "public_consolidation_summary": lifecycle.public_consolidation_summary,
             }
         )
@@ -803,6 +829,50 @@ class CooperativeRuntime:
         return state.model_copy(update={"current_plan": plan.model_copy(update={"status": AgentPlanStatus.NEEDS_REVISION, "steps": steps, "updated_turn_id": turn_id, "revision": plan.revision + 1})})
 
     @staticmethod
+    def _prepare_next_goal(state, observation, turn_id):
+        """Start the next active phase before exposing a terminal goal to the Agent."""
+
+        if (
+            state.current_goal.status not in {
+                AgentGoalStatus.COMPLETED,
+                AgentGoalStatus.ABANDONED,
+            }
+            or observation.session_status.value != "active"
+        ):
+            return state
+        if observation.submitted_diagnosis_id is not None:
+            goal_type = AgentGoalType.SELECT_TREATMENT
+            completion = GoalCondition(condition_type=GoalConditionType.CASE_COMPLETED)
+            description = "与玩家协商安全处置。"
+        elif observation.can_submit_diagnosis:
+            goal_type = AgentGoalType.FORM_DIAGNOSIS
+            completion = GoalCondition(condition_type=GoalConditionType.DIAGNOSIS_SUBMITTED)
+            description = "与玩家形成并协商公开诊断。"
+        else:
+            goal_type = AgentGoalType.GATHER_EVIDENCE
+            completion = GoalCondition(
+                condition_type=GoalConditionType.MINIMUM_CLUE_COUNT,
+                threshold=max(3, len(observation.discovered_clues) + 1),
+            )
+            description = "继续收集足以推进病例判断的公开证据。"
+        next_goal = AgentGoalState(
+            goal_id=f"goal_{turn_id}",
+            goal_type=goal_type,
+            public_description=description,
+            status=AgentGoalStatus.ACTIVE,
+            priority=80,
+            completion_condition=completion,
+            source_contribution_id=turn_id,
+            created_turn_id=turn_id,
+            updated_turn_id=turn_id,
+        )
+        return state.model_copy(update={
+            "current_goal": next_goal,
+            "current_plan": None,
+            "last_plan_evaluation": None,
+        })
+
+    @staticmethod
     def _complete_satisfied_goal(state, observation, turn_id):
         goal = state.current_goal.model_copy(update={
             "status": AgentGoalStatus.COMPLETED,
@@ -890,6 +960,85 @@ class CooperativeRuntime:
         return target == step.public_target_id
 
     @staticmethod
+    def _alignment_telemetry(decision, state, observation):
+        """Observe alignment inputs without participating in the alignment decision."""
+
+        action = decision.proposal.action
+        tool_call = action.tool_call
+        plan = state.current_plan
+        step = None
+        if plan is not None and plan.status is AgentPlanStatus.ACTIVE:
+            if 0 <= plan.current_step_index < len(plan.steps):
+                step = plan.steps[plan.current_step_index]
+
+        proposed_target = None
+        if tool_call is not None:
+            arguments = tool_call.arguments
+            candidate_key = {
+                "question_patient": "investigation_id",
+                "inspect_environment": "investigation_id",
+                "consult_archive": "investigation_id",
+                "submit_diagnosis": "diagnosis_id",
+                "execute_treatment": "treatment_id",
+            }.get(tool_call.name.value)
+            candidate = arguments.get(candidate_key) if candidate_key is not None else None
+            public_ids = {
+                *(item.investigation_id for item in observation.available_investigations),
+                *(item.diagnosis_id for item in observation.diagnosis_candidates),
+                *(item.treatment_id for item in observation.available_treatments),
+            }
+            if isinstance(candidate, str) and candidate in public_ids:
+                proposed_target = candidate
+
+        if action.action_type is AgentActionType.RESPOND:
+            reason = "not_applicable"
+        elif plan is None or plan.status is not AgentPlanStatus.ACTIVE:
+            reason = "missing_active_plan"
+        elif step is None:
+            reason = "missing_active_step"
+        elif tool_call is None or tool_call.name is not step.suggested_tool:
+            reason = "tool_mismatch"
+        elif next(iter(tool_call.arguments.values()), None) != step.public_target_id:
+            reason = "target_mismatch"
+        else:
+            reason = "match"
+
+        return {
+            "proposed_action_type": action.action_type.value,
+            "proposed_tool": tool_call.name if tool_call is not None else None,
+            "proposed_public_target_id": proposed_target,
+            "proposed_argument_keys": tuple(tool_call.arguments) if tool_call is not None else (),
+            "active_plan_step_id": step.step_id if step is not None else None,
+            "active_plan_step_intent": step.intent.value if step is not None else None,
+            "active_plan_step_tool": step.suggested_tool if step is not None else None,
+            "active_plan_step_public_target_id": step.public_target_id if step is not None else None,
+            "alignment_reason_code": reason,
+        }
+
+    @staticmethod
+    def _alignment_recovery_evaluation(*, state, observation, turn_id):
+        """Persist public, bounded recovery context without changing world or plan."""
+
+        plan = state.current_plan
+        if plan is None or plan.status is not AgentPlanStatus.ACTIVE:
+            raise ValueError("alignment recovery requires an active plan")
+        return PlanEvaluation(
+            evaluation_id=f"evaluation_{turn_id}",
+            plan_id=plan.plan_id,
+            outcome=PlanEvaluationOutcome.REVISE_PLAN,
+            reason_code=PlanEvaluationReason.ACTION_OUTSIDE_ACTIVE_PLAN,
+            observation_revision_before=observation.session_revision,
+            observation_revision_after=observation.session_revision,
+            next_goal_status=state.current_goal.status,
+            public_summary=(
+                "上一候选行动未执行，因为它与当前 active PlanStep 不一致。"
+                "当前 active Plan 仍为权威；请提出与该步骤对齐的行动，"
+                "或先提交合法 Plan revision。"
+            ),
+            evaluated_turn_id=turn_id,
+        )
+
+    @staticmethod
     def _advance_state_revision(state, turn_id, expected_revision):
         return state.model_copy(update={
             "revision": 1 if expected_revision == 0 else expected_revision + 1,
@@ -909,6 +1058,7 @@ class CooperativeRuntime:
             summaries = tuple(item.public_summary for item in plan.steps)
             current_step = plan.steps[plan.current_step_index].public_summary
         evaluation = state.last_plan_evaluation
+        repair_telemetry = self._repair_attempt_telemetry_fields(decision)
         return CooperativeTurnResult(
             turn_id=decision.turn_id, status=status, decision=decision,
             runtime_kind=getattr(self.agent, "runtime_kind", AgentRuntimeKind.UNKNOWN),
@@ -926,8 +1076,37 @@ class CooperativeRuntime:
             public_memory_effect_summary=(
                 memory_usage_trace.public_effect_summary if memory_usage_trace else None
             ),
+            **repair_telemetry,
             **kwargs,
         )
+
+    def _repair_attempt_telemetry_fields(self, decision):
+        if not decision.repair_kind:
+            return {}
+        diagnostics = getattr(self.agent, "last_planning_execution", None)
+        execution = diagnostics() if callable(diagnostics) else None
+        attempts = execution.attempt_telemetry if execution is not None else ()
+        initial = next((item for item in attempts if item.attempt_kind == "initial"), None)
+        repaired = next((item for item in attempts if item.attempt_kind == "repair"), None)
+
+        def summary(error_prefix, structure_prefix, item):
+            if item is None:
+                return {}
+            return {
+                f"{error_prefix}_validation_error_code": item.failure_code,
+                f"{error_prefix}_validation_error_path": item.field_path,
+                f"{structure_prefix}_plan_first_step_intent": item.plan_first_step_intent,
+                f"{structure_prefix}_plan_first_step_tool": item.plan_first_step_tool,
+                f"{structure_prefix}_plan_first_step_public_target": item.plan_first_step_public_target,
+                f"{structure_prefix}_decision_action_type": item.decision_action_type,
+                f"{structure_prefix}_decision_tool": item.decision_tool,
+                f"{structure_prefix}_decision_public_target": item.decision_public_target,
+            }
+
+        return {
+            **summary("initial", "initial", initial),
+            **summary("repair", "repaired", repaired),
+        }
 
     @staticmethod
     def _public_target(action, observation):

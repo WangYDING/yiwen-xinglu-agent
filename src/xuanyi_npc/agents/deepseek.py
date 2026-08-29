@@ -23,12 +23,12 @@ from pydantic import (
 )
 
 from xuanyi_npc.domain.base import DomainModel, NonEmptyText
-from xuanyi_npc.evaluation import (
+from xuanyi_npc.evaluation.costing import (
     DeepSeekPilotPricing,
-    ModelUsage,
     estimate_model_usage_cost,
     load_deepseek_pilot_pricing,
 )
+from .model_usage import ModelUsage
 
 from .llm import ChatRole, LLMAdapterError, LLMRequest, LLMResponse
 
@@ -451,23 +451,49 @@ class DeepSeekChatAdapter:
             self.request_budget.settle(usage)
             usage_settled = True
             if choice.finish_reason == "length":
-                raise DeepSeekTruncatedOutputError(
+                error = DeepSeekTruncatedOutputError(
                     "DeepSeek output was truncated at the configured token limit",
                     usage=usage,
                 )
+                self._attach_completion_failure_metadata(
+                    error, request_payload, finish_reason=choice.finish_reason,
+                    failure_stage="provider_finish",
+                )
+                raise error
             if choice.finish_reason != "stop":
-                raise DeepSeekProviderError(
+                error = DeepSeekProviderError(
                     "DeepSeek completion did not finish normally",
                     usage=usage,
                 )
+                self._attach_completion_failure_metadata(
+                    error, request_payload, finish_reason=choice.finish_reason,
+                    failure_stage="provider_finish",
+                )
+                raise error
             content = choice.message.content
             if content is None or not content.strip():
-                raise DeepSeekEmptyContentError(
+                error = DeepSeekEmptyContentError(
                     "DeepSeek returned an empty final content field",
                     usage=usage,
                 )
+                self._attach_completion_failure_metadata(
+                    error, request_payload, finish_reason=choice.finish_reason,
+                    failure_stage="provider_content",
+                )
+                raise error
 
-            return LLMResponse(content=content, usage=usage)
+            try:
+                return LLMResponse(content=content, usage=usage)
+            except ValidationError:
+                error = DeepSeekResponseFieldError(
+                    "DeepSeek final content does not satisfy the LLM response contract",
+                    usage=usage,
+                )
+                self._attach_completion_failure_metadata(
+                    error, request_payload, finish_reason=choice.finish_reason,
+                    failure_stage="llm_response_validation",
+                )
+                raise error from None
         except Exception as exc:
             if isinstance(exc, DeepSeekTimeoutError):
                 exc.latency_ms = max(
@@ -481,6 +507,21 @@ class DeepSeekChatAdapter:
                     raise
                 raise DeepSeekUsageUnavailableError() from exc
             raise
+
+    @staticmethod
+    def _attach_completion_failure_metadata(
+        error: LLMAdapterError,
+        request_payload: Mapping[str, object],
+        *,
+        finish_reason: str,
+        failure_stage: str,
+    ) -> None:
+        error.failure_stage = failure_stage
+        error.finish_reason = finish_reason
+        max_tokens = request_payload.get("max_tokens")
+        error.configured_max_output_tokens = (
+            max_tokens if isinstance(max_tokens, int) else None
+        )
 
     def conservative_request_reservation(
         self,

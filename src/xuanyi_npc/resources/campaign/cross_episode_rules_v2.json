@@ -2,11 +2,11 @@
   "rules_version":"cross_episode_rules_v1","projection_version":"campaign_projection_v1",
   "recommended_case_order":[
     {"case_id":"old_paper_umbrella","public_reason":"建议先从旧纸伞案熟悉证据核对。"},{"case_id":"gray_hearth_inn","public_reason":"继续在灰灶案核对契物来源。"},{"case_id":"moon_well_echo","public_reason":"在月井案练习交接顺序。"},
-    {"case_id":"lantern_alley_conflicting_testimony","public_reason":"正式弟子可在双灯巷练习证词交叉核对。"},{"case_id":"mist_ferry_borrowed_lantern","public_reason":"随后在雾渡辨明处置代价与安全边界。"},{"case_id":"returning_contract_nameless_shrine","public_reason":"最后在归契古祠综合六项能力并应用传承。"}
+    {"case_id":"lantern_alley_conflicting_testimony","public_reason":"可在双灯巷核对相互冲突的证词。"},{"case_id":"mist_ferry_borrowed_lantern","public_reason":"随后在雾渡辨明处置代价与安全边界。"},{"case_id":"returning_contract_nameless_shrine","public_reason":"最后在归契古祠综合人物、契物、地点与炁息证据。"}
   ],
   "target_case_contexts":[
     {"case_id":"gray_hearth_inn","neutral_reaction":"道医请你先按眼前公开现象调查掌勺人、燃料与旧灶，不预设异常来源。"},{"case_id":"moon_well_echo","neutral_reaction":"道医请你分别核对送信人的陈述、木简物证与月井现场，不凭回声先下结论。"},
-    {"case_id":"lantern_alley_conflicting_testimony","neutral_reaction":"玄医先生提醒你并列记录两名证人的时间、位置和动作，再以客观痕迹核对。"},{"case_id":"mist_ferry_borrowed_lantern","neutral_reaction":"玄医先生提醒你先确认青灯影响范围，再判断任何处置的代价由谁承担。"},{"case_id":"returning_contract_nameless_shrine","neutral_reaction":"玄医先生提醒你综合人物、碑面、契册与炁息，不机械套用前案。"}
+    {"case_id":"lantern_alley_conflicting_testimony","neutral_reaction":"调查搭档建议并列记录两名证人的时间、位置和动作，再以客观痕迹核对。"},{"case_id":"mist_ferry_borrowed_lantern","neutral_reaction":"调查搭档建议先确认青灯影响范围，再判断任何处置的代价由谁承担。"},{"case_id":"returning_contract_nameless_shrine","neutral_reaction":"调查搭档建议综合人物、碑面、契册与炁息，不机械套用前案。"}
   ],
   "rules":[
     {"rule_id":"old_paper_contract_knowledge","source_case_id":"old_paper_umbrella","source_treatment_id":"return_token_and_fulfill_vow","source_outcome":"resolved","effect":{"fact_id":"old_paper_vow_fulfilled","fact_type":"public_case_resolution","fact_public_text":"你曾归还旧纸伞所系木牌，并完成书生公开承认的雨夜承诺。","knowledge_id":"contract_provenance_check","knowledge_public_description":"你已掌握：遇到契约类异常时，先核对契物归属和承诺来源。","target_case_id":"gray_hearth_inn","history_reaction":"道医记得你在旧纸伞案中核对过契物来源，提醒你本案也可留意灶契归属。","recommended_investigation_id":"inspect_hearth_contract","recommendation_reason":"可在公开前置满足后优先核对灶契，但不会自动执行或发现线索。"}},

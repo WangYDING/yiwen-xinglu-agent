@@ -57,6 +57,12 @@ class ReflectionMemoryWriteOutcome(str, Enum):
     REPOSITORY_FAILURE = "repository_failure"
 
 
+class ReflectionMemoryIndexStatus(str, Enum):
+    NOT_REQUIRED = "not_required"
+    COMPLETE = "complete"
+    PENDING = "pending"
+
+
 class ReflectionMemoryWriteDecision(DomainModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -80,3 +86,5 @@ class ReflectionConsolidationResult(DomainModel):
     candidate_ids: tuple[Identifier, ...] = ()
     written_memory_ids: tuple[Identifier, ...] = ()
     decisions: tuple[ReflectionMemoryWriteDecision, ...] = ()
+    index_status: ReflectionMemoryIndexStatus = ReflectionMemoryIndexStatus.NOT_REQUIRED
+    index_error_code: Identifier | None = None

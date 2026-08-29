@@ -13,7 +13,7 @@ from typing import Iterator
 
 
 RESOURCE_PACKAGE = "xuanyi_npc.resources"
-FOUNDATION_CASE_RESOURCE_NAMES = (
+CORE_CASE_RESOURCE_NAMES = (
     "gray_hearth_inn.json",
     "moon_well_echo.json",
     "old_paper_umbrella.json",
@@ -23,65 +23,22 @@ ADVANCED_CASE_RESOURCE_NAMES = (
     "mist_ferry_borrowed_lantern.json",
     "returning_contract_nameless_shrine.json",
 )
-CASE_RESOURCE_NAMES = FOUNDATION_CASE_RESOURCE_NAMES + ADVANCED_CASE_RESOURCE_NAMES
+CASE_RESOURCE_NAMES = CORE_CASE_RESOURCE_NAMES + ADVANCED_CASE_RESOURCE_NAMES
 CAMPAIGN_RESOURCE_NAME = "cross_episode_rules_v1.json"
-M5_HISTORY_RESOURCE_NAME = "m5_history_evidence_v1.json"
 DEEPSEEK_POLICY_RESOURCE_NAME = "deepseek_v4_flash_pilot_policy_2026-08-07.json"
-PROGRESSION_RESOURCE_NAME = "apprenticeship_progression_v1.json"
-MENTOR_PROFILE_RESOURCE_NAME = "mentor_profile_v1.json"
-R2_LESSON_RESOURCE_NAME = "evidence_before_diagnosis_v1.json"
-R3_CURRICULUM_RESOURCE_NAMES = (
-    R2_LESSON_RESOURCE_NAME,
-    "provenance_before_intent_v1.json",
-    "corroborate_before_handoff_v1.json",
-    "remediate_evidence_completeness_v1.json",
-    "remediate_diagnostic_reasoning_v1.json",
-    "remediate_treatment_alignment_v1.json",
-    "curriculum_selection_v1.json",
-    "structured_mentor_memory_selection_v1.json",
-    "r3_acceptance_v1.json",
-)
-R4_RUNTIME_RESOURCES = (
-    "exams/foundational_xuanyi_exam_v1.json",
-    "permissions/permission_policy_v1.json",
-    "inheritance/trace_vow_restore_v1.json",
-    "inheritance/r4_acceptance_v1.json",
-)
-R5_RUNTIME_RESOURCES = (
-    "curriculum/curriculum_selection_v2.json",
-    "curriculum/cross_check_conflicting_testimony_v1.json",
-    "curriculum/bounded_treatment_and_consequence_v1.json",
-    "curriculum/integrated_causal_reasoning_v1.json",
-    "clinic/clinic_contract_v1.json",
-    "clinic/r5_acceptance_v1.json",
-    "clinic/case_access_policy_v1.json",
+CLINIC_RUNTIME_RESOURCES = (
+    "clinic/case_guides_v1.json",
     "campaign/cross_episode_rules_v2.json",
     "clinic/clinic.css",
     "clinic/clinic.js",
-)
-R6_RUNTIME_RESOURCES = (
-    "acceptance/product_acceptance_v1.json",
-    "acceptance/real_mentor_pilot_v1.json",
-    "acceptance/r6_real_mentor_pilot_v2.json",
-    "acceptance/r6_real_mentor_pilot_v3.json",
-    "acceptance/r6_real_mentor_pilot_v3_inputs.json",
-    "acceptance/r6_real_mentor_pilot_v3_expectations.json",
-    "pilot/deepseek_v4_flash_mentor_pricing_2026-08-13.json",
-    "presentation/public_terminology_v1.json",
 )
 ALLOWED_RUNTIME_RESOURCES = frozenset(
     {
         *(f"cases/{name}" for name in CASE_RESOURCE_NAMES),
         *(f"cases/{name}" for name in ADVANCED_CASE_RESOURCE_NAMES),
         f"campaign/{CAMPAIGN_RESOURCE_NAME}",
-        f"release/{M5_HISTORY_RESOURCE_NAME}",
         f"pilot/{DEEPSEEK_POLICY_RESOURCE_NAME}",
-        f"progression/{PROGRESSION_RESOURCE_NAME}",
-        f"mentor/{MENTOR_PROFILE_RESOURCE_NAME}",
-        *(f"curriculum/{name}" for name in R3_CURRICULUM_RESOURCE_NAMES),
-        *R4_RUNTIME_RESOURCES,
-        *R5_RUNTIME_RESOURCES,
-        *R6_RUNTIME_RESOURCES,
+        *CLINIC_RUNTIME_RESOURCES,
     }
 )
 
@@ -96,8 +53,6 @@ class RuntimeResourcePaths:
 
     case_dir: Path
     campaign_rules: Path
-    m5_history_evidence: Path
-    deepseek_policy: Path
 
 
 @dataclass(frozen=True)
@@ -154,21 +109,15 @@ def materialized_runtime_resources() -> Iterator[RuntimeResourcePaths]:
         with tempfile.TemporaryDirectory(prefix="xuanyi-runtime-") as temporary:
             root = Path(temporary)
             case_dir = root / "cases"
-            for name in FOUNDATION_CASE_RESOURCE_NAMES:
+            for name in CORE_CASE_RESOURCE_NAMES:
                 _copy_resource(f"cases/{name}", case_dir / name)
             campaign_rules = root / "campaign" / CAMPAIGN_RESOURCE_NAME
             _copy_resource(
                 f"campaign/{CAMPAIGN_RESOURCE_NAME}", campaign_rules
             )
-            history = root / "release" / M5_HISTORY_RESOURCE_NAME
-            _copy_resource(f"release/{M5_HISTORY_RESOURCE_NAME}", history)
-            policy = root / "pilot" / DEEPSEEK_POLICY_RESOURCE_NAME
-            _copy_resource(f"pilot/{DEEPSEEK_POLICY_RESOURCE_NAME}", policy)
             yield RuntimeResourcePaths(
                 case_dir=case_dir,
                 campaign_rules=campaign_rules,
-                m5_history_evidence=history,
-                deepseek_policy=policy,
             )
     except PackageResourceError:
         raise

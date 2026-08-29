@@ -12,6 +12,12 @@ from typing import Any
 from pydantic import TypeAdapter, ValidationError
 
 from xuanyi_npc.domain.memory import MemoryType
+from xuanyi_npc.domain.reflection import ReflectionTrigger
+from xuanyi_npc.domain.reflection_lifecycle import (
+    ReflectionLifecycleResult,
+    ReflectionLifecycleStatus,
+)
+from xuanyi_npc.domain.reflection_memory import ReflectionMemoryIndexStatus
 from xuanyi_npc.memory.canonical import (
     canonical_json,
     normalize_utc,
@@ -65,7 +71,8 @@ from xuanyi_npc.memory.projection import DeterministicMemoryProjector
 
 
 LEGACY_MEMORY_SCHEMA_VERSION = 1
-MEMORY_SCHEMA_VERSION = 2
+EMBEDDING_MEMORY_SCHEMA_VERSION = 2
+MEMORY_SCHEMA_VERSION = 3
 CORRECTION_PROJECTION_VERSION = "memory_correction_v1"
 
 _payload_adapter = TypeAdapter(PublicMemoryPayload)
@@ -81,8 +88,10 @@ class SQLiteMemoryRepository:
             "memory_events",
             "memory_lifecycle_events",
             "memory_tombstones",
+            "reflection_lifecycle_receipts",
         }
     )
+    LEGACY_CORE_TABLES = CORE_TABLES - {"reflection_lifecycle_receipts"}
     REQUIRED_TABLES = CORE_TABLES | {"memory_embeddings"}
 
     def __init__(
@@ -119,9 +128,17 @@ class SQLiteMemoryRepository:
                 self._verify_schema_version(
                     connection,
                     expected_version=LEGACY_MEMORY_SCHEMA_VERSION,
-                    required_tables=self.CORE_TABLES,
+                    required_tables=self.LEGACY_CORE_TABLES,
                 )
                 self._migrate_v1_to_v2(connection)
+                self._migrate_v2_to_v3(connection)
+            elif version == EMBEDDING_MEMORY_SCHEMA_VERSION:
+                self._verify_schema_version(
+                    connection,
+                    expected_version=EMBEDDING_MEMORY_SCHEMA_VERSION,
+                    required_tables=self.LEGACY_CORE_TABLES | {"memory_embeddings"},
+                )
+                self._migrate_v2_to_v3(connection)
             elif version != MEMORY_SCHEMA_VERSION:
                 raise MemorySchemaVersionError("memory schema version is incompatible")
             self._verify_schema(connection)
@@ -144,6 +161,206 @@ class SQLiteMemoryRepository:
             return int(connection.execute("PRAGMA user_version").fetchone()[0])
         finally:
             connection.close()
+
+    def claim_reflection_trigger(
+        self,
+        *,
+        trigger: ReflectionTrigger,
+        player_id: str,
+        owner_token: str,
+    ) -> tuple[str, ReflectionLifecycleResult | None]:
+        """Atomically claim a trigger; one bounded recovery is allowed after restart."""
+
+        now = utc_text(self._clock())
+
+        def operation(connection: sqlite3.Connection):
+            row = connection.execute(
+                "SELECT * FROM reflection_lifecycle_receipts WHERE trigger_id = ?",
+                (trigger.trigger_id,),
+            ).fetchone()
+            if row is None:
+                connection.execute(
+                    """
+                    INSERT INTO reflection_lifecycle_receipts (
+                        trigger_id, trigger_type, player_id, episode_id, case_id,
+                        status, owner_token, attempt_count, result_json,
+                        created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, 'processing', ?, 1, NULL, ?, ?)
+                    """,
+                    (
+                        trigger.trigger_id,
+                        trigger.trigger_type.value,
+                        player_id,
+                        trigger.episode_id,
+                        trigger.case_id,
+                        owner_token,
+                        now,
+                        now,
+                    ),
+                )
+                return "acquired", None
+            if (
+                row["player_id"] != player_id
+                or row["episode_id"] != trigger.episode_id
+                or row["case_id"] != trigger.case_id
+                or row["trigger_type"] != trigger.trigger_type.value
+            ):
+                raise MemoryPlayerIsolationError("reflection trigger ownership mismatch")
+            if row["result_json"]:
+                return "replay", ReflectionLifecycleResult.model_validate_json(row["result_json"])
+            if row["owner_token"] == owner_token:
+                return "in_progress", None
+            if int(row["attempt_count"]) >= 2:
+                return "interrupted", None
+            updated = connection.execute(
+                """
+                UPDATE reflection_lifecycle_receipts
+                SET owner_token = ?, attempt_count = attempt_count + 1, updated_at = ?
+                WHERE trigger_id = ? AND status = 'processing' AND owner_token = ?
+                """,
+                (owner_token, now, trigger.trigger_id, row["owner_token"]),
+            )
+            return ("recovered", None) if updated.rowcount == 1 else ("in_progress", None)
+
+        return self._write_transaction(operation)
+
+    def complete_reflection_trigger(
+        self,
+        *,
+        trigger_id: str,
+        owner_token: str,
+        result: ReflectionLifecycleResult,
+    ) -> None:
+        now = utc_text(self._clock())
+
+        def operation(connection: sqlite3.Connection):
+            updated = connection.execute(
+                """
+                UPDATE reflection_lifecycle_receipts
+                SET status = ?, result_json = ?, updated_at = ?
+                WHERE trigger_id = ? AND status = 'processing' AND owner_token = ?
+                """,
+                (
+                    result.status.value,
+                    result.model_dump_json(),
+                    now,
+                    trigger_id,
+                    owner_token,
+                ),
+            )
+            if updated.rowcount != 1:
+                raise MemoryStorageError("reflection trigger claim was lost")
+
+        self._write_transaction(operation)
+
+    def list_pending_reflection_index_receipts(
+        self, *, player_id: str
+    ) -> tuple[ReflectionLifecycleResult, ...]:
+        connection = self._connect()
+        try:
+            rows = connection.execute(
+                """
+                SELECT result_json FROM reflection_lifecycle_receipts
+                WHERE player_id = ? AND status = 'index_pending'
+                  AND result_json IS NOT NULL
+                ORDER BY trigger_id
+                """,
+                (player_id,),
+            ).fetchall()
+            return tuple(
+                ReflectionLifecycleResult.model_validate_json(row["result_json"])
+                for row in rows
+            )
+        finally:
+            connection.close()
+
+    def reconcile_reflection_index_receipt(
+        self,
+        *,
+        player_id: str,
+        trigger_id: str,
+        expected: ReflectionLifecycleResult,
+        reconciled: ReflectionLifecycleResult,
+    ) -> str:
+        """CAS one index-pending receipt to the normal successful terminal state."""
+
+        if (
+            expected.trigger_id != trigger_id
+            or expected.status is not ReflectionLifecycleStatus.INDEX_PENDING
+            or expected.index_status is not ReflectionMemoryIndexStatus.PENDING
+            or reconciled.trigger_id != trigger_id
+            or reconciled.status is not ReflectionLifecycleStatus.COMPLETED
+            or reconciled.index_status is not ReflectionMemoryIndexStatus.COMPLETE
+            or reconciled.error_code is not None
+            or not reconciled.index_reconciled
+            or reconciled.previous_index_status is not expected.index_status
+            or reconciled.previous_error_code != expected.error_code
+            or reconciled.index_reconciled_memory_ids != expected.written_memory_ids
+        ):
+            raise MemoryStorageError("invalid reflection index reconciliation transition")
+        permitted = expected.model_copy(
+            update={
+                "status": reconciled.status,
+                "index_status": reconciled.index_status,
+                "error_code": reconciled.error_code,
+                "index_reconciled": reconciled.index_reconciled,
+                "previous_index_status": reconciled.previous_index_status,
+                "previous_error_code": reconciled.previous_error_code,
+                "index_reconciliation_embedding_space_id": (
+                    reconciled.index_reconciliation_embedding_space_id
+                ),
+                "index_reconciled_memory_ids": reconciled.index_reconciled_memory_ids,
+                "index_reconciled_at": reconciled.index_reconciled_at,
+            }
+        )
+        if permitted != reconciled:
+            raise MemoryStorageError("reflection reconciliation changed immutable history")
+        now = utc_text(self._clock())
+
+        def operation(connection: sqlite3.Connection) -> str:
+            row = connection.execute(
+                """
+                SELECT player_id, status, result_json
+                FROM reflection_lifecycle_receipts WHERE trigger_id = ?
+                """,
+                (trigger_id,),
+            ).fetchone()
+            if row is None:
+                return "ineligible"
+            if row["player_id"] != player_id:
+                raise MemoryPlayerIsolationError("reflection receipt player mismatch")
+            current = None
+            if row["result_json"]:
+                current = ReflectionLifecycleResult.model_validate_json(row["result_json"])
+                if (
+                    row["status"] == ReflectionLifecycleStatus.COMPLETED.value
+                    and current == reconciled
+                ):
+                    return "idempotent"
+            if (
+                row["status"] != ReflectionLifecycleStatus.INDEX_PENDING.value
+                or current != expected
+            ):
+                return "ineligible"
+            updated = connection.execute(
+                """
+                UPDATE reflection_lifecycle_receipts
+                SET status = ?, result_json = ?, updated_at = ?
+                WHERE trigger_id = ? AND player_id = ?
+                  AND status = 'index_pending' AND result_json = ?
+                """,
+                (
+                    reconciled.status.value,
+                    reconciled.model_dump_json(),
+                    now,
+                    trigger_id,
+                    player_id,
+                    row["result_json"],
+                ),
+            )
+            return "updated" if updated.rowcount == 1 else "ineligible"
+
+        return self._write_transaction(operation)
 
     def write_projection(
         self,
@@ -587,7 +804,10 @@ class SQLiteMemoryRepository:
                 table: int(
                     connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
                 )
-                for table in sorted(self.REQUIRED_TABLES - {"memory_schema"})
+                for table in sorted(
+                    self.REQUIRED_TABLES
+                    - {"memory_schema", "reflection_lifecycle_receipts"}
+                )
             }
         finally:
             connection.close()
@@ -1106,6 +1326,14 @@ class SQLiteMemoryRepository:
         self._fault_point("migration_after_embedding_table")
         connection.execute(
             "UPDATE memory_schema SET version = ? WHERE singleton = 1",
+            (EMBEDDING_MEMORY_SCHEMA_VERSION,),
+        )
+        connection.execute(f"PRAGMA user_version = {EMBEDDING_MEMORY_SCHEMA_VERSION}")
+
+    def _migrate_v2_to_v3(self, connection: sqlite3.Connection) -> None:
+        self._create_reflection_receipt_schema(connection)
+        connection.execute(
+            "UPDATE memory_schema SET version = ? WHERE singleton = 1",
             (MEMORY_SCHEMA_VERSION,),
         )
         connection.execute(f"PRAGMA user_version = {MEMORY_SCHEMA_VERSION}")
@@ -1221,6 +1449,7 @@ class SQLiteMemoryRepository:
         for statement in statements:
             connection.execute(statement)
         SQLiteMemoryRepository._create_embedding_schema(connection)
+        SQLiteMemoryRepository._create_reflection_receipt_schema(connection)
         connection.execute(
             "INSERT INTO memory_schema (singleton, version) VALUES (1, ?)",
             (MEMORY_SCHEMA_VERSION,),
@@ -1259,6 +1488,32 @@ class SQLiteMemoryRepository:
             """
             CREATE INDEX idx_memory_embeddings_player_space
             ON memory_embeddings (player_id, embedding_space_id)
+            """
+        )
+
+    @staticmethod
+    def _create_reflection_receipt_schema(connection: sqlite3.Connection) -> None:
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS reflection_lifecycle_receipts (
+                trigger_id TEXT PRIMARY KEY,
+                trigger_type TEXT NOT NULL,
+                player_id TEXT NOT NULL,
+                episode_id TEXT NOT NULL,
+                case_id TEXT NOT NULL,
+                status TEXT NOT NULL,
+                owner_token TEXT NOT NULL,
+                attempt_count INTEGER NOT NULL CHECK (attempt_count BETWEEN 1 AND 2),
+                result_json TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )
+            """
+        )
+        connection.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_reflection_receipts_player_episode
+            ON reflection_lifecycle_receipts (player_id, episode_id)
             """
         )
 

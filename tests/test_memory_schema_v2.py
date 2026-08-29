@@ -132,7 +132,7 @@ def test_v1_to_v2_migration_preserves_authoritative_and_lifecycle_data(
     migrated = SQLiteMemoryRepository(database_path, clock=lambda: FIXED_TIME)
     migrated.initialize()
 
-    assert migrated.schema_version() == MEMORY_SCHEMA_VERSION == 2
+    assert migrated.schema_version() == MEMORY_SCHEMA_VERSION == 3
     assert core_snapshot(database_path) == before
     assert migrated.table_counts()["memory_embeddings"] == 0
     migrated.initialize()
@@ -162,15 +162,15 @@ def test_v1_to_v2_migration_failure_rolls_back_atomically(tmp_path: Path) -> Non
     assert "memory_embeddings" not in tables
 
     SQLiteMemoryRepository(database_path).initialize()
-    assert SQLiteMemoryRepository(database_path).schema_version() == 2
+    assert SQLiteMemoryRepository(database_path).schema_version() == 3
 
 
 def test_future_schema_version_is_rejected_without_mutation(tmp_path: Path) -> None:
     database_path = tmp_path / "memory.sqlite3"
     SQLiteMemoryRepository(database_path).initialize()
     with sqlite3.connect(database_path) as connection:
-        connection.execute("PRAGMA user_version = 3")
-        connection.execute("UPDATE memory_schema SET version=3 WHERE singleton=1")
+        connection.execute("PRAGMA user_version = 4")
+        connection.execute("UPDATE memory_schema SET version=4 WHERE singleton=1")
     before = database_path.read_bytes()
 
     with pytest.raises(MemorySchemaVersionError):

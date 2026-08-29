@@ -24,7 +24,7 @@ from .contracts import (
     ProjectionWriteDisposition,
     ProjectionWriteResult,
     TrustedMemoryBoundary,
-    StructuredTeachingPublicPayload,
+    StructuredExperiencePublicPayload,
     VerifiedMemorySource,
 )
 from .errors import (
@@ -189,7 +189,7 @@ __all__ = [
     "ProjectionWriteDisposition",
     "ProjectionWriteResult",
     "TrustedMemoryBoundary",
-    "StructuredTeachingPublicPayload",
+    "StructuredExperiencePublicPayload",
     "UnsupportedMemorySourceError",
     "VerifiedMemorySource",
     "canonical_json",

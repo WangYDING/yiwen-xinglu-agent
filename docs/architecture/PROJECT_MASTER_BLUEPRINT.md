@@ -2,7 +2,7 @@
 
 > 状态：当前产品身份冻结（2026-08-21）
 >
-> 作用：本文件是当前产品身份与核心体验的最高层权威来源。它不改写历史提交、实验结果、M/R 里程碑或退出审计；旧材料中的“玄医问道”“问道医途”按形成时的历史产品身份理解。
+> 作用：本文件是当前产品身份与核心体验的最高层权威来源。
 
 ## 一句话主题
 
@@ -16,9 +16,7 @@
 2. **当前主 Agent**：`GameNPCAgent`。它读取权限过滤后的公开 Observation，维护 Goal/Plan，评价 `PlayerContribution`，在 Public Action Space 中选择候选行动，在权限内自主推进普通调查，并根据结果 Replan。
 3. **确定性系统**：`PublicActionContract`、`GoalPlanPolicy`、Authority Policy 与 `CaseEngine` 验证行动、计划和权限，执行合法 Tool，并独占实际世界状态的变更权。
 4. **长期记忆与反思**：Memory 是有范围和来源约束的历史经验；Reflection 必须以真实执行结果为证据，经确定性验证和保守写入后才能成为未来经验。
-5. **保留分支**：`MentorAgent` 是 retained teaching / presentation branch，服务课程、成长、考试、权限和传承表达，不代表当前 Cooperative Game NPC 的主 Agent 身份。
-6. **历史基线**：`DoctorAgent` 是 V0 baseline / historical benchmark Agent，用于回归、演示与历史工程评测，不代表当前玩家体验。
-7. **系统形态**：普通案件角色不是 Agent；当前每次合作回合只有一个 `GameNPCAgent` 参与决策。**This is not a Multi-Agent system.**
+5. **系统形态**：普通案件角色不是 Agent；当前每次合作回合只有一个 `GameNPCAgent` 参与决策。**This is not a Multi-Agent system.**
 
 ## 核心权责
 
@@ -90,17 +88,9 @@ Goal 表示当前目标，Plan 保存有序步骤。`GoalPlanPolicy` 检查目�
 
 真实 Episode 结果先形成 evidence，再生成 Reflection proposal。弱证据、越界推断和无来源总结必须被拒绝；只有验证通过的候选经验才能经保守 consolidation 进入未来检索。这里的“学习”是可审计的经验形成，不是模型参数训练。
 
-## 保留的教学与成长分支
-
-R-series 已实现或验证的 Mentor teaching、curriculum、progression、assessment、exam、permission 与 inheritance 能力继续保留。它们可以作为 Clinic 中的教学、成长和表达能力，也保留其工程与产品研究价值，但不再定义整个产品的最终身份，也不取代 `GameNPCAgent` 的 Cooperative Investigation 主链。
-
-该分支继续遵守相同安全原则：Mentor 的语言或建议不是权威状态；课程、成长、考试、权限与传承结果由确定性规则决定。详细范围见 [`../product/ROADMAP.md`](../product/ROADMAP.md) 和 R-series 文档。
-
 ## 工程阶段解释
 
 - **M1–M5**：当前 Cooperative Agent 核心工程与验证主线，覆盖 Human-Agent Cooperation、Planning/Replanning、Long-term Memory、Reflection 和 Agent Benchmark / Real LLM Validation。
-- **R-series**：retained / historical teaching、growth、exam、permission 与 inheritance product evolution。
-- **DoctorAgent 与旧 Pilot**：historical baseline / benchmark evidence。
 - **M4.5 语义检索**：保留真实负结果；未通过的 Dense-only 能力继续默认关闭，不进入正式 Agent 决策链。
 
 ## 技术标识与历史身份
@@ -125,4 +115,4 @@ R-series 已实现或验证的 Mentor teaching、curriculum、progression、asse
 3. [`../product/ROADMAP.md`](../product/ROADMAP.md)：当前状态、保留分支与历史演化；
 4. [`../../README.md`](../../README.md)：对外摘要。
 
-这些文件必须共同描述“异闻行录 + Human-Agent Cooperative Game NPC System”，不得再把 Mentor teaching 或 R-series 写成替代 Cooperative Agent 主线的唯一最终产品定义。
+这些文件必须共同描述“异闻行录 + Human-Agent Cooperative Game NPC System”。

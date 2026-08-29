@@ -1,7 +1,7 @@
 {
   "case_id": "old_paper_umbrella",
   "title": "旧纸伞与失约书生",
-  "synopsis": "一名书生连续梦见窗外有人呼名，影子渐淡，并开始遗忘亲人的面容。此病例仅用于验证确定性调查与教学闭环。",
+  "synopsis": "一名书生连续梦见窗外有人呼名，影子渐淡，并开始遗忘亲人的面容。玩家需与调查搭档核对人物、契物与承诺之间的联系。",
   "difficulty": 2,
   "patient": {
     "patient_id": "scholar_lu",

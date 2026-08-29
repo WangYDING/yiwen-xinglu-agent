@@ -36,7 +36,10 @@ from xuanyi_npc.domain.reflection import (
     ReusableLessonProposal,
     ReusableLessonType,
 )
-from xuanyi_npc.domain.reflection_memory import ReflectionMemoryWriteOutcome
+from xuanyi_npc.domain.reflection_memory import (
+    ReflectionMemoryIndexStatus,
+    ReflectionMemoryWriteOutcome,
+)
 from xuanyi_npc.memory import (
     DeterministicFakeEmbedding,
     MemoryRetrievalConfig,
@@ -79,7 +82,7 @@ ASSESSMENT = evidence(
 )
 
 
-def scope(*, tags=("question_before_treatment",)) -> ApplicabilityScope:
+def scope(*, tags=(OUTCOME.ref_id,)) -> ApplicabilityScope:
     return ApplicabilityScope(
         scope_type=ApplicabilityScopeType.SIMILAR_TOOL_OUTCOME_PATTERN,
         public_pattern_tags=tags,
@@ -95,10 +98,13 @@ def outcome_lesson(
     memory_type: MemoryType = MemoryType.LEARNING,
     refs=(OUTCOME, ASSESSMENT),
 ) -> ReusableLessonProposal:
+    if lesson_scope is None:
+        tool_refs = tuple(item.ref_id for item in refs if item.ref_type is EvidenceRefType.TOOL_OUTCOME)
+        lesson_scope = scope(tags=tool_refs[:1])
     return ReusableLessonProposal(
         lesson_type=ReusableLessonType.OUTCOME,
         public_safe_summary=summary,
-        applicability_scope=lesson_scope or scope(),
+        applicability_scope=lesson_scope,
         evidence_refs=refs,
         confidence=confidence,
         proposed_memory_type=memory_type,
@@ -150,7 +156,9 @@ def test_valid_outcome_grounded_lesson_writes_existing_repository(tmp_path) -> N
     record = repository.get_memory(
         player_id="player_apprentice", memory_id=result.written_memory_ids[0]
     )
-    assert record.content == OUTCOME.public_summary
+    assert record.content.startswith("历史经验参考（不是当前世界事实）")
+    assert OUTCOME.public_summary in record.content
+    assert "question_before_treatment" not in record.content
     receipt = repository.get_source_receipt(
         player_id="player_apprentice",
         source_event_id=record.source_event_id,
@@ -199,7 +207,28 @@ def test_persisted_reflection_memory_is_retrievable_by_m3(
         observation=observation,
     )
     assert result.written_memory_ids[0] in context.selected_memory_ids
-    assert context.memories[0].public_summary == OUTCOME.public_summary
+    assert context.memories[0].public_summary.startswith("历史经验参考（不是当前世界事实）")
+    assert OUTCOME.public_summary in context.memories[0].public_summary
+
+
+def test_consolidation_automatically_indexes_written_lesson(tmp_path) -> None:
+    repository = repository_at(tmp_path / "memory.sqlite3")
+    adapter = DeterministicFakeEmbedding()
+    value = proposal(outcome_lesson())
+    result = ReflectionMemoryConsolidationService(
+        repository=repository,
+        index_service=MemoryIndexService(repository=repository, adapter=adapter),
+        clock=lambda: NOW,
+    ).consolidate(
+        player_id="player_apprentice",
+        proposal=value,
+        evidence_bundle=bundle(*value.reusable_lesson_candidates[0].evidence_refs),
+    )
+    assert result.index_status is ReflectionMemoryIndexStatus.COMPLETE
+    assert repository.list_embeddings(
+        player_id="player_apprentice",
+        embedding_space_id=adapter.embedding_space_id,
+    )[0].memory_id == result.written_memory_ids[0]
 
 
 def test_same_trigger_rerun_is_idempotent_and_duplicate_is_skipped(tmp_path) -> None:
@@ -224,8 +253,9 @@ def test_weak_evidence_and_broad_scope_are_rejected(tmp_path) -> None:
     broad = outcome_lesson(
         lesson_scope=scope(tags=("one", "two", "three", "four"))
     )
-    _, broad_result = consolidate(repository, broad)
-    assert broad_result.decisions[0].outcome is ReflectionMemoryWriteOutcome.REJECT_SCOPE_TOO_BROAD
+    with pytest.raises(ReflectionProposalValidationError) as captured:
+        consolidate(repository, broad)
+    assert captured.value.grounding_rule_code.value == "lesson_scope_invalid"
 
 
 def test_player_belief_cannot_be_consolidated_as_fact(tmp_path) -> None:
@@ -244,7 +274,7 @@ def test_player_belief_cannot_be_consolidated_as_fact(tmp_path) -> None:
         public_safe_summary=belief.public_summary,
         applicability_scope=ApplicabilityScope(
             scope_type=ApplicabilityScopeType.SIMILAR_PLAYER_BEHAVIOR,
-            public_pattern_tags=("premature_certainty",),
+            public_pattern_tags=(evaluation.ref_id,),
             limitation="Only for the same public cooperation pattern.",
         ),
         evidence_refs=(belief, evaluation, ASSESSMENT),
@@ -258,8 +288,11 @@ def test_player_belief_cannot_be_consolidated_as_fact(tmp_path) -> None:
         proposal=value,
         evidence_bundle=bundle(belief, evaluation, ASSESSMENT),
     )
-    assert result.decisions[0].outcome is ReflectionMemoryWriteOutcome.REJECT_UNSAFE
-    assert repository.list_memories(player_id="player_apprentice") == ()
+    memory = repository.get_memory(
+        player_id="player_apprentice", memory_id=result.written_memory_ids[0]
+    )
+    assert belief.public_summary not in memory.content
+    assert evaluation.public_summary in memory.content
 
 
 def memory_trace(*, accepted: bool) -> EvidenceRef:
@@ -305,15 +338,15 @@ def test_accepted_memory_usage_with_outcome_builds_bounded_candidate() -> None:
     lesson = ReusableLessonProposal(
         lesson_type=ReusableLessonType.MEMORY_HELPFULNESS,
         public_safe_summary=ASSESSMENT.public_summary,
-        applicability_scope=scope(),
-        evidence_refs=(accepted, ASSESSMENT),
+        applicability_scope=scope(tags=(OUTCOME.ref_id,)),
+        evidence_refs=(accepted, OUTCOME),
         confidence=ReflectionConfidence.HIGH,
         proposed_memory_type=MemoryType.LEARNING,
     )
     candidates = ReflectionMemoryCandidateBuilder().build(
         player_id="player_apprentice",
         proposal=proposal(lesson),
-        evidence_bundle=bundle(accepted, ASSESSMENT),
+        evidence_bundle=bundle(accepted, OUTCOME),
     )
     assert len(candidates) == 1
     assert candidates[0].source == "reflection_generated"
@@ -382,9 +415,12 @@ def test_conflicting_active_memory_is_rejected_without_supersede(tmp_path) -> No
 def test_unsupported_claim_is_rejected_before_repository_write(tmp_path) -> None:
     unsupported = outcome_lesson(summary="The hidden diagnosis was correct.")
     repository = repository_at(tmp_path / "memory.sqlite3")
-    with pytest.raises(ReflectionProposalValidationError, match="not supported"):
-        consolidate(repository, unsupported)
-    assert repository.list_memories(player_id="player_apprentice") == ()
+    _, result = consolidate(repository, unsupported)
+    memory = repository.get_memory(
+        player_id="player_apprentice", memory_id=result.written_memory_ids[0]
+    )
+    assert "hidden diagnosis" not in memory.content
+    assert OUTCOME.public_summary in memory.content
 
 
 class FailingRepository:

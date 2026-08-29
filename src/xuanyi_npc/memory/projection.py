@@ -21,9 +21,9 @@ from xuanyi_npc.domain.events import (
     TreatmentExecutedEvent,
 )
 from xuanyi_npc.domain.memory import MemoryType
-from xuanyi_npc.domain.curriculum import (
+from xuanyi_npc.domain.memory_taxonomy import (
     StructuredMemorySourceType,
-    StructuredTeachingMemoryType,
+    StructuredMemoryType,
 )
 from xuanyi_npc.domain.player import PlayerState
 
@@ -36,7 +36,7 @@ from .contracts import (
     MemoryWriteReason,
     PublicClueFact,
     StrictMemoryModel,
-    StructuredTeachingPublicPayload,
+    StructuredExperiencePublicPayload,
     TreatmentPublicPayload,
     UtcDateTime,
     VerifiedMemorySource,
@@ -355,7 +355,7 @@ class DeterministicMemoryProjector:
         )
         return source, self.memory_from_verified_source(source)
 
-    def project_structured_teaching_fact(
+    def project_structured_experience(
         self,
         *,
         player_id: str,
@@ -363,7 +363,7 @@ class DeterministicMemoryProjector:
         source_sequence: int,
         source_revision: int,
         occurred_at,
-        structured_memory_type: StructuredTeachingMemoryType,
+        structured_memory_type: StructuredMemoryType,
         source_type: StructuredMemorySourceType,
         source_reference_id: str,
         public_summary: str,
@@ -372,7 +372,7 @@ class DeterministicMemoryProjector:
         lesson_id: str | None = None,
         ability_ids: tuple[str, ...] = (),
     ) -> tuple[VerifiedMemorySource, AuthoritativeMemoryRecord]:
-        payload = StructuredTeachingPublicPayload(
+        payload = StructuredExperiencePublicPayload(
             structured_memory_type=structured_memory_type,
             source_type=source_type,
             source_reference_id=source_reference_id,
@@ -383,7 +383,7 @@ class DeterministicMemoryProjector:
             ability_ids=tuple(sorted(set(ability_ids))),
         )
         source_event_id = stable_source_event_id(
-            MemorySourceEventType.STRUCTURED_TEACHING_FACT.value,
+            MemorySourceEventType.STRUCTURED_EXPERIENCE.value,
             source_session_id,
             source_sequence,
         )
@@ -391,7 +391,7 @@ class DeterministicMemoryProjector:
             source_event_id=source_event_id,
             player_id=player_id,
             source_session_id=source_session_id,
-            source_event_type=MemorySourceEventType.STRUCTURED_TEACHING_FACT,
+            source_event_type=MemorySourceEventType.STRUCTURED_EXPERIENCE,
             source_sequence=source_sequence,
             source_revision=source_revision,
             projection_version=self.projection_version,
@@ -449,17 +449,16 @@ class DeterministicMemoryProjector:
             action_id = payload.treatment_id
             public_clues = ()
             related_case_id = payload.case_id
-        elif isinstance(payload, StructuredTeachingPublicPayload):
+        elif isinstance(payload, StructuredExperiencePublicPayload):
             memory_type = (
                 MemoryType.EPISODIC
-                if payload.structured_memory_type is StructuredTeachingMemoryType.CASE_EXPERIENCE
+                if payload.structured_memory_type is StructuredMemoryType.CASE_EXPERIENCE
                 else MemoryType.LEARNING
             )
             importance = 4 if payload.structured_memory_type in {
-                StructuredTeachingMemoryType.LEARNING_PATTERN,
-                StructuredTeachingMemoryType.MENTOR_FEEDBACK,
+                StructuredMemoryType.LEARNING_PATTERN,
             } else 3
-            write_reason = MemoryWriteReason.VERIFIED_STRUCTURED_TEACHING_FACT
+            write_reason = MemoryWriteReason.VERIFIED_STRUCTURED_EXPERIENCE
             content = payload.public_summary
             action_id = payload.source_reference_id
             public_clues = ()
@@ -470,7 +469,7 @@ class DeterministicMemoryProjector:
             )
 
         related_entities = {action_id, *(item.clue_id for item in public_clues)}
-        if isinstance(payload, StructuredTeachingPublicPayload):
+        if isinstance(payload, StructuredExperiencePublicPayload):
             related_entities.update(
                 {
                     payload.structured_memory_type.value,

@@ -89,7 +89,7 @@ def run(*, model_directory: Path, manifest_path: Path) -> dict[str, Any]:
                 item_id="smoke_zh", text="玩家曾在雨夜检查过旧纸伞。"
             ),
             EmbeddingRequestItem(
-                item_id="smoke_en", text="The apprentice returned the wooden token."
+                item_id="smoke_en", text="The investigator returned the wooden token."
             ),
             EmbeddingRequestItem(
                 item_id="smoke_mixed", text="道医 memory：遵守已验证的历史边界。"

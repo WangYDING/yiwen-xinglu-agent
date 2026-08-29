@@ -10,7 +10,7 @@ class LanguageProposal:
     message: str = ""
 
 CaseMessageIntent = Literal[
-    "mentor_message", "character_question", "investigation_action",
+    "character_question", "investigation_action",
     "diagnosis_statement", "treatment_statement", "clarification_needed", "off_topic",
 ]
 
@@ -32,14 +32,12 @@ def classify_case_message(raw: str, current_target: str, participants) -> CaseMe
     text = raw.strip()
     by_name = {item.display_name: item.participant_id for item in participants}
     if text.startswith("@"):
-        matched = next((name for name in ("师父", *by_name) if text.startswith("@" + name)), None)
+        matched = next((name for name in by_name if text.startswith("@" + name)), None)
         if matched is None:
             return CaseMessageClassification("clarification_needed", text, message="本案没有这位可交谈人物，请从参与者列表选择。")
         rest = text[len(matched) + 1:].strip()
         if not rest:
             return CaseMessageClassification("clarification_needed", text, message="请选择接收者后再输入要说的话。")
-        if matched == "师父":
-            return CaseMessageClassification("mentor_message", rest, "mentor")
         return CaseMessageClassification("character_question", rest, by_name[matched])
     if not text:
         return CaseMessageClassification("clarification_needed", text, message="请说明你想询问、调查、辨证或处置什么。")
@@ -80,12 +78,3 @@ def propose_investigation(text: str, investigations) -> LanguageProposal:
     if not scored or scored[0][0] < 6 or (len(scored)>1 and scored[0][0]==scored[1][0]):
         return LanguageProposal("clarify", message="我还不能可靠判断调查目标。请补充对象与动作，例如‘询问某人来由’或‘检查某件物品的痕迹’。")
     return LanguageProposal("investigation",scored[0][1],"已按你的描述提出调查，并由病例规则复核能力与前置证据。")
-
-def mentor_reply(text: str) -> str:
-    if any(x in text for x in ("答案","真相","正确辨证","正确处置")):
-        return "师父：答案须由你从已得证据中辨明。我不会泄露未发现线索，也不会替你行动。"
-    if any(x in text for x in ("能力","技法")):
-        return "师父：察形比较表象，问因核对来由，验物检查契物；特殊观炁还需熟练度与前置证据。以病例规则的校验为准。"
-    if any(x in text for x in ("建议","现在")):
-        return "师父：先看尚未完成的调查阶段，说明要查的对象与目的；证据不足时不要急着辨证。"
-    return "师父：问清来由，核对人物、契物与炁息之间能互相印证的事实。行动仍须你亲自完成。"

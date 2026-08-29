@@ -5,12 +5,12 @@ import pytest
 from xuanyi_npc.application import (
     CaseObservation,
     DiagnosisReadinessDecision,
-    FixedV0DiagnosisReadinessPolicy,
+    FixedDiagnosisReadinessPolicy,
     PlayerView,
 )
-from xuanyi_npc.application.v0_tools import (
+from xuanyi_npc.application.case_tools import (
     DiagnosisNotReadyError,
-    V0ToolExecutor,
+    CaseToolExecutor,
 )
 from xuanyi_npc.domain import (
     AgentAction,
@@ -79,8 +79,8 @@ def test_fixed_v0_blocks_early_diagnosis_without_events_or_state_change(
     case_definition: CaseDefinition,
     qualified_player_state: PlayerState,
 ) -> None:
-    executor = V0ToolExecutor(
-        diagnosis_readiness_policy=FixedV0DiagnosisReadinessPolicy(),
+    executor = CaseToolExecutor(
+        diagnosis_readiness_policy=FixedDiagnosisReadinessPolicy(),
     )
     initial = _session(case_definition, qualified_player_state, "fixed_block")
     observation = executor.case_observation(
@@ -110,7 +110,7 @@ def test_replacing_policy_allows_engine_valid_early_diagnosis(
     case_definition: CaseDefinition,
     qualified_player_state: PlayerState,
 ) -> None:
-    executor = V0ToolExecutor(
+    executor = CaseToolExecutor(
         diagnosis_readiness_policy=AlwaysReadyPolicy(),
     )
     initial = _session(case_definition, qualified_player_state, "replaceable")

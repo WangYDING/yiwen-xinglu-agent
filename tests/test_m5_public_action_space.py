@@ -6,10 +6,12 @@ from xuanyi_npc.application.action_contract import (
     INVESTIGATION_TOOL_BY_ACTION,
     PublicActionContractError,
     PublicActionContractValidator,
+    project_public_diagnosis_actions,
     project_public_investigation_actions,
 )
 from xuanyi_npc.application.npc_authority import NPCAuthorityPolicy
-from xuanyi_npc.domain import AgentAction, AgentActionType, ToolCallRequest
+from xuanyi_npc.domain import AgentAction, AgentActionType, ToolCallRequest, ToolName
+from xuanyi_npc.domain.cooperative_planning import AgentGoalType
 
 from .test_m5_planning_output_budget import planning_input
 
@@ -84,3 +86,82 @@ def test_projection_grants_no_authority_and_validator_remains_strict(case_defini
 
     assert captured.value.code == "invalid_tool_arguments"
     assert NPCAuthorityPolicy().view() == authority_before
+
+
+def test_diagnosis_surface_projects_every_public_candidate_with_validator_exact_arguments(
+    case_definition, qualified_player_state,
+) -> None:
+    value = planning_input(case_definition, qualified_player_state)
+    observation = value.case_observation.model_copy(update={"can_submit_diagnosis": True})
+    before = observation.model_dump_json()
+
+    actions = project_public_diagnosis_actions(observation)
+
+    assert {item.diagnosis_id for item in actions} == {
+        item.diagnosis_id for item in observation.diagnosis_candidates
+    }
+    assert len(actions) == len(observation.diagnosis_candidates)
+    expected_evidence = [item.clue_id for item in observation.discovered_clues]
+    for projected in actions:
+        assert projected.tool_name is ToolName.SUBMIT_DIAGNOSIS
+        assert projected.arguments == {
+            "diagnosis_id": projected.diagnosis_id,
+            "evidence_clue_ids": expected_evidence,
+        }
+        PublicActionContractValidator().validate(
+            AgentAction(
+                action_id=f"action_{projected.diagnosis_id}",
+                action_type=AgentActionType.USE_TOOL,
+                dialogue="提出一个公开候选诊断。",
+                tool_call=ToolCallRequest(
+                    name=projected.tool_name,
+                    arguments=projected.arguments,
+                ),
+                confidence=0.5,
+            ),
+            observation,
+        )
+    assert observation.model_dump_json() == before
+
+
+def test_diagnosis_surface_is_empty_until_public_readiness(case_definition, qualified_player_state) -> None:
+    value = planning_input(case_definition, qualified_player_state)
+    observation = value.case_observation.model_copy(update={"can_submit_diagnosis": False})
+
+    assert project_public_diagnosis_actions(observation) == ()
+
+
+def test_form_diagnosis_request_exposes_calls_and_phase_action_contract(
+    case_definition, qualified_player_state,
+) -> None:
+    value = planning_input(case_definition, qualified_player_state)
+    observation = value.case_observation.model_copy(update={"can_submit_diagnosis": True})
+    goal = value.current_goal.model_copy(update={"goal_type": AgentGoalType.FORM_DIAGNOSIS})
+    diagnosis_value = value.model_copy(update={
+        "case_observation": observation,
+        "current_goal": goal,
+    })
+
+    context = GameNPCAgent(ScriptedFakeLLM([]))._planning_request(diagnosis_value).messages[-1].content
+
+    assert "DIAGNOSIS_ACTION_CONTRACT" in context
+    assert "active PlanStep 要求 submit_diagnosis" in context
+    assert "不是 KEEP 同一诊断步骤后仅 RESPOND" in context
+    assert "诊断候选与证据取舍仍由你自主判断" in context
+    for action in project_public_diagnosis_actions(observation):
+        assert f'"tool_name": "submit_diagnosis"' in context
+        assert f'"diagnosis_id": "{action.diagnosis_id}"' in context
+    assert "valid_diagnosis_ids" not in context
+    assert "root_cause" not in context
+
+
+def test_respond_remains_valid_for_ordinary_communication(case_definition, qualified_player_state) -> None:
+    observation = planning_input(case_definition, qualified_player_state).case_observation
+    response = AgentAction(
+        action_id="action_public_response",
+        action_type=AgentActionType.RESPOND,
+        dialogue="先解释当前公开证据，不执行工具。",
+        confidence=0.5,
+    )
+
+    PublicActionContractValidator().validate(response, observation)
