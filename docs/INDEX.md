@@ -23,6 +23,8 @@
 - [产品系统架构](architecture/PRODUCT_SYSTEM_ARCHITECTURE.md)：当前组件、数据流与持久化边界。
 - [技术总览](architecture/TECHNICAL_OVERVIEW.md)：简洁运行链和资源边界。
 - [架构决策记录](architecture/DECISIONS.md)：模型提案/规则提交、玩家贡献、记忆来源和安全失败等 ADR。
+- [上下文工程模块主文档](architecture/CONTEXT_ENGINEERING_DESIGN.md)：当前架构、信息边界、六个工程维度、故障契约、版本轴、验证证据和阶段状态的首选入口。当前范围完成到 CE-2A，离线质量验收已通过；CE-2B、完整 CE-3 与真实模型语义收益验证暂缓。
+- 上下文工程的原始设计、实施、审查、修复和评测材料由主文档的[历史文档索引](architecture/CONTEXT_ENGINEERING_DESIGN.md#9-历史文档索引)统一导航，保留为各轮历史与专项证据。
 - [主 Agent](../src/xuanyi_npc/agents/game_npc.py)：A1 结构化决策、Goal/Plan proposal、修复与 fallback。
 - [协作运行时](../src/xuanyi_npc/application/cooperative_runtime.py)：单回合编排、确认、执行、状态推进与遥测。
 - [权威案件引擎](../src/xuanyi_npc/engine/case_engine.py)：调查、诊断、处置、评分与权威状态变更。
