@@ -35,5 +35,6 @@ runtime_data/
 runtime_models/
 results/
 evaluation_results/
+runtime_evaluations/
 private/
 **/shadow/semantic_shadow.jsonl

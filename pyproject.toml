@@ -32,6 +32,7 @@ classifiers = [
 ]
 dependencies = [
     "httpx>=0.27,<1",
+    "tokenizers>=0.21,<0.23",
     "mcp==2.0.0",
     "pydantic>=2.8,<3",
     "python-dotenv>=1.0,<2",
@@ -64,12 +65,16 @@ include-package-data = false
 
 [tool.setuptools.package-data]
 "xuanyi_npc.resources" = [
+    "tokenizer/*.json",
     "campaign/*.json",
     "cases/*.json",
     "pilot/*.json",
     "clinic/*.json",
     "clinic/*.css",
     "clinic/*.js",
+]
+"xuanyi_npc.evaluation" = [
+    "fixtures/ce2a_context_behavior/v1/*.json",
 ]
 
 [tool.pytest.ini_options]

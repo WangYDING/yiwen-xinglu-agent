@@ -7,6 +7,7 @@ import uuid
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
+from threading import Lock
 from typing import Annotated, Literal, Mapping, Protocol
 
 from pydantic import (
@@ -70,6 +71,8 @@ MUTATING_CASE_TOOLS = frozenset(
         ToolName.EXECUTE_TREATMENT,
     }
 )
+_ACTION_RECEIPTS_GUARD = Lock()
+_ACTION_RECEIPTS: dict[tuple[str, str, str, str], object] = {}
 
 
 class MultiCaseContract(DomainModel):
@@ -268,6 +271,9 @@ class MultiCaseActionReceipt(MultiCaseContract):
     """Internal orchestration receipt without widening the public CLI contract."""
 
     result: MultiCaseServiceResult
+    world_commit_status: Literal["not_committed", "committed", "unknown"] = (
+        "not_committed"
+    )
     events: tuple[CaseEvent, ...] = Field(default_factory=tuple)
     score_breakdown: ScoreBreakdown | None = None
     memory_commit_status: Literal[
@@ -619,6 +625,27 @@ class MultiCaseEpisodeService:
         self,
         request: SubmitActionInput,
     ) -> MultiCaseActionReceipt:
+        fingerprint = request.model_dump_json()
+        operation_key = (
+            str(self.state_store.root.resolve()),
+            request.session_id,
+            request.action.action_id,
+            fingerprint,
+        )
+        with self.state_store.session_write_lock(request.session_id):
+            with _ACTION_RECEIPTS_GUARD:
+                existing = _ACTION_RECEIPTS.get(operation_key)
+            if existing is not None:
+                return existing  # type: ignore[return-value]
+            receipt = self._submit_action_with_receipt_once(request)
+            with _ACTION_RECEIPTS_GUARD:
+                _ACTION_RECEIPTS[operation_key] = receipt
+            return receipt
+
+    def _submit_action_with_receipt_once(
+        self,
+        request: SubmitActionInput,
+    ) -> MultiCaseActionReceipt:
         context = self._load_context(
             player_id=request.player_id,
             case_id=request.case_id,
@@ -726,23 +753,25 @@ class MultiCaseEpisodeService:
             return MultiCaseActionReceipt(
                 result=self._context_result(
                     ok=False,
-                    code="state_unavailable",
+                    code="world_commit_uncertain",
                     player=player,
                     case=case,
                     session=session,
                     campaign_state=campaign,
-                )
+                ),
+                world_commit_status="unknown",
             )
         except Exception:
             return MultiCaseActionReceipt(
                 result=self._context_result(
                     ok=False,
-                    code="internal_error",
+                    code="world_commit_uncertain",
                     player=player,
                     case=case,
                     session=session,
                     campaign_state=campaign,
-                )
+                ),
+                world_commit_status="unknown",
             )
 
         if execution.session.status is CaseSessionStatus.COMPLETED:
@@ -758,6 +787,7 @@ class MultiCaseEpisodeService:
             )
             return MultiCaseActionReceipt(
                 result=result,
+                world_commit_status="committed",
                 events=execution.events,
                 score_breakdown=execution.score_breakdown,
                 memory_commit_status=memory_commit_status,
@@ -776,6 +806,7 @@ class MultiCaseEpisodeService:
         )
         return MultiCaseActionReceipt(
             result=result,
+            world_commit_status="committed",
             events=execution.events,
             score_breakdown=execution.score_breakdown,
             memory_commit_status=memory_commit_status,

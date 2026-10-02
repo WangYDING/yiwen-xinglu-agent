@@ -1,0 +1,17 @@
+{
+  "schema_version": "ce2a_context_behavior_protocol_v1",
+  "experiment_id": "ce2a_context_behavior_offline_v1",
+  "architecture": "A1",
+  "conditions": {"C":{"record_enabled":true,"context_v2_enabled":false},"T":{"record_enabled":true,"context_v2_enabled":true}},
+  "repeats": 2,
+  "frozen_order": {"description":"按场景序号与重复号交替 AB/BA；这是版本化确定性顺序，不使用随机数。","repeat_1_odd":"C,T","repeat_1_even":"T,C","repeat_2_odd":"T,C","repeat_2_even":"C,T"},
+  "memory_mode": "disabled",
+  "reflection_enabled": false,
+  "max_adapter_calls_per_turn": 2,
+  "expected_turn_count": 48,
+  "max_total_adapter_calls": 96,
+  "output_policy": {"overwrite_existing":false,"resume_interrupted":false},
+  "suggested_not_authorized_budget_cny": {"total":"10.00","per_turn":"0.50"},
+  "real_run": {"enabled":false,"paid_authorized":false,"model":null,"price_source":null,"verified_input_price_per_million":null,"verified_output_price_per_million":null,"next_call_input_token_upper_bound":null,"next_call_output_token_upper_bound":null},
+  "synthetic_test_pricing": {"is_real_quote":false,"label":"algorithm-test-only","currency":"CNY","input_price_per_million":"1.00","output_price_per_million":"2.00"}
+}

@@ -42,6 +42,8 @@ def test_failed_repair_records_sanitized_attempts_without_changing_fallback(
 
     initial, repaired = execution.attempt_telemetry
     for attempt in (initial, repaired):
+        assert attempt.response_content == invalid.model_dump_json()
+        assert attempt.duration_ms is not None and attempt.duration_ms >= 0
         assert attempt.failure_code.startswith("goal_plan_propose_diagnosis_PlanStep")
         assert attempt.field_path == "plan_update.draft.steps"
         assert attempt.plan_first_step_intent == "propose_diagnosis"

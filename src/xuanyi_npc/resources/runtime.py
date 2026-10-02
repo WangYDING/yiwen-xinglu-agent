@@ -26,6 +26,9 @@ ADVANCED_CASE_RESOURCE_NAMES = (
 CASE_RESOURCE_NAMES = CORE_CASE_RESOURCE_NAMES + ADVANCED_CASE_RESOURCE_NAMES
 CAMPAIGN_RESOURCE_NAME = "cross_episode_rules_v1.json"
 DEEPSEEK_POLICY_RESOURCE_NAME = "deepseek_v4_flash_pilot_policy_2026-08-07.json"
+DEEPSEEK_FLASH_PRICING_RESOURCE_NAME = (
+    "deepseek_flash_price_snapshot_2026-09-18.json"
+)
 CLINIC_RUNTIME_RESOURCES = (
     "clinic/case_guides_v1.json",
     "campaign/cross_episode_rules_v2.json",
@@ -38,6 +41,7 @@ ALLOWED_RUNTIME_RESOURCES = frozenset(
         *(f"cases/{name}" for name in ADVANCED_CASE_RESOURCE_NAMES),
         f"campaign/{CAMPAIGN_RESOURCE_NAME}",
         f"pilot/{DEEPSEEK_POLICY_RESOURCE_NAME}",
+        f"pilot/{DEEPSEEK_FLASH_PRICING_RESOURCE_NAME}",
         *CLINIC_RUNTIME_RESOURCES,
     }
 )

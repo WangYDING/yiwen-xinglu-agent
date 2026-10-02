@@ -1,7 +1,7 @@
 from tests.test_m3_cooperative_web_memory import render_memory_page
 
 
-def test_web_shows_learning_notice_only_when_memory_was_persisted(tmp_path):
+def test_web_keeps_internal_learning_receipt_out_of_player_page(tmp_path):
     page = render_memory_page(
         tmp_path,
         reflection_triggered="1",
@@ -15,8 +15,8 @@ def test_web_shows_learning_notice_only_when_memory_was_persisted(tmp_path):
         reflection_provenance_ref_ids="ev_outcome,ev_assessment",
         public_consolidation_summary="NPC 从本次经历中沉淀了一条可复用经验。",
     )
-    assert "经验沉淀" in page
-    assert "NPC 从本次经历中沉淀了一条可复用经验。" in page
+    assert "经验沉淀" not in page
+    assert "NPC 从本次经历中沉淀了一条可复用经验。" not in page
 
 
 def test_web_does_not_claim_learning_when_all_candidates_rejected(tmp_path):
@@ -36,7 +36,7 @@ def test_web_does_not_claim_learning_when_all_candidates_rejected(tmp_path):
     assert "这段学习成功提示不应显示。" not in page
 
 
-def test_reflection_debug_is_folded_and_excludes_private_material(tmp_path):
+def test_reflection_debug_is_hidden_and_excludes_private_material(tmp_path):
     page = render_memory_page(
         tmp_path,
         reflection_triggered="1",
@@ -49,10 +49,9 @@ def test_reflection_debug_is_folded_and_excludes_private_material(tmp_path):
         reflection_rejection_reasons="active_memory_conflict",
         reflection_provenance_ref_ids="ev_plan,ev_plan_evaluation",
     )
-    assert "reflection trigger type：plan_abandoned" in page
-    assert "candidate IDs：rmc_debug" in page
-    assert "provenance refs：ev_plan,ev_plan_evaluation" in page
-    assert "<details><summary>开发信息</summary>" in page
-    assert "<details open" not in page
+    assert "reflection trigger type：plan_abandoned" not in page
+    assert "candidate IDs：rmc_debug" not in page
+    assert "provenance refs：ev_plan,ev_plan_evaluation" not in page
+    assert "开发信息" not in page
     forbidden = ("chain-of-thought", "raw prompt", "hidden facts", "raw DB record")
     assert not any(item.lower() in page.lower() for item in forbidden)

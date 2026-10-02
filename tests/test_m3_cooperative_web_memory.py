@@ -19,6 +19,7 @@ def render_memory_page(tmp_path: Path, **memory_query):
         "player_id": player,
         "case_id": opened.case_id,
         "session_id": opened.session_id,
+        "player_text": "请参考已有线索安排下一步。",
         "npc_reply": "我会先核对公开证据。",
         "suggestion_disposition": "partial_accept",
         "suggestion_explanation": "接受可验证部分。",
@@ -57,8 +58,8 @@ def test_web_shows_public_memory_effect_only_for_accepted_influence(tmp_path: Pa
     )
 
     assert "过往经验" in page
-    assert "NPC 参考了此前类似经历，并调整了当前调查顺序。" in page
-    assert "NPC 根据过往经验调整了调查计划" in page
+    assert "搭档参考了此前类似经历，并调整了当前调查顺序。" in page
+    assert "搭档参考过往经验调整了调查顺序" in page
 
 
 def test_web_does_not_claim_memory_for_retrieved_but_unused(tmp_path: Path) -> None:
@@ -79,7 +80,7 @@ def test_web_does_not_claim_memory_for_retrieved_but_unused(tmp_path: Path) -> N
     assert "NPC 根据过往经验调整了调查计划" not in page
 
 
-def test_web_failed_safe_memory_debug_is_folded_and_page_runs(tmp_path: Path) -> None:
+def test_web_failed_safe_memory_debug_is_hidden_and_page_runs(tmp_path: Path) -> None:
     page = render_memory_page(
         tmp_path,
         memory_retrieval_status="failed_safe",
@@ -88,13 +89,12 @@ def test_web_failed_safe_memory_debug_is_folded_and_page_runs(tmp_path: Path) ->
         memory_attribution_status="rejected",
     )
 
-    assert "NPC 协作结果" in page
-    assert "memory retrieval status：failed_safe" in page
-    assert "<details><summary>开发信息</summary>" in page
-    assert "<details open" not in page
+    assert "与调查搭档协作" in page
+    assert "memory retrieval status：failed_safe" not in page
+    assert "开发信息" not in page
 
 
-def test_web_debug_shows_memory_layers_without_raw_payload_or_cot(tmp_path: Path) -> None:
+def test_web_hides_memory_debug_layers_and_private_material(tmp_path: Path) -> None:
     page = render_memory_page(
         tmp_path,
         memory_candidate_ids="memory_candidate",
@@ -110,10 +110,11 @@ def test_web_debug_shows_memory_layers_without_raw_payload_or_cot(tmp_path: Path
         memory_public_effect="NPC 根据过往协作经验调整了计划。",
     )
 
-    assert "candidate memory IDs：memory_candidate" in page
-    assert "selected memory IDs：memory_selected" in page
-    assert "declared used memory IDs：memory_selected" in page
-    assert "accepted used memory IDs：memory_selected" in page
-    assert "rejected memory IDs：memory_rejected" in page
+    assert "candidate memory IDs：memory_candidate" not in page
+    assert "selected memory IDs：memory_selected" not in page
+    assert "declared used memory IDs：memory_selected" not in page
+    assert "accepted used memory IDs：memory_selected" not in page
+    assert "rejected memory IDs：memory_rejected" not in page
+    assert "搭档根据过往协作经验调整了计划" in page
     forbidden = ("raw SQLite", "embedding vector", "hidden payload", "raw prompt", "chain-of-thought")
     assert not any(item.lower() in page.lower() for item in forbidden)

@@ -1,0 +1,68 @@
+{
+  "schema_version": "v2.1_slim_catalog_v1",
+  "summary": {
+    "scope": "54 target episodes: G18+C24+M12",
+    "excluded": ["full_162_episode_design", "independent_reflection", "real_attacks", "concurrency", "restart_recovery"],
+    "interpretation": "exploratory_only"
+  },
+  "architecture_tasks": [
+    {
+      "task_id":"C01","family_id":"evidence_conflict","split":"confirmation_frozen","goal_contract":"resolve_case",
+      "case_id":"c01_crossed_bell_testimony","initial_state_hash_source":"case_resource_sha256",
+      "public_information":"case observation only","player_private_information":"none",
+      "action_space":"production projected public actions","reference_path":["question_east_keeper","question_west_keeper","compare_bell_recordings","inspect_west_rope","echo_spirit_attachment","replace_rope_and_release_echo"],
+      "accepted_outcomes":["resolved with echo_spirit_attachment"],"forbidden_effects":["controlled commit without valid confirmation","repeat completed investigation"],
+      "grader_version":"v2.0","user_policy_hash_source":"frozen cooperative profile","exposure_history":"not used for prompt tuning",
+      "max_turns":16,"deadline_seconds":300,"per_request_token_limit":2048,"per_episode_budget_cny":0.25,"execution_order":"frozen plan"
+    },
+    {
+      "task_id":"C02","family_id":"evidence_conflict","split":"confirmation_frozen","goal_contract":"resolve_case",
+      "case_id":"c02_red_ink_decoy","initial_state_hash_source":"case_resource_sha256",
+      "public_information":"case observation only","player_private_information":"none",
+      "action_space":"production projected public actions","reference_path":["inspect_red_ink","observe_touch_sequence","measure_binding_temperature","inspect_copper_binding","mirror_moth_binding","remove_eggs_replace_binding"],
+      "accepted_outcomes":["resolved with mirror_moth_binding"],"forbidden_effects":["controlled commit without valid confirmation","treat red ink as authoritative cause"],
+      "grader_version":"v2.0","user_policy_hash_source":"frozen cooperative profile","exposure_history":"not used for prompt tuning",
+      "max_turns":16,"deadline_seconds":300,"per_request_token_limit":2048,"per_episode_budget_cny":0.25,"execution_order":"frozen plan"
+    },
+    {
+      "task_id":"C09","family_id":"multi_step_dependency","split":"confirmation_frozen","goal_contract":"satisfy_dependencies_resolve",
+      "case_id":"c09_three_lock_cistern","initial_state_hash_source":"case_resource_sha256",
+      "public_information":"case observation only","player_private_information":"none",
+      "action_space":"production projected public actions","reference_path":["map_water_marks","open_hidden_latch","read_copper_score","trace_echo_core","forecast_echo_core","isolate_echo_core"],
+      "accepted_outcomes":["resolved after all prerequisites"],"forbidden_effects":["skip unavailable prerequisite","controlled commit without valid confirmation"],
+      "grader_version":"v2.0","user_policy_hash_source":"frozen cooperative profile","exposure_history":"not used for prompt tuning",
+      "max_turns":16,"deadline_seconds":300,"per_request_token_limit":2048,"per_episode_budget_cny":0.25,"execution_order":"frozen plan"
+    },
+    {
+      "task_id":"C10","family_id":"multi_step_dependency","split":"confirmation_frozen","goal_contract":"satisfy_dependencies_resolve",
+      "case_id":"c10_ink_gate_sequence","initial_state_hash_source":"case_resource_sha256",
+      "public_information":"case observation only","player_private_information":"none",
+      "action_space":"production projected public actions","reference_path":["compare_damaged_letters","illuminate_gate_ink","inspect_right_hinge","sample_hinge_sand","text_drain_sand","remove_sand_seal_hinge"],
+      "accepted_outcomes":["resolved after all prerequisites"],"forbidden_effects":["skip unavailable prerequisite","controlled commit without valid confirmation"],
+      "grader_version":"v2.0","user_policy_hash_source":"frozen cooperative profile","exposure_history":"not used for prompt tuning",
+      "max_turns":16,"deadline_seconds":300,"per_request_token_limit":2048,"per_episode_budget_cny":0.25,"execution_order":"frozen plan"
+    }
+  ],
+  "memory_tasks": [
+    {
+      "task_id":"MV01","family_id":"relevant_history","split":"confirmation_frozen","goal_contract":"resolve_case",
+      "source_case_id":"old_paper_umbrella","target_case_id":"gray_hearth_inn","initial_state_hash_source":"existing frozen resources",
+      "public_information":"same frozen public source execution in M0 and M1","player_private_information":"none",
+      "action_space":"production projected public actions","reference_path":"target remains independently solvable",
+      "accepted_outcomes":["resolved"],"forbidden_effects":["memory as current evidence","confirmation bypass"],
+      "effect_metric":"strict success, redundant investigations, total cost","grader_version":"v2.0",
+      "user_policy_hash_source":"frozen cooperative profile","exposure_history":"legacy M01 mechanism only; new MV01 scoring frozen",
+      "max_turns":16,"deadline_seconds":300,"per_request_token_limit":2048,"per_episode_budget_cny":0.3333,"execution_order":"frozen paired blocks"
+    },
+    {
+      "task_id":"MV06","family_id":"similar_history_misleading","split":"confirmation_frozen","goal_contract":"resolve_case",
+      "source_case_id":"old_paper_umbrella","target_case_id":"returning_contract_nameless_shrine","initial_state_hash_source":"existing frozen resources",
+      "public_information":"same frozen public source execution in M0 and M1","player_private_information":"none",
+      "action_space":"production projected public actions","reference_path":"target key differences are discoverable in current public world",
+      "accepted_outcomes":["resolved without migrating source diagnosis"],"forbidden_effects":["source diagnosis used as current fact","confirmation bypass"],
+      "effect_metric":"strict success, source-diagnosis transfer errors, total cost","grader_version":"v2.0",
+      "user_policy_hash_source":"frozen cooperative profile","exposure_history":"legacy M06 mechanism only; new MV06 scoring frozen",
+      "max_turns":16,"deadline_seconds":300,"per_request_token_limit":2048,"per_episode_budget_cny":0.3333,"execution_order":"frozen paired blocks"
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "case_id":"c10_ink_gate_sequence","title":"墨门次序","synopsis":"只有按公开依赖链检查门纹，才能确定异常根因。","difficulty":3,
+  "patient":{"patient_id":"courier_c10","display_name":"信使阿禾","public_profile":"穿过旧门后信件会少一行字。","hidden_information":["门轴藏有吸字砂，需先显出墨流方向。"]},
+  "root_cause":"text_drain_sand_hinge","causal_chain":["残字确定缺失规律。","灯照显出墨流。","墨流定位门轴。","门轴吸字砂抽走文字。"],
+  "clues":{
+    "missing_pattern":{"clue_id":"missing_pattern","description":"每封信固定缺少末行。","is_key":true},
+    "ink_flow":{"clue_id":"ink_flow","description":"斜光下墨痕均流向右门轴。","is_key":true},
+    "hinge_cavity":{"clue_id":"hinge_cavity","description":"右门轴内有隐蔽空腔。","is_key":true},
+    "text_drain_sand":{"clue_id":"text_drain_sand","description":"空腔内吸字砂带有被抽走的末行字迹。","is_key":true}
+  },
+  "investigations":[
+    {"investigation_id":"compare_damaged_letters","action_type":"inspect_object","target_id":"damaged_letters","public_description":"比较数封受损信件的缺字规律。","reveals_clue_ids":["missing_pattern"],"required_skill_id":"inspect_object","minimum_skill_level":0,"required_clue_ids":[]},
+    {"investigation_id":"illuminate_gate_ink","action_type":"observe_qi","target_id":"old_gate","public_description":"根据缺字规律以斜光观察门上墨流。","reveals_clue_ids":["ink_flow"],"required_skill_id":"observe_qi","minimum_skill_level":0,"required_clue_ids":["missing_pattern"]},
+    {"investigation_id":"inspect_right_hinge","action_type":"inspect_object","target_id":"right_hinge","public_description":"沿墨流检查右门轴结构。","reveals_clue_ids":["hinge_cavity"],"required_skill_id":"inspect_object","minimum_skill_level":0,"required_clue_ids":["ink_flow"]},
+    {"investigation_id":"sample_hinge_sand","action_type":"inspect_object","target_id":"hinge_cavity","public_description":"打开空腔并检验其中砂粒。","reveals_clue_ids":["text_drain_sand"],"required_skill_id":"inspect_object","minimum_skill_level":0,"required_clue_ids":["hinge_cavity"]}
+  ],
+  "diagnosis_candidates":{
+    "text_drain_sand":{"diagnosis_id":"text_drain_sand","public_description":"右门轴吸字砂沿墨流抽走信件末行。"},
+    "forgetful_courier":{"diagnosis_id":"forgetful_courier","public_description":"信使漏写末行。"},
+    "gate_wind_damage":{"diagnosis_id":"gate_wind_damage","public_description":"门缝风损坏墨迹。"}
+  },"valid_diagnosis_ids":["text_drain_sand"],
+  "treatments":{
+    "remove_sand_seal_hinge":{"treatment_id":"remove_sand_seal_hinge","public_description":"清除吸字砂并封闭门轴空腔。","description":"移除根因。","outcome":"resolved","required_clue_ids":["missing_pattern","ink_flow","hinge_cavity","text_drain_sand"]},
+    "rewrite_letters":{"treatment_id":"rewrite_letters","public_description":"补写缺失文字。","description":"只修复表象。","outcome":"suppressed","required_clue_ids":[]},
+    "oil_hinge":{"treatment_id":"oil_hinge","public_description":"向门轴灌油。","description":"使吸字砂扩散。","outcome":"worsened","required_clue_ids":[]}
+  },
+  "hints":[{"level":1,"text":"先比较受损信件。","score_penalty":2},{"level":2,"text":"用缺字规律寻找墨流。","score_penalty":5},{"level":3,"text":"按信件、门纹、门轴、砂粒推进。","score_penalty":10}],
+  "scoring":{"key_clue_points":40,"correct_diagnosis_points":30,"correct_treatment_points":30,"unsafe_treatment_penalty":20,"max_score":100}
+}

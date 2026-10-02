@@ -1,0 +1,46 @@
+{
+  "fixture_version": "ce2a_requests_v1",
+  "canonicalization": "json.dumps(model_dump(mode=json), ensure_ascii=false, separators=(comma,colon), sort_keys=true)",
+  "requests": {
+    "a0_initial": {
+      "sha256": "fd260a8bbc804a579988a926c71bb7c2323de59db4fec8ca001237a354398d2c",
+      "roles": ["system", "user", "assistant", "user"],
+      "message_count": 4,
+      "message_content_characters": 3772,
+      "response_schema_sha256": "b48b767760229dcbe13f7d30d1bb084517efde7b134a89284c836b749e5d7332",
+      "max_output_tokens": null
+    },
+    "a0_format_repair": {
+      "sha256": "f0914231b24641351fcc2652158b026197a2cc95e055be92bf66ebefdacc18f3",
+      "roles": ["system", "user", "assistant", "user", "assistant", "user"],
+      "message_count": 6,
+      "message_content_characters": 4075,
+      "response_schema_sha256": "b48b767760229dcbe13f7d30d1bb084517efde7b134a89284c836b749e5d7332",
+      "max_output_tokens": null
+    },
+    "a1_initial": {
+      "sha256": "638dce2867d08fc9289c342748ab90744332e2287690085bc39c65fb86c73239",
+      "roles": ["system", "user", "assistant", "user"],
+      "message_count": 4,
+      "message_content_characters": 11156,
+      "response_schema_sha256": "016d0aca47501b0c4b6ec3ddcd7ca7b46cc09e9f31095f4a06e8423e35e6dd47",
+      "max_output_tokens": 2048
+    },
+    "a1_format_repair": {
+      "sha256": "09fa8cd5c216bf434c791ba9683ef9f8553136fd9e371fdbdcb8d8012d55b022",
+      "roles": ["system", "user", "assistant", "user", "assistant", "user"],
+      "message_count": 6,
+      "message_content_characters": 11495,
+      "response_schema_sha256": "016d0aca47501b0c4b6ec3ddcd7ca7b46cc09e9f31095f4a06e8423e35e6dd47",
+      "max_output_tokens": null
+    },
+    "a1_action_contract_repair_a0_shape": {
+      "sha256": "9f039d2ea8406e999224c6aa54a1ec1e2c571801dabb674c29a2cecf5b501b93",
+      "roles": ["system", "user", "assistant", "user", "user"],
+      "message_count": 5,
+      "message_content_characters": 4862,
+      "response_schema_sha256": "b48b767760229dcbe13f7d30d1bb084517efde7b134a89284c836b749e5d7332",
+      "max_output_tokens": null
+    }
+  }
+}

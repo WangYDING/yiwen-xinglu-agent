@@ -90,6 +90,7 @@ SAFE_ERROR_MESSAGES: Mapping[str, str] = {
     "session_closed": "病例已经结束，不能继续执行操作。",
     "context_mismatch": "玩家、会话或病例上下文不匹配。",
     "state_unavailable": "当前会话状态不可用。",
+    "world_commit_uncertain": "无法确认世界状态是否已提交；请勿盲目重放该工具请求。",
     "internal_error": "工具暂时无法完成请求，状态未改变。",
 }
 
@@ -128,6 +129,23 @@ class MCPApplicationService:
         tool_arguments: dict[str, JsonValue],
     ) -> MCPApplicationResult:
         """Execute one case tool and persist only accepted event changes."""
+
+        with self.state_store.session_write_lock(session_id):
+            return self._execute_tool(
+                tool_name=tool_name,
+                player_id=player_id,
+                session_id=session_id,
+                tool_arguments=tool_arguments,
+            )
+
+    def _execute_tool(
+        self,
+        *,
+        tool_name: ToolName,
+        player_id: str,
+        session_id: str,
+        tool_arguments: dict[str, JsonValue],
+    ) -> MCPApplicationResult:
 
         try:
             player, session, case = self._load_context(player_id, session_id)
@@ -178,10 +196,10 @@ class MCPApplicationService:
         if result.events:
             try:
                 self.state_store.save_case_session(result.session)
-            except StorageError:
+            except Exception:
                 return self._result_for_context(
                     ok=False,
-                    code="internal_error",
+                    code="world_commit_uncertain",
                     player=player,
                     session=session,
                     case=case,

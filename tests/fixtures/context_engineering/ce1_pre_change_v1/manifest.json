@@ -1,0 +1,14 @@
+{
+  "baseline_id": "ce1_pre_change_v1",
+  "generated_bytecode": "excluded",
+  "git_head": "956a380aa357e09d8287d5fb4609aa3693227dad",
+  "immutable": true,
+  "not_ce0_claim": "This baseline is not claimed to predate CE-0/CE-1 refactoring.",
+  "provenance": "Captured directly from the current worktree before CE-1.1 runtime/test changes in this work session.",
+  "provider_payloads_sha256": "56ac1a329fb355c7d56b568803342297e953b1ecf83d73ae76a07b9946d29ad0",
+  "rebuild_verification": "rebuild_verification.json",
+  "requests_sha256": "ae11bf9e98cf1e54274edd69d3044a88f3730977e73c08d4f64c15bd8ae79841",
+  "sha256_manifest": "sha256s.json",
+  "signed_file_count": 138,
+  "workspace_status_sha256": "05aa854a3133e3e79c7723ec942251c4cd8134d25520a0ab23a70f120d01bc23"
+}

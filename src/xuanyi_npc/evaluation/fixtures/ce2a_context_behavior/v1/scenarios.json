@@ -1,0 +1,160 @@
+{
+  "schema_version": "ce2a_context_behavior_scenarios_v1",
+  "fixture_id": "ce2a_context_behavior_v1",
+  "history_source_notice": "All history rows in this fixture are synthetic evaluation fixtures, not claims about real conversations.",
+  "scenarios": [
+    {
+      "scenario_id": "H01", "case_id": "old_paper_umbrella", "adapter_mode": "valid",
+      "bindings": [
+        {"label":"A","kind":"investigation","public_id":"inspect_umbrella","public_description":"检查旧纸伞的破损、水迹、伞柄和异常痕迹。"},
+        {"label":"B","kind":"investigation","public_id":"ask_about_memory","public_description":"询问书生近期睡眠、记忆和日常经历的变化。"}
+      ],
+      "initial_state": {"completed_investigation_ids":[],"expected_goal_type":"gather_evidence","expected_plan":null},
+      "history": [{"operation_id":"fixture_H01_history_1","source":"synthetic_evaluation_fixture","contribution_type":"suggestion","player_text":"在检查旧纸伞和询问记忆之间，你建议先做哪一个？","npc_dialogue":"我建议先检查旧纸伞，再询问记忆变化。","public_rationale":"旧纸伞是当前可直接核对的公开物件，先检查其水迹和伞柄能为后续问询提供明确参照。"}],
+      "pending": [],
+      "current": {"operation_id":"fixture_H01_current","text":"为什么先做这个？","contribution_type":"question"},
+      "preconditions": ["A、B 均为案件初始公开调查项", "当前 Plan 为空，不单独泄露 A"],
+      "history_dependency_eligible": true
+    },
+    {
+      "scenario_id": "H02", "case_id": "moon_well_echo", "adapter_mode": "format_repair",
+      "bindings": [
+        {"label":"A","kind":"investigation","public_id":"inspect_wooden_slip","public_description":"检查木简正文、边角刻痕、系绳和收信木签是否相互吻合。"},
+        {"label":"B","kind":"investigation","public_id":"question_route","public_description":"询问送信人的行程、交接顺序和在月井旁停留的经过。"}
+      ],
+      "initial_state": {"completed_investigation_ids":[],"expected_goal_type":"gather_evidence","expected_plan":null},
+      "history": [{"operation_id":"fixture_H02_history_1","source":"synthetic_evaluation_fixture","contribution_type":"suggestion","player_text":"下一步给一个唯一建议。","npc_dialogue":"下一步只建议检查木简。","public_rationale":"先核对木简正文、刻痕与系绳这些公开物证。"}],
+      "pending": [],
+      "current": {"operation_id":"fixture_H02_current","text":"先查你刚才说的那个。","contribution_type":"suggestion"},
+      "preconditions": ["历史只有 A 一个建议", "当前 Plan 为空，不由 Plan 解出 A"],
+      "history_dependency_eligible": true
+    },
+    {
+      "scenario_id": "H03", "case_id": "lantern_alley_conflicting_testimony", "adapter_mode": "fallback",
+      "bindings": [
+        {"label":"A","kind":"investigation","public_id":"question_witness_yu","public_description":"询问余青移灯的原因、路线和听见的更次。"},
+        {"label":"B","kind":"investigation","public_id":"question_witness_shao","public_description":"询问邵安当时站位、视线与看见的动作。"}
+      ],
+      "initial_state": {"completed_investigation_ids":[],"expected_goal_type":"gather_evidence","expected_plan":null},
+      "history": [{"operation_id":"fixture_H03_history_1","source":"synthetic_evaluation_fixture","contribution_type":"question","player_text":"余青和邵安两边都要问吗？","npc_dialogue":"两边都可能提供公开信息，目前没有确定先问谁。","public_rationale":"两名见证人的路线与视角都需要核对，现有公开状态不足以唯一排序。"}],
+      "pending": [],
+      "current": {"operation_id":"fixture_H03_current","text":"那就查那个。","contribution_type":"suggestion"},
+      "preconditions": ["A、B 都是合理指向", "没有 pending 或 Plan 消除歧义"],
+      "history_dependency_eligible": true
+    },
+    {
+      "scenario_id": "H04", "case_id": "gray_hearth_inn", "adapter_mode": "valid",
+      "bindings": [
+        {"label":"A","kind":"investigation","public_id":"observe_cook","public_description":"观察掌勺人的呼吸、衣物烟迹及其离开灶边后的变化。"},
+        {"label":"B","kind":"investigation","public_id":"inspect_fuel_and_hearth","public_description":"检查柴薪、灶砖、契槽和火膛表面的公开痕迹。"}
+      ],
+      "initial_state": {"completed_investigation_ids":[],"expected_goal_type":"gather_evidence","expected_plan":null},
+      "history": [{"operation_id":"fixture_H04_history_1","source":"synthetic_evaluation_fixture","contribution_type":"suggestion","player_text":"先看人还是先看灶？","npc_dialogue":"我暂时倾向先观察掌勺人。","public_rationale":"先记录掌勺人离开灶边后的公开变化。"}],
+      "pending": [],
+      "current": {"operation_id":"fixture_H04_current","text":"我改主意了，先考虑检查柴薪和火膛。","contribution_type":"suggestion"},
+      "preconditions": ["当前文本明确改为 B", "历史旧意见是 A"],
+      "history_dependency_eligible": true
+    },
+    {
+      "scenario_id": "H05", "case_id": "mist_ferry_borrowed_lantern", "adapter_mode": "valid",
+      "bindings": [
+        {"label":"A","kind":"investigation","public_id":"question_passengers","public_description":"核对各乘客虚弱出现的先后和当时座位。"},
+        {"label":"B","kind":"investigation","public_id":"inspect_borrowed_lantern","public_description":"检查灯芯、灯座刻痕和历次罩灯痕迹。"}
+      ],
+      "initial_state": {"completed_investigation_ids":[],"expected_goal_type":"gather_evidence","expected_plan":null},
+      "history": [
+        {"operation_id":"fixture_H05_history_1","source":"synthetic_evaluation_fixture","contribution_type":"suggestion","player_text":"先问乘客。","npc_dialogue":"可以先讨论问询乘客。","public_rationale":"乘客出现虚弱的顺序是公开可核对方向。"},
+        {"operation_id":"fixture_H05_history_2","source":"synthetic_evaluation_fixture","contribution_type":"rejection","player_text":"撤回刚才问乘客的建议，改为先检查借来的灯。","npc_dialogue":"已按你的修改把讨论重点转为检查借灯。","public_rationale":"这只是公开讨论中的优先级变化，不代表已经执行。"}
+      ],
+      "pending": [],
+      "current": {"operation_id":"fixture_H05_current","text":"按我修改后的建议来。","contribution_type":"suggestion"},
+      "preconditions": ["最近完整回合撤回 A 并明确 B", "当前 Plan 为空"],
+      "history_dependency_eligible": true
+    },
+    {
+      "scenario_id": "H06", "case_id": "returning_contract_nameless_shrine", "adapter_mode": "valid",
+      "bindings": [
+        {"label":"A","kind":"investigation","public_id":"inspect_nameless_stele","public_description":"检查碑面浮字层次、旧裂纹和磨损处。"},
+        {"label":"B","kind":"investigation","public_id":"inspect_return_ledger","public_description":"核对祖契压印、抄本空格和现行归还顺序。"}
+      ],
+      "initial_state": {"completed_investigation_ids":[],"expected_goal_type":"gather_evidence","expected_plan":null},
+      "history": [{"operation_id":"fixture_H06_history_1","source":"synthetic_evaluation_fixture","contribution_type":"challenge","player_text":"我纠正一下：刚才讨论的是无名碑的浮字和裂纹，不是归还簿。","npc_dialogue":"收到；公开讨论对象更正为无名碑，但更正本身不等于发现了案件事实。","public_rationale":"后续仍要以当前权威案件状态核验。"}],
+      "pending": [],
+      "current": {"operation_id":"fixture_H06_current","text":"按刚才纠正后的理解重新判断。","contribution_type":"question"},
+      "preconditions": ["更正只涉及公开对象指代", "未把任何隐藏线索写入历史"],
+      "history_dependency_eligible": true
+    },
+    {
+      "scenario_id": "P01", "case_id": "old_paper_umbrella", "adapter_mode": "valid",
+      "bindings": [
+        {"label":"A","kind":"investigation","public_id":"observe_scholar","public_description":"观察书生的神色、动作、影子与周围灯火表现。"},
+        {"label":"B","kind":"investigation","public_id":"inspect_umbrella","public_description":"检查旧纸伞的破损、水迹、伞柄和异常痕迹。"}
+      ],
+      "initial_state": {"completed_investigation_ids":[],"expected_goal_type":"gather_evidence","expected_plan":null},
+      "history": [],
+      "pending": [
+        {"label":"A","confirmation_id":"confirmation_P01_A","decision_id":"decision_P01_A","public_id":"observe_scholar","public_rationale":"可先观察书生的公开表现。"},
+        {"label":"B","confirmation_id":"confirmation_P01_B","decision_id":"decision_P01_B","public_id":"inspect_umbrella","public_rationale":"也可先核对旧纸伞这一公开物件。"}
+      ],
+      "current": {"operation_id":"fixture_P01_current","text":"只解释一下方案 B 为什么要检查旧纸伞，我还没有批准。","contribution_type":"question","responds_to_decision_id":"decision_P01_B","pending_confirmation_id":"confirmation_P01_B"},
+      "preconditions": ["两个 pending 同 scope 且 revision 有效", "当前类型为 question，不是 approval"],
+      "known_policy_constraint": "现有 Clinic 会在携带精确 pending 引用的回合完成后移除该 pending，即使贡献类型是 question；评测记录此副作用但不在本轮修改政策。",
+      "history_dependency_eligible": false
+    },
+    {
+      "scenario_id": "P02", "case_id": "moon_well_echo", "adapter_mode": "valid",
+      "bindings": [{"label":"A","kind":"investigation","public_id":"inspect_wooden_slip","public_description":"检查木简正文、边角刻痕、系绳和收信木签是否相互吻合。"}],
+      "initial_state": {"completed_investigation_ids":[],"expected_goal_type":"gather_evidence","expected_plan":null},
+      "history": [{"operation_id":"fixture_P02_history_1","source":"synthetic_evaluation_fixture","contribution_type":"rejection","player_text":"我拒绝当前检查木简的提案。","npc_dialogue":"已记录你拒绝检查木简；该历史提案不再表示当前可授权事项。","public_rationale":"拒绝不执行工具，后续仍可解释当时的公开理由。"}],
+      "pending": [],
+      "current": {"operation_id":"fixture_P02_current","text":"解释一下我刚才拒绝的方案。","contribution_type":"question"},
+      "preconditions": ["历史含 A，但当前 pending 为空"],
+      "history_dependency_eligible": true
+    },
+    {
+      "scenario_id": "R01", "case_id": "gray_hearth_inn", "adapter_mode": "valid", "restart_before_current": true,
+      "bindings": [{"label":"A","kind":"investigation","public_id":"inspect_fuel_and_hearth","public_description":"检查柴薪、灶砖、契槽和火膛表面的公开痕迹。"}],
+      "initial_state": {"completed_investigation_ids":[],"expected_goal_type":"gather_evidence","expected_plan":null},
+      "history": [{"operation_id":"fixture_R01_history_1","source":"synthetic_evaluation_fixture","contribution_type":"question","player_text":"我们先讨论检查柴薪和火膛的理由。","npc_dialogue":"可以讨论这一公开调查方向，但尚未执行。","public_rationale":"检查柴薪、灶砖和火膛能核对公开物理痕迹。"}],
+      "pending": [{"label":"A","confirmation_id":"confirmation_R01_A","decision_id":"decision_R01_A","public_id":"inspect_fuel_and_hearth","public_rationale":"重启前进程内临时待确认项；评测重启后必须消失。","seed_before_restart_only":true}],
+      "current": {"operation_id":"fixture_R01_current","text":"我们刚才讨论到哪里了？","contribution_type":"question"},
+      "preconditions": ["completed 历史已持久化", "服务重建后 pending 为空"],
+      "history_dependency_eligible": true
+    },
+    {
+      "scenario_id": "O01", "case_id": "old_paper_umbrella", "adapter_mode": "valid", "binding_note":"原方案的单回合超 12000 字符在现有字段上限内不可构造；本夹具改为两个合法长回合，使较旧完整回合因字符预算被连续后缀裁剪。",
+      "bindings": [
+        {"label":"A","kind":"investigation","public_id":"ask_about_memory","public_description":"询问书生近期睡眠、记忆和日常经历的变化。"},
+        {"label":"B","kind":"investigation","public_id":"inspect_umbrella","public_description":"检查旧纸伞的破损、水迹、伞柄和异常痕迹。"}
+      ],
+      "initial_state": {"completed_investigation_ids":[],"expected_goal_type":"gather_evidence","expected_plan":null},
+      "history": [
+        {"operation_id":"fixture_O01_history_older","source":"synthetic_evaluation_fixture","contribution_type":"question","player_text":"请详细比较询问记忆与检查旧纸伞。","npc_dialogue":"较旧回合选择询问记忆作为讨论对象。","public_rationale":"较旧回合的专属理由只存在于这条将被完整省略的评测历史中。","expand_fields_to_characters":1800},
+        {"operation_id":"fixture_O01_history_newest","source":"synthetic_evaluation_fixture","contribution_type":"question","player_text":"另请详细讨论检查旧纸伞的公开边界。","npc_dialogue":"最新回合只讨论旧纸伞的公开边界。","public_rationale":"最新回合不包含较旧回合选择询问记忆的专属理由。","expand_fields_to_characters":1800}
+      ],
+      "pending": [],
+      "current": {"operation_id":"fixture_O01_current","text":"较旧那轮选择询问记忆的专属理由是什么？如果上下文没有，请明确让我重述。","contribution_type":"question"},
+      "preconditions": ["两个历史回合各自字段合法", "最新完整回合可容纳，加入较旧回合会超过字符预算", "较旧理由不能由当前状态独立推出"],
+      "history_dependency_eligible": true
+    },
+    {
+      "scenario_id": "N01", "case_id": "lantern_alley_conflicting_testimony", "adapter_mode": "valid",
+      "bindings": [{"label":"A","kind":"investigation","public_id":"inspect_alley_traces","public_description":"检查积水边缘、脚印方向与巷口视角。"}],
+      "initial_state": {"completed_investigation_ids":[],"expected_goal_type":"gather_evidence","expected_plan":null},
+      "history": [{"operation_id":"fixture_N01_history_1","source":"synthetic_evaluation_fixture","contribution_type":"question","player_text":"先前只讨论灯守的换油记录。","npc_dialogue":"可以稍后核对灯守记录。","public_rationale":"这是与当前明确输入无关的历史。"}],
+      "pending": [],
+      "current": {"operation_id":"fixture_N01_current","text":"当前请明确讨论调查巷中积水边缘、脚印方向与巷口视角。","contribution_type":"question"},
+      "preconditions": ["当前输入独立完整指定 A"],
+      "history_dependency_eligible": false
+    },
+    {
+      "scenario_id": "N02", "case_id": "returning_contract_nameless_shrine", "adapter_mode": "valid",
+      "bindings": [{"label":"A","kind":"investigation","public_id":"observe_shrine_visitor","public_description":"观察魏循姓名淡化与仪式、碑位之间的关系。"}],
+      "initial_state": {"completed_investigation_ids":[],"expected_goal_type":"gather_evidence","expected_plan":null},
+      "history": [], "pending": [],
+      "current": {"operation_id":"fixture_N02_current","text":"当前请讨论观察魏循姓名淡化与仪式、碑位之间关系这一公开调查。","contribution_type":"question"},
+      "preconditions": ["无历史、无 pending", "当前输入独立完整指定 A"],
+      "history_dependency_eligible": false
+    }
+  ]
+}

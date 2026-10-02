@@ -1,7 +1,10 @@
 """Composition-only local clinic application service for ordinary players."""
 
 from dataclasses import dataclass
+import re
+from threading import Lock
 from typing import Annotated, Literal
+from uuid import uuid4
 
 from pydantic import ConfigDict, Field
 
@@ -13,7 +16,14 @@ from xuanyi_npc.domain.cooperation import (
 )
 from xuanyi_npc.domain.base import DomainModel, Identifier, NonEmptyText
 from xuanyi_npc.domain.cases import CaseActionType
-from xuanyi_npc.storage import JsonStateStore, StateNotFoundError
+from xuanyi_npc.storage import (
+    CooperativeHistoryError,
+    CooperativePayloadConflict,
+    JsonStateStore,
+    SQLiteCooperativeHistoryRepository,
+    StateNotFoundError,
+)
+from xuanyi_npc.agents.context import RequiredContextTooLargeError
 
 from .multicase import (
     CampaignPlayerInput, CampaignRuleSet, CaseCatalog, CreatePlayerInput, ListCasesInput, ListPlayersInput,
@@ -21,7 +31,66 @@ from .multicase import (
 )
 from .case_dialogue import CaseDialogueStore, ChatMessage, asks_participant_identity, case_participants, load_guides
 from .player_experience import classify_case_message, propose_investigation
-from .cooperative_runtime import CooperativeRuntime, CooperativeTurnInput
+from .cooperative_runtime import (
+    CooperativePostCommitError,
+    CooperativeRuntime,
+    CooperativeTurnInput,
+)
+from .cooperative_context import (
+    RequiredCooperativeContextTooLarge,
+    build_context_snapshot,
+)
+
+
+_PROCESS_INSTANCE_ID = uuid4().hex
+_ACTIVE_OPERATION_LOCK = Lock()
+_ACTIVE_OPERATIONS: dict[tuple[str, str, str, str, str], str] = {}
+_ORDINARY_OPERATION_LOCK = Lock()
+_ORDINARY_OPERATION_RECEIPTS: dict[
+    tuple[str, str, str, str, str], tuple[str, object]
+] = {}
+
+
+_CASE_ACTION_VERBS = (
+    "检查", "查看", "调查", "观察", "询问", "盘问", "问问", "搜查", "检验",
+    "核对", "分析", "追查", "探查", "勘查", "前往", "诊断", "辨证", "治疗", "处置", "执行",
+)
+_CASE_ACTION_PATTERN = re.compile("|".join(map(re.escape, _CASE_ACTION_VERBS)))
+_NEGATED_CASE_ACTION_PATTERN = re.compile(
+    rf"(?:不要|别|不用|无需|先别|暂时不|不必).{{0,4}}(?:{'|'.join(map(re.escape, _CASE_ACTION_VERBS))})"
+)
+_QUESTION_ONLY_ACTION_PATTERN = re.compile(
+    rf"(?:为什么|为何|怎么|如何|是否).{{0,10}}(?:{'|'.join(map(re.escape, _CASE_ACTION_VERBS))})"
+)
+
+
+def message_requests_case_action(text: str) -> bool:
+    """Return whether natural-language chat explicitly authorizes a case action."""
+
+    compact = "".join(text.split())
+    if not compact or not _CASE_ACTION_PATTERN.search(compact):
+        return False
+    if _NEGATED_CASE_ACTION_PATTERN.search(compact):
+        return False
+    if _QUESTION_ONLY_ACTION_PATTERN.search(compact) and not re.search(
+        r"(?:请|先|再|去|帮我|麻烦|建议|要不|可以|应该)", compact
+    ):
+        return False
+    return True
+
+
+def _claim_live_operation(key: tuple[str, str, str, str, str], fingerprint: str) -> str:
+    with _ACTIVE_OPERATION_LOCK:
+        existing = _ACTIVE_OPERATIONS.get(key)
+        if existing is not None:
+            return "conflict" if existing != fingerprint else "in_progress"
+        _ACTIVE_OPERATIONS[key] = fingerprint
+        return "claimed"
+
+
+def _release_live_operation(key: tuple[str, str, str, str, str]) -> None:
+    with _ACTIVE_OPERATION_LOCK:
+        _ACTIVE_OPERATIONS.pop(key, None)
 
 
 class ClinicError(ValueError):
@@ -43,6 +112,8 @@ class ClinicCaseView(DomainModel):
     synopsis: NonEmptyText
     status: str
     recommended: bool
+    can_start: bool = False
+    active_session_id: Identifier | None = None
 
 
 class ClinicView(DomainModel):
@@ -91,10 +162,15 @@ class ClinicService:
     memory_index_service: object | None = None
     memory_mode: str = "disabled"
     reflection_service: object | None = None
+    cooperative_history_repository: object | None = None
+    cooperative_record_enabled: bool = False
+    cooperative_context_v2_enabled: bool = False
 
     def __post_init__(self) -> None:
         if self.game_npc_agent is None:
             raise ValueError("ClinicService requires an explicit game_npc_agent")
+        if self.cooperative_context_v2_enabled and not self.cooperative_record_enabled:
+            raise ValueError("cooperative context v2 requires cooperative recording")
         kwargs = {"state_store": self.store, "case_catalog": self.base_catalog,
                   "campaign_rules": CampaignRuleSet.load(self.campaign_path, self.base_catalog),
                   "clock": self.clock, "memory_coordinator": self.memory_coordinator,
@@ -107,10 +183,37 @@ class ClinicService:
         self.base_service = MultiCaseEpisodeService(**kwargs)
         self.case_guides = load_guides()
         self.case_dialogues = CaseDialogueStore(self.store.root)
+        self._player_creation_lock = Lock()
         self.cooperative_pending: dict[str, PendingActionConfirmation] = {}
+        self._cooperative_pending_lock = Lock()
+        if self.cooperative_record_enabled and self.cooperative_history_repository is None:
+            self.cooperative_history_repository = SQLiteCooperativeHistoryRepository(
+                self.store.root / "cooperative_conversation.sqlite3"
+            )
 
     def create_player(self, display_name: str):
-        result = self.base_service.create_player(CreatePlayerInput(display_name=display_name))
+        request = CreatePlayerInput(display_name=display_name)
+        normalized_name = request.display_name.casefold()
+        with self._player_creation_lock:
+            if any(
+                player.display_name.casefold() == normalized_name
+                for player in self.store.list_players()
+            ):
+                raise ClinicError(
+                    "player_name_exists",
+                    "这个玩家名已经有调查档案，请从恢复调查档案中进入。",
+                )
+            result = None
+            for _ in range(8):
+                candidate = self.base_service.create_player(request)
+                if candidate.ok or candidate.error_code != "id_conflict":
+                    result = candidate
+                    break
+            if result is None:
+                raise ClinicError(
+                    "player_id_unavailable",
+                    "暂时无法生成新的档案编号，请重新点击创建。",
+                )
         if not result.ok or result.player_id is None:
             raise ClinicError("player_create_failed", result.message)
         return self.home(result.player_id)
@@ -144,7 +247,15 @@ class ClinicService:
         )[-3:]
         return ClinicView(
             player_summary=ClinicPlayerSummary(player_id=player_id, display_name=player.display_name),
-            visible_cases=tuple(ClinicCaseView(case_id=item.case_id, title=item.title, synopsis=item.synopsis, status=item.play_status.value, recommended=item.is_recommended_next) for item in cases.cases),
+            visible_cases=tuple(ClinicCaseView(
+                case_id=item.case_id,
+                title=item.title,
+                synopsis=item.synopsis,
+                status=item.play_status.value,
+                recommended=item.is_recommended_next,
+                can_start=item.can_start,
+                active_session_id=item.active_session_id,
+            ) for item in cases.cases),
             active_case=active,
             recent_public_history=history,
         )
@@ -258,16 +369,127 @@ class ClinicService:
             raise ClinicError(result.error_code or "case_resume_failed", result.message)
         return result
 
+    def cooperative_turn_history(
+        self,
+        player_id: str,
+        case_id: str,
+        session_id: str,
+        *,
+        limit: int = 16,
+    ) -> tuple[tuple[PlayerContribution, CooperativeTurnResult], ...]:
+        """Load completed, player-visible cooperative turns for a case page."""
+        if not self.cooperative_record_enabled or self.cooperative_history_repository is None:
+            return ()
+        session = self.store.load_case_session(session_id)
+        if (session.player_id, session.case_id) != (player_id, case_id):
+            raise ClinicError(
+                "cooperative_scope_ownership_mismatch",
+                "该协作记录不属于当前玩家或案件。",
+            )
+        try:
+            records = self.cooperative_history_repository.completed_for_session(
+                player_id, case_id, session_id, limit=limit
+            )
+        except CooperativeHistoryError as exc:
+            raise ClinicError("cooperative_history_unavailable", str(exc)) from exc
+        turns: list[tuple[PlayerContribution, CooperativeTurnResult]] = []
+        for record in records:
+            if not record.contribution_json or not record.result_json:
+                continue
+            try:
+                contribution = PlayerContribution.model_validate_json(
+                    record.contribution_json
+                )
+                result = CooperativeTurnResult.model_validate_json(record.result_json)
+            except ValueError:
+                continue
+            turns.append((contribution, result))
+        return tuple(turns)
+
     def submit_player_contribution(self, request: ClinicContributionInput) -> CooperativeTurnResult:
-        pending = None
-        if request.pending_confirmation_id is not None:
-            pending = self.cooperative_pending.get(request.pending_confirmation_id)
-            if pending is None:
-                raise ClinicError("confirmation_unavailable", "该协商请求已失效，请依据最新病例状态重新讨论。")
-            if (pending.player_id, pending.case_id, pending.session_id) != (
+        if self.cooperative_record_enabled:
+            repository = self.cooperative_history_repository
+            stable_request = {
+                "player_id": request.player_id,
+                "case_id": request.case_id,
+                "session_id": request.session_id,
+                "operation_id": request.operation_id,
+                "text": request.text,
+                "contribution_type": request.contribution_type.value,
+                "responds_to_decision_id": request.responds_to_decision_id,
+                "pending_confirmation_id": request.pending_confirmation_id,
+            }
+            fingerprint = SQLiteCooperativeHistoryRepository.fingerprint(stable_request)
+            database_identity = str(getattr(repository, "path", id(repository)))
+            operation_key = (
+                database_identity,
+                request.player_id,
+                request.case_id,
+                request.session_id,
+                request.operation_id,
+            )
+            claim = _claim_live_operation(operation_key, fingerprint)
+            if claim == "in_progress":
+                raise ClinicError(
+                    "operation_in_progress", "同一协作操作仍在处理中，请稍后重试。"
+                )
+            if claim == "conflict":
+                raise ClinicError(
+                    "operation_payload_conflict",
+                    "operation_id 已用于不同的协作请求。",
+                )
+            try:
+                with self.store.session_write_lock(request.session_id):
+                    return self._submit_player_contribution(
+                        request, operation_claimed=True
+                    )
+            except Exception:
+                _release_live_operation(operation_key)
+                raise
+        with self.store.session_write_lock(request.session_id):
+            return self._submit_player_contribution(request)
+
+    def _submit_player_contribution(
+        self,
+        request: ClinicContributionInput,
+        *,
+        operation_claimed: bool = False,
+    ) -> CooperativeTurnResult:
+        session = self.store.load_case_session(request.session_id)
+        self.store.load_player(request.player_id)
+        if (session.player_id, session.case_id) != (request.player_id, request.case_id):
+            raise ClinicError(
+                "cooperative_scope_ownership_mismatch",
+                "该协作操作不属于当前玩家、病例或会话。",
+            )
+        def current_pending(*, require_current_revision: bool = False):
+            if request.pending_confirmation_id is None:
+                return None
+            with self._cooperative_pending_lock:
+                value = self.cooperative_pending.get(request.pending_confirmation_id)
+            if value is None:
+                raise ClinicError(
+                    "confirmation_unavailable",
+                    "该协商请求已失效，请依据最新病例状态重新讨论。",
+                )
+            if (value.player_id, value.case_id, value.session_id) != (
                 request.player_id, request.case_id, request.session_id
             ):
-                raise ClinicError("confirmation_ownership_mismatch", "该协商请求不属于当前玩家或病例。")
+                raise ClinicError(
+                    "confirmation_ownership_mismatch",
+                    "该协商请求不属于当前玩家或病例。",
+                )
+            if require_current_revision and value.case_revision != session.revision:
+                raise ClinicError(
+                    "confirmation_unavailable",
+                    "该协商请求已因病例状态变化而失效，请重新讨论。",
+                )
+            return value
+        pending = None
+        if not self.cooperative_record_enabled:
+            # Preserve the pre-CE-2A validation/clock ordering when recording
+            # is disabled.
+            pending = current_pending()
         contribution = PlayerContribution(
             contribution_id=request.operation_id,
             player_id=request.player_id,
@@ -278,25 +500,246 @@ class ClinicService:
             responds_to_decision_id=request.responds_to_decision_id,
             created_at=self.clock.now(),
         )
-        runtime = CooperativeRuntime(
-            service=self._service(request.player_id),
-            agent=self.game_npc_agent,
-            memory_service=self.cooperative_memory_service,
-            reflection_service=self.reflection_service,
+        allow_world_action = (
+            request.contribution_type is not PlayerContributionType.GENERAL_MESSAGE
+            or message_requests_case_action(request.text)
         )
-        result = runtime.handle(CooperativeTurnInput(contribution=contribution, pending_action=pending))
-        if pending is not None:
-            self.cooperative_pending.pop(pending.confirmation_id, None)
-        if result.pending_action is not None:
-            self.cooperative_pending[result.pending_action.confirmation_id] = result.pending_action
-        return result
+        if not self.cooperative_record_enabled:
+            runtime = CooperativeRuntime(
+                service=self._service(request.player_id),
+                agent=self.game_npc_agent,
+                memory_service=self.cooperative_memory_service,
+                reflection_service=self.reflection_service,
+            )
+            result = runtime.handle(CooperativeTurnInput(
+                contribution=contribution,
+                pending_action=pending,
+                allow_world_action=allow_world_action,
+            ))
+            with self._cooperative_pending_lock:
+                if pending is not None:
+                    self.cooperative_pending.pop(pending.confirmation_id, None)
+                if result.pending_action is not None:
+                    self.cooperative_pending[result.pending_action.confirmation_id] = result.pending_action
+            return result
+
+        repository = self.cooperative_history_repository
+        assert isinstance(repository, SQLiteCooperativeHistoryRepository) or all(
+            callable(getattr(repository, name, None))
+            for name in ("begin", "mark_prepared", "complete")
+        )
+        stable_request = {
+            "player_id": request.player_id,
+            "case_id": request.case_id,
+            "session_id": request.session_id,
+            "operation_id": request.operation_id,
+            "text": request.text,
+            "contribution_type": request.contribution_type.value,
+            "responds_to_decision_id": request.responds_to_decision_id,
+            "pending_confirmation_id": request.pending_confirmation_id,
+        }
+        fingerprint = SQLiteCooperativeHistoryRepository.fingerprint(stable_request)
+        database_identity = str(getattr(repository, "path", id(repository)))
+        operation_key = (
+            database_identity, request.player_id, request.case_id,
+            request.session_id, request.operation_id,
+        )
+        if not operation_claimed:
+            claim = _claim_live_operation(operation_key, fingerprint)
+            if claim == "in_progress":
+                raise ClinicError("operation_in_progress", "同一协作操作仍在处理中，请稍后重试。")
+            if claim == "conflict":
+                raise ClinicError("operation_payload_conflict", "operation_id 已用于不同的协作请求。")
+
+        record = None
+        prepared = False
+        try:
+            try:
+                record, created = repository.begin(
+                    player_id=request.player_id,
+                    case_id=request.case_id,
+                    session_id=request.session_id,
+                    operation_id=request.operation_id,
+                    stable_request=stable_request,
+                    contribution_json=contribution.model_dump_json(),
+                    owner_process_id=_PROCESS_INSTANCE_ID,
+                )
+            except CooperativePayloadConflict as exc:
+                raise ClinicError("operation_payload_conflict", str(exc)) from exc
+            except CooperativeHistoryError as exc:
+                raise ClinicError("cooperative_history_unavailable", str(exc)) from exc
+
+            if not created:
+                if record.lifecycle == "completed" and record.result_json:
+                    stored = CooperativeTurnResult.model_validate_json(record.result_json)
+                    current_pending = None
+                    if stored.pending_action is not None:
+                        with self._cooperative_pending_lock:
+                            live = self.cooperative_pending.get(stored.pending_action.confirmation_id)
+                        if (
+                            live is not None
+                            and live == stored.pending_action
+                            and live.case_revision == session.revision
+                        ):
+                            current_pending = live
+                    return stored.model_copy(update={"pending_action": current_pending})
+                if record.lifecycle in ("started", "prepared"):
+                    repository.require_recovery(record, "interrupted_operation_uncertain")
+                    raise ClinicError(
+                        "operation_recovery_uncertain",
+                        "发现重启后遗留的未完成操作；无法确认执行结果，未自动重放。",
+                    )
+                if record.lifecycle == "recovery_required":
+                    if (record.failure_code or "").startswith("committed_"):
+                        raise ClinicError(
+                            "operation_committed_followup_incomplete",
+                            "该操作已提交世界状态，但后续处理未完成；同 operation 不会重放工具。",
+                        )
+                    raise ClinicError(
+                        "operation_recovery_uncertain",
+                        "该操作结果无法安全确认，未自动重放模型或工具。",
+                    )
+                raise ClinicError(
+                    "operation_previously_failed",
+                    "该 operation_id 的协作操作此前已在公开回复前失败。",
+                )
+
+            # Only a genuinely new operation needs a currently valid pending.
+            # Completed replay and other existing lifecycle states above never
+            # use historical results as authorization.
+            try:
+                pending = current_pending(require_current_revision=True)
+            except ClinicError as exc:
+                try:
+                    repository.fail_before_reply(record, exc.code)
+                except CooperativeHistoryError as storage_exc:
+                    raise ClinicError(
+                        "cooperative_history_unavailable", str(storage_exc)
+                    ) from storage_exc
+                raise
+
+            snapshot = None
+            history_messages = ()
+            if self.cooperative_context_v2_enabled:
+                with self._cooperative_pending_lock:
+                    pending_snapshot = tuple(self.cooperative_pending.values())
+                try:
+                    snapshot, history_messages = build_context_snapshot(
+                        repository,
+                        record,
+                        pending_snapshot,
+                        contribution=contribution,
+                        case_revision=session.revision,
+                        responds_to_confirmation_id=request.pending_confirmation_id,
+                    )
+                except RequiredCooperativeContextTooLarge as exc:
+                    repository.fail_before_reply(record, "required_context_too_large")
+                    raise ClinicError("required_context_too_large", str(exc)) from exc
+
+            def prepared_hook(decision) -> None:
+                nonlocal prepared
+                repository.mark_prepared(record, decision.model_dump_json())
+                prepared = True
+
+            runtime = CooperativeRuntime(
+                service=self._service(request.player_id),
+                agent=self.game_npc_agent,
+                memory_service=self.cooperative_memory_service,
+                reflection_service=self.reflection_service,
+                cooperative_context=snapshot,
+                cooperative_history_messages=history_messages,
+                decision_prepared_hook=prepared_hook,
+            )
+            try:
+                result = runtime.handle(
+                    CooperativeTurnInput(
+                        contribution=contribution,
+                        pending_action=pending,
+                        allow_world_action=allow_world_action,
+                    )
+                )
+            except Exception as exc:
+                if isinstance(exc, RequiredContextTooLargeError):
+                    try:
+                        repository.fail_before_reply(record, "required_context_too_large")
+                    except CooperativeHistoryError:
+                        pass
+                    raise ClinicError("required_context_too_large", str(exc)) from exc
+                if isinstance(exc, CooperativePostCommitError):
+                    try:
+                        repository.require_recovery(
+                            record, f"committed_{exc.stage}_failed"
+                        )
+                    except CooperativeHistoryError:
+                        pass
+                    raise ClinicError(
+                        "operation_committed_followup_incomplete",
+                        "世界状态已提交，但协作后续处理未完成；同 operation 不会重放工具。",
+                    ) from exc
+                try:
+                    repository.require_recovery(record, "runtime_result_uncertain")
+                except CooperativeHistoryError:
+                    pass
+                if isinstance(exc, ClinicError):
+                    raise
+                raise ClinicError(
+                    "operation_recovery_uncertain",
+                    "协作操作未能完成，且无法安全断言世界状态未改变；同 operation 不会自动重放。",
+                ) from exc
+            if not prepared:
+                # Early safe-return branches cannot execute a tool. Record their
+                # final public decision before marking the turn completed.
+                repository.mark_prepared(record, result.decision.model_dump_json())
+            with self._cooperative_pending_lock:
+                if pending is not None:
+                    self.cooperative_pending.pop(pending.confirmation_id, None)
+            try:
+                repository.complete(record, result.model_dump_json())
+            except CooperativeHistoryError as exc:
+                try:
+                    repository.require_recovery(record, "completion_write_failed")
+                except CooperativeHistoryError:
+                    pass
+                raise ClinicError(
+                    "operation_recovery_uncertain",
+                    "世界状态可能已经提交，但协作结果记录失败；同 operation 不会自动重放。",
+                ) from exc
+            with self._cooperative_pending_lock:
+                if result.pending_action is not None:
+                    self.cooperative_pending[result.pending_action.confirmation_id] = result.pending_action
+            return result
+        finally:
+            _release_live_operation(operation_key)
 
     def submit_case_action(self, request: ClinicActionInput):
+        with self.store.session_write_lock(request.session_id):
+            return self._submit_case_action(request)
+
+    def _submit_case_action(self, request: ClinicActionInput):
         from xuanyi_npc.domain import AgentAction, AgentActionType, ToolCallRequest, ToolName
         service = self._service(request.player_id)
         case = service.case_catalog.get(request.case_id)
         if case is None:
             raise ClinicError("case_not_found", "病例不存在。")
+        operation_key = (
+            str(self.store.root.resolve()),
+            request.player_id,
+            request.case_id,
+            request.session_id,
+            request.operation_id,
+        )
+        fingerprint = request.model_dump_json()
+        with _ORDINARY_OPERATION_LOCK:
+            stored = _ORDINARY_OPERATION_RECEIPTS.get(operation_key)
+        if stored is not None:
+            stored_fingerprint, receipt = stored
+            if stored_fingerprint != fingerprint:
+                raise ClinicError(
+                    "operation_payload_conflict",
+                    "operation_id 已用于不同的普通行动请求。",
+                )
+        else:
+            receipt = None
         if request.action_type == "investigation":
             investigation = next((item for item in case.investigations if item.investigation_id == request.selection_id), None)
             if investigation is None:
@@ -308,7 +751,21 @@ class ClinicService:
         else:
             tool, arguments = ToolName.EXECUTE_TREATMENT, {"treatment_id": request.selection_id}
         action = AgentAction(action_id=request.operation_id, action_type=AgentActionType.USE_TOOL, dialogue="玩家通过异案页面选择了公开行动。", tool_call=ToolCallRequest(name=tool, arguments=arguments), confidence=1.0)
-        result = service.submit_action(SubmitActionInput(player_id=request.player_id, case_id=request.case_id, session_id=request.session_id, action=action))
+        if receipt is None:
+            receipt = service.submit_action_with_receipt(SubmitActionInput(
+                player_id=request.player_id,
+                case_id=request.case_id,
+                session_id=request.session_id,
+                action=action,
+            ))
+            with _ORDINARY_OPERATION_LOCK:
+                _ORDINARY_OPERATION_RECEIPTS[operation_key] = (fingerprint, receipt)
+        result = receipt.result
+        if receipt.world_commit_status == "unknown":
+            raise ClinicError(
+                "world_commit_uncertain",
+                "无法确认世界状态是否已提交；同一进程内不会自动重放该 operation。",
+            )
         if not result.ok:
             raise ClinicError(result.error_code or "case_action_rejected", result.message)
         return result

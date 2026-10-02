@@ -169,6 +169,55 @@ def revise_plan_proposal(value):
     )
 
 
+def discussion_then_investigation_proposal(value):
+    option = value.case_observation.available_investigations[0]
+    tool = INVESTIGATION_TOOL_BY_ACTION[option.action_type]
+    return GameNPCTurnProposal(
+        goal_update=GoalUpdateProposal(
+            update=GoalUpdateKind.KEEP, public_rationale="保持当前目标。"
+        ),
+        plan_update=PlanUpdateProposal(
+            update=PlanUpdateKind.CREATE,
+            draft=PlanDraft(steps=(
+                PlanStepDraft(
+                    intent=PlanStepIntent.DISCUSS_WITH_PLAYER,
+                    capability=NPCCapability.EXPLAIN,
+                    public_summary="先解释公开调查方向。",
+                    completion_signal=value.current_goal.completion_condition,
+                ),
+                PlanStepDraft(
+                    intent=PlanStepIntent.INVESTIGATE,
+                    capability=NPCCapability.USE_TOOL,
+                    suggested_tool=tool,
+                    public_target_id=option.investigation_id,
+                    public_summary="随后执行公开调查。",
+                    completion_signal=GoalCondition(
+                        condition_type=GoalConditionType.INVESTIGATION_COMPLETED,
+                        reference_id=option.investigation_id,
+                    ),
+                ),
+            )),
+            public_rationale="先沟通，再执行下一步。",
+        ),
+        decision=GameNPCDecisionProposal(
+            contribution_evaluation=PlayerContributionEvaluation(
+                contribution_id=value.player_contribution.contribution_id,
+                disposition=SuggestionDisposition.ACCEPT,
+                reason_code="public_discussion",
+                explanation="先解释本轮公开计划。",
+            ),
+            capability=NPCCapability.EXPLAIN,
+            action=AgentAction(
+                action_id=f"npc_{value.turn_id}",
+                action_type=AgentActionType.RESPOND,
+                dialogue="先说明调查方向，下一步执行公开调查。",
+                confidence=0.7,
+            ),
+            explanation="完成当前非工具沟通步骤。",
+        ),
+    )
+
+
 def test_runtime_initializes_state_executes_one_step_and_keeps_plan(tmp_path: Path) -> None:
     service, player_id, opened = opened_case(tmp_path)
     agent = PlanningAgent([create_plan_proposal()])
@@ -221,6 +270,27 @@ def test_completed_goal_is_replaced_before_next_agent_proposal(tmp_path: Path) -
     assert next_agent.inputs[0].current_plan is None
 
 
+def test_submitted_diagnosis_deterministically_prepares_treatment_goal(tmp_path: Path) -> None:
+    service, player_id, opened = opened_case(tmp_path)
+    runtime = CooperativeRuntime(service=service, agent=PlanningAgent([]))
+    request = contribution(player_id, opened.session_id, "turn_after_diagnosis")
+    state, _ = runtime._load_or_initialize(request, opened.observation)
+    completed = state.model_copy(update={
+        "current_goal": state.current_goal.model_copy(
+            update={"status": AgentGoalStatus.COMPLETED}
+        ),
+    })
+    observation = opened.observation.model_copy(update={
+        "submitted_diagnosis_id": opened.observation.diagnosis_candidates[0].diagnosis_id,
+    })
+
+    advanced = runtime._prepare_next_goal(completed, observation, "turn_treatment")
+
+    assert advanced.current_goal.goal_type is AgentGoalType.SELECT_TREATMENT
+    assert advanced.current_goal.status is AgentGoalStatus.ACTIVE
+    assert advanced.current_plan is None
+
+
 def test_world_commit_survives_agent_projection_failure(tmp_path: Path, monkeypatch) -> None:
     service, player_id, opened = opened_case(tmp_path)
     agent = PlanningAgent([create_plan_proposal()])
@@ -235,6 +305,34 @@ def test_world_commit_survives_agent_projection_failure(tmp_path: Path, monkeypa
     )
 
     assert result.error_code == "agent_state_projection_pending"
+    assert service.state_store.load_case_session(opened.session_id).revision == 1
+
+
+def test_response_advances_non_tool_step_and_unblocks_following_tool(tmp_path: Path) -> None:
+    service, player_id, opened = opened_case(tmp_path)
+    agent = PlanningAgent([
+        discussion_then_investigation_proposal,
+        _keep_plan_action(match=True),
+    ])
+    runtime = CooperativeRuntime(service=service, agent=agent)
+
+    discussed = runtime.handle(CooperativeTurnInput(contribution=contribution(
+        player_id, opened.session_id, "turn_discuss"
+    )))
+    after_discussion = service.state_store.load_cooperative_agent_state(opened.session_id)
+
+    assert discussed.status.value == "responded"
+    assert discussed.plan_evaluation_outcome == "keep_plan"
+    assert after_discussion.current_plan.steps[0].status is PlanStepStatus.COMPLETED
+    assert after_discussion.current_plan.steps[1].status is PlanStepStatus.ACTIVE
+    assert after_discussion.current_plan.current_step_index == 1
+
+    executed = runtime.handle(CooperativeTurnInput(contribution=contribution(
+        player_id, opened.session_id, "turn_execute"
+    )))
+
+    assert executed.status.value == "action_executed"
+    assert executed.selected_tool is not None
     assert service.state_store.load_case_session(opened.session_id).revision == 1
 
 
@@ -462,6 +560,9 @@ def test_outside_plan_rejection_persists_bounded_public_recovery_and_repeats_saf
     assert len(feedback) < 200
     assert state_second.last_plan_evaluation.public_summary == feedback
     assert state_second.last_plan_evaluation.evaluated_turn_id == "turn_bad_2"
+    assert state_first.last_decision_feedback.stage == "alignment"
+    assert agent.inputs[2].last_decision_feedback == state_first.last_decision_feedback
+    assert state_second.last_decision_feedback.related_action_id == "npc_turn_bad_2"
 
 
 def test_matching_action_after_alignment_rejection_executes_and_overwrites_recovery(tmp_path: Path) -> None:
@@ -484,6 +585,7 @@ def test_matching_action_after_alignment_rejection_executes_and_overwrites_recov
     assert recovered.event_sequences
     assert after.revision == before.revision + 1
     assert state.last_plan_evaluation.reason_code is not PlanEvaluationReason.ACTION_OUTSIDE_ACTIVE_PLAN
+    assert state.last_decision_feedback is None
 
 
 def test_legal_plan_revision_after_alignment_rejection_executes_normally(tmp_path: Path) -> None:
@@ -505,3 +607,4 @@ def test_legal_plan_revision_after_alignment_rejection_executes_normally(tmp_pat
     assert service.state_store.load_case_session(opened.session_id).revision == before.revision + 1
     assert state.current_plan.revision > agent.inputs[2].current_plan.revision
     assert state.last_plan_evaluation.reason_code is not PlanEvaluationReason.ACTION_OUTSIDE_ACTIVE_PLAN
+    assert state.last_decision_feedback is None

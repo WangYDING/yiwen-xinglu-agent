@@ -94,9 +94,14 @@ def build_service(
     return service, state_store, catalog
 
 
-def action(tool_name: ToolName, **arguments: object) -> AgentAction:
+def action(
+    tool_name: ToolName,
+    *,
+    action_id: str = "service_test_action",
+    **arguments: object,
+) -> AgentAction:
     return AgentAction(
-        action_id="service_test_action",
+        action_id=action_id,
         action_type=AgentActionType.USE_TOOL,
         dialogue="执行测试中的公开行动。",
         tool_call=ToolCallRequest(name=tool_name, arguments=arguments),
@@ -128,6 +133,7 @@ def submit(
     player_id: str,
     session_id: str,
     tool_name: ToolName,
+    action_id: str = "service_test_action",
     **arguments: object,
 ) -> MultiCaseServiceResult:
     return service.submit_action(
@@ -135,7 +141,7 @@ def submit(
             player_id=player_id,
             case_id="old_paper_umbrella",
             session_id=session_id,
-            action=action(tool_name, **arguments),
+            action=action(tool_name, action_id=action_id, **arguments),
         )
     )
 
@@ -512,6 +518,7 @@ def test_completed_session_rejects_further_actions_without_writing(tmp_path: Pat
         player_id,
         session_id,
         ToolName.OBSERVE_PATIENT,
+        action_id="closed_session_action",
         investigation_id="observe_scholar",
     )
 
@@ -609,7 +616,7 @@ def test_action_save_failure_keeps_previous_file_and_returns_no_event(tmp_path: 
         investigation_id="observe_scholar",
     )
 
-    assert result.error_code == "state_unavailable"
+    assert result.error_code == "world_commit_uncertain"
     assert result.event_sequences == ()
     assert result.session_revision == 0
     assert path.read_bytes() == before

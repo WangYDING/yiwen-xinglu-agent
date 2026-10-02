@@ -11,7 +11,7 @@ python -m pip install -e ".[dev]"
 yiwen-xinglu
 ```
 
-服务只绑定 `127.0.0.1`。正式 LLM 模式需要 API Key、显式付费授权和预算上限；详见[首次启动说明](START_HERE.md)。`xuanyi-clinic` 是同一入口的兼容命令，`xuanyi-mcp-stdio` 提供独立的本地 MCP stdio 接口。
+服务只绑定 `127.0.0.1`。正式 LLM 模式需要 API Key、显式付费授权和预算上限；协作回合记录与 CE-2A 上下文默认启用，可分别用 `--no-cooperative-record` 和 `--no-cooperative-context-v2` 显式关闭。详见[首次启动说明](START_HERE.md)。`xuanyi-clinic` 是同一入口的兼容命令，`xuanyi-mcp-stdio` 提供独立的本地 MCP stdio 接口。
 
 ## 玩家实际体验
 
@@ -34,7 +34,9 @@ PlayerContribution
   → NPCAuthorityPolicy
   → CaseToolExecutor
   → CaseEngine
-  → world commit / plan evaluation / memory / reflection
+  → world commit / memory projection
+  → refreshed Observation / plan evaluation / Agent state
+  → reflection
 ```
 
 玩家文本不会直接转换为工具调用，隐藏真相也不会进入 Agent 的公开视图。模型输出必须先经过结构、规划、公开行动和权限校验，才能进入确定性执行链。
@@ -64,7 +66,7 @@ LLM 负责评价玩家贡献、提出 Goal/Plan 变更、选择候选行动、�
 
 ## 当前验证证据
 
-- 当前工作区测试：`590 passed`；该数字是代码回归规模，不替代真实模型或真人体验证据。
+- 当前工作区测试：`657 passed`（2026-09-26 当前工作区实测）；该数字是代码回归规模，不替代真实模型或真人体验证据。
 - E6 历史冻结基线：3 个案件 × 3 次独立重复，Task Success 8/9；只适用于该冻结协议，不是线上成功率。
 - 早期 V2 全量运行暴露了严重的任务推进和评测实现问题，随后完成 P0–P5 诊断、计划—动作对齐、结构化修复和处置承诺修复。
 - 诊断修复小批次：指定的 6 个 T 任务与 M01 三条件共 9/9 完成；它只证明该批次关键路径恢复，不是正式可靠性或 Memory 收益结论。
@@ -74,7 +76,7 @@ LLM 负责评价玩家贡献、提出 Goal/Plan 变更、选择候选行动、�
 
 ## 当前明确限制
 
-- JSON 状态写入有 revision 检查和原子文件替换，但同一 session 的并发更新不是数据库级原子 CAS；严格并发安全尚未完成。
+- JSON 状态写入有 revision 检查和原子文件替换；正常单进程产品入口还使用按 state root + session_id 共享的 `RLock` 串行化同一 session 的完整读改写链，并已有并发冲突测试。该锁不跨进程，`save_case_session()` 本身也不是数据库级原子 CAS，因此多进程或绕过受控入口的严格并发安全仍未完成。
 - pending confirmation 主要保存在进程内，尚不能在重启后完整恢复原确认流程。
 - world、AgentState 与 SQLite memory 分属不同提交边界；已有权威快照、事件回放、记忆投影对账和部分故障恢复，但跨存储恢复尚未完全闭环。
 - 模型原始 structured output 的 schema 遵循仍不稳定，系统仍依赖有限修复和 safe fallback。

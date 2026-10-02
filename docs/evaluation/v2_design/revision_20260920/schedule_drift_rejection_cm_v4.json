@@ -1,0 +1,5 @@
+{
+  "rejected": true,
+  "provider_initialization_reached": false,
+  "error": "schedule order differs from canonical at index 0"
+}

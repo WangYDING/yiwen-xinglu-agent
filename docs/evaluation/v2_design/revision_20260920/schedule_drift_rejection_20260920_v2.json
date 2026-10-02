@@ -1,0 +1,15 @@
+{
+  "schema_version": "v2.1_schedule_drift_probe_v1",
+  "mutation": "swap execution_order indexes 18 and 19",
+  "preflight_status": "FAIL",
+  "preflight_errors": [
+    "schedule: schedule order differs from canonical at index 18"
+  ],
+  "entrypoint": {
+    "rejected": true,
+    "error_type": "ValueError",
+    "error": "schedule order differs from canonical at index 18"
+  },
+  "provider_initialized": false,
+  "paid_model_calls": 0
+}

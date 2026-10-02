@@ -394,7 +394,7 @@ def test_persistence_failure_returns_no_event_and_leaves_snapshot_unchanged(
     )
 
     assert result["ok"] is False
-    assert result["error_code"] == "internal_error"
+    assert result["error_code"] == "world_commit_uncertain"
     assert result["event_sequences"] == []
     assert result["session_revision"] == 0
     assert harness.session_path.read_bytes() == before

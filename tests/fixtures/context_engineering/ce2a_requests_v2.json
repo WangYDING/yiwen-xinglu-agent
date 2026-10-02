@@ -1,0 +1,30 @@
+{
+  "fixture_version": "ce2a_requests_v2",
+  "supersedes_for_pending_response_marker": "ce2a_requests_v1 does not contain a responding pending item",
+  "scenario": {
+    "confirmation_id": "confirmation_fixture",
+    "decision_id": "decision_fixture",
+    "scope_and_revision": "matching",
+    "expected_marker": true
+  },
+  "requests": {
+    "a0_initial": {
+      "sha256": "9acadf663387e0bf3e94af5f74c61de70d8737f57e6e951964eaeb9f3ebedd6e",
+      "roles": ["system", "user", "assistant", "user"],
+      "message_count": 4,
+      "message_content_characters": 4066,
+      "response_schema_sha256": "b48b767760229dcbe13f7d30d1bb084517efde7b134a89284c836b749e5d7332",
+      "max_output_tokens": null,
+      "responds_to_current_contribution_occurrences": 1
+    },
+    "a0_format_repair": {
+      "sha256": "dcb096257c56591ef8ab02b5223e1d19a1343d0d7d1227b75f2b0159613125e7",
+      "roles": ["system", "user", "assistant", "user", "assistant", "user"],
+      "message_count": 6,
+      "message_content_characters": 4369,
+      "response_schema_sha256": "b48b767760229dcbe13f7d30d1bb084517efde7b134a89284c836b749e5d7332",
+      "max_output_tokens": null,
+      "responds_to_current_contribution_occurrences": 1
+    }
+  }
+}

@@ -1,9 +1,12 @@
 """One-action cooperative runtime with deterministic M2 Goal/Plan lifecycle."""
 
-from hashlib import sha256
-from typing import Protocol
+from xuanyi_npc.domain.cooperative_planning import PublicDecisionFeedback
 
-from pydantic import ConfigDict
+from hashlib import sha256
+from functools import wraps
+from typing import Callable, Protocol
+
+from pydantic import ConfigDict, StrictBool
 
 from xuanyi_npc.agents.game_npc import GameNPCAgentInput, GameNPCAgentInterface
 from xuanyi_npc.application.action_contract import (
@@ -11,7 +14,7 @@ from xuanyi_npc.application.action_contract import (
     PublicActionContractValidator,
     build_safe_action_feedback,
 )
-from xuanyi_npc.application.goal_plan_policy import GoalPlanPolicy
+from xuanyi_npc.application.goal_plan_policy import GoalPlanPolicy, GoalPlanPolicyError
 from xuanyi_npc.application.multicase import ResumeEpisodeInput, SubmitActionInput
 from xuanyi_npc.application.plan_evaluator import DeterministicPlanEvaluator
 from xuanyi_npc.domain import AgentAction, AgentActionType
@@ -51,6 +54,8 @@ from xuanyi_npc.domain.cooperative_memory import (
     MemoryUsageAttributionStatus,
     MemoryUsageTrace,
 )
+from xuanyi_npc.domain.cooperative_context import CooperativeContextSnapshot
+from xuanyi_npc.agents.llm import ChatMessage
 from xuanyi_npc.domain.planning_contract import GoalUpdateKind, PlanUpdateKind
 from xuanyi_npc.domain.reflection import ReflectionTrigger, ReflectionTriggerType
 from xuanyi_npc.domain.reflection_lifecycle import (
@@ -69,6 +74,29 @@ from .reflection import (
 
 class CooperativeRuntimeError(ValueError):
     pass
+
+
+class CooperativePostCommitError(CooperativeRuntimeError):
+    """World is committed, but a named cooperative follow-up did not finish."""
+
+    def __init__(self, stage: str) -> None:
+        self.stage = stage
+        super().__init__(f"world committed; cooperative {stage} follow-up failed")
+
+
+class CooperativeCommitUncertainError(CooperativeRuntimeError):
+    """The storage call failed without a trustworthy commit receipt."""
+
+
+def _serialize_session(method):
+    @wraps(method)
+    def wrapped(self, request):
+        with self.service.state_store.session_write_lock(
+            request.contribution.session_id
+        ):
+            return method(self, request)
+
+    return wrapped
 
 
 class CooperativeService(Protocol):
@@ -92,6 +120,7 @@ class CooperativeTurnInput(DomainModel):
 
     contribution: PlayerContribution
     pending_action: PendingActionConfirmation | None = None
+    allow_world_action: StrictBool = True
 
 
 class CooperativeRuntime:
@@ -106,6 +135,9 @@ class CooperativeRuntime:
         plan_evaluator: DeterministicPlanEvaluator | None = None,
         memory_service: CooperativeMemoryService | None = None,
         reflection_service: CooperativeReflectionService | None = None,
+        cooperative_context: CooperativeContextSnapshot | None = None,
+        cooperative_history_messages: tuple[ChatMessage, ...] = (),
+        decision_prepared_hook: Callable[[GameNPCDecision], None] | None = None,
     ) -> None:
         self.service = service
         self.agent = agent
@@ -115,7 +147,11 @@ class CooperativeRuntime:
         self.plan_evaluator = plan_evaluator or DeterministicPlanEvaluator()
         self.memory_service = memory_service
         self.reflection_service = reflection_service
+        self.cooperative_context = cooperative_context
+        self.cooperative_history_messages = cooperative_history_messages
+        self.decision_prepared_hook = decision_prepared_hook
 
+    @_serialize_session
     def handle(self, request: CooperativeTurnInput) -> CooperativeTurnResult:
         contribution = request.contribution
         public = self._resume(contribution)
@@ -126,6 +162,25 @@ class CooperativeRuntime:
         state, expected_revision = self._load_or_initialize(contribution, observation)
         state = self._mark_invalid_plan(state, observation, contribution.contribution_id)
         state = self._prepare_next_goal(state, observation, contribution.contribution_id)
+        if not request.allow_world_action:
+            # Conversation is a first-class turn, not an implicit permission to
+            # execute the active plan.  This deterministic boundary deliberately
+            # runs before planning/model invocation so a greeting or question can
+            # never consume an investigation, diagnosis, or treatment action.
+            decision = self._conversation_only_decision(contribution, state)
+            state = self._advance_state_revision(
+                state, contribution.contribution_id, expected_revision
+            )
+            self._save_state(state, expected_revision)
+            return self._result(
+                state,
+                decision,
+                goal_changed=False,
+                plan_changed=False,
+                status=CooperativeTurnStatus.RESPONDED,
+                authority_mode=AuthorityMode.AUTONOMOUS,
+                public_rationale="本轮仅进行对话；案件状态和调查计划均未推进。",
+            )
         memory_context, memory_trace = self._retrieve_memory_context(
             contribution=contribution,
             observation=observation,
@@ -135,6 +190,7 @@ class CooperativeRuntime:
             state.current_goal.status is AgentGoalStatus.ACTIVE
             and self.plan_evaluator.condition_met(state.current_goal.completion_condition, observation)
         ):
+            state = state.model_copy(update={"last_decision_feedback": None})
             state = self._complete_satisfied_goal(state, observation, contribution.contribution_id)
             state = self._advance_state_revision(state, contribution.contribution_id, expected_revision)
             self._save_state(state, expected_revision)
@@ -168,8 +224,13 @@ class CooperativeRuntime:
             ),
             memory_context=memory_context,
             pending_confirmation_id=pending.decision_id if pending is not None else None,
+            last_decision_feedback=(state.last_decision_feedback if state.last_decision_feedback is not None and state.last_decision_feedback.observation_revision == observation.session_revision else None),
+            agent_state_revision=state.revision,
+            recent_messages=self.cooperative_history_messages,
+            cooperative_context=self.cooperative_context,
         )
 
+        state = state.model_copy(update={"last_decision_feedback": None})
         planning_supported = callable(getattr(self.agent, "propose_turn", None))
         goal_changed = False
         plan_changed = False
@@ -177,14 +238,72 @@ class CooperativeRuntime:
         alignment_telemetry = {}
         if planning_supported:
             turn_proposal = self.agent.propose_turn(agent_input)
-            self.goal_plan_policy.validate(
-                turn_proposal,
-                current_goal=state.current_goal,
-                current_plan=state.current_plan,
-                observation=observation,
-                authority_view=agent_input.authority_view,
-                pending_confirmation=pending is not None,
-            )
+            diagnostics = getattr(self.agent, "last_planning_execution", None)
+            execution = diagnostics() if callable(diagnostics) else None
+            if execution is not None and execution.output is None:
+                budget_failure = execution.failure_code == "context_budget_exceeded"
+                state = self._with_feedback(state, contribution, observation,
+                    "budget" if budget_failure else "model",
+                    "context_budget_exceeded" if budget_failure else "model_output_unavailable",
+                    "本轮上下文超过预算，未发送该请求。" if budget_failure else "模型输出不可用，未执行工具。")
+            try:
+                self.goal_plan_policy.validate(
+                    turn_proposal,
+                    current_goal=state.current_goal,
+                    current_plan=state.current_plan,
+                    observation=observation,
+                    authority_view=agent_input.authority_view,
+                    pending_confirmation=pending is not None,
+                )
+            except GoalPlanPolicyError:
+                if state.last_decision_feedback is None:
+                    state = self._with_feedback(state, contribution, observation, "planning", "goal_plan_policy_rejected", "规划未通过公开状态与安全策略校验，未执行。")
+                # The model boundary (including its deterministic fallback) is
+                # untrusted.  A policy mismatch must stop this turn without a
+                # tool call or world mutation, but must not crash the episode.
+                planning_diagnostics = getattr(self.agent, "last_planning_execution", None)
+                planning_execution = planning_diagnostics() if callable(planning_diagnostics) else None
+                safe = GameNPCDecisionProposal(
+                    contribution_evaluation=PlayerContributionEvaluation(
+                        contribution_id=contribution.contribution_id,
+                        disposition=SuggestionDisposition.REQUEST_MORE_EVIDENCE,
+                        reason_code="planning_policy_rejected",
+                        explanation="本轮规划未通过安全策略，未执行任何行动。",
+                    ),
+                    capability=NPCCapability.EXPLAIN,
+                    action=AgentAction(
+                        action_id=f"npc_{contribution.contribution_id}",
+                        action_type=AgentActionType.RESPOND,
+                        dialogue="本轮规划无法安全继续，已停止且未执行工具。",
+                        confidence=0.0,
+                    ),
+                    explanation="规划与当前状态契约不一致，安全结束本轮。",
+                )
+                decision = GameNPCDecision(
+                    decision_id=f"decision_{contribution.contribution_id}",
+                    turn_id=contribution.contribution_id,
+                    proposal=safe,
+                    llm_attempts=(planning_execution.attempts if planning_execution else 1),
+                    used_fallback=True,
+                    repair_kind=(
+                        planning_execution.repair_kind.value
+                        if planning_execution and planning_execution.repair_kind else None
+                    ),
+                    usages=(planning_execution.usages if planning_execution else ()),
+                    goal_id=state.current_goal.goal_id,
+                )
+                state = self._advance_state_revision(
+                    state, contribution.contribution_id, expected_revision
+                )
+                self._save_state(state, expected_revision)
+                return self._result(
+                    state, decision, goal_changed=False, plan_changed=False,
+                    status=CooperativeTurnStatus.ACTION_REJECTED,
+                    authority_mode=AuthorityMode.FORBIDDEN,
+                    memory_usage_trace=self._reject_decision_memory_trace(memory_trace),
+                    error_code="goal_plan_policy_rejected",
+                    public_rationale="本轮规划未通过安全策略；没有执行工具或修改世界状态。",
+                )
             state, goal_changed, plan_changed = self._apply_proposal(
                 state, turn_proposal, contribution.contribution_id, observation.session_revision,
                 contribution.contribution_id,
@@ -214,6 +333,7 @@ class CooperativeRuntime:
             decision = self._associate_decision(decision, state)
             alignment_telemetry = self._alignment_telemetry(decision, state, observation)
             if not self._action_matches_plan(decision, state):
+                state = self._with_feedback(state, contribution, observation, "alignment", "action_outside_active_plan", "行动与当前计划步骤不一致，未执行。")
                 state = state.model_copy(update={
                     "last_plan_evaluation": self._alignment_recovery_evaluation(
                         state=state,
@@ -244,17 +364,99 @@ class CooperativeRuntime:
             decision = self.agent.decide(agent_input)
 
         decision = self._resolve_contract(agent_input, decision, observation)
+        if decision.used_fallback and state.last_decision_feedback is None:
+            state = self._with_feedback(state, contribution, observation, "action_contract" if decision.repair_kind == "action_contract_repair" else "model", "action_contract_rejected" if decision.repair_kind == "action_contract_repair" else "model_output_unavailable", "本轮输出未通过校验，未执行工具。")
         if turn_proposal is not None:
+            # Contract repair may replace the model-authored action after the
+            # first alignment check.  The final action is the only action that
+            # may reach authority/tool execution, so it must still match the
+            # already-applied active PlanStep.
+            alignment_telemetry = self._alignment_telemetry(
+                decision, state, observation
+            )
+            if not self._action_matches_plan(decision, state):
+                state = self._with_feedback(state, contribution, observation, "alignment", "action_outside_active_plan", "行动与当前计划步骤不一致，未执行。")
+                decision = self._plan_alignment_rejection_decision(decision)
+                state = state.model_copy(update={
+                    "last_plan_evaluation": self._alignment_recovery_evaluation(
+                        state=state,
+                        observation=observation,
+                        turn_id=contribution.contribution_id,
+                    ),
+                })
+                state = self._advance_state_revision(
+                    state, contribution.contribution_id, expected_revision
+                )
+                self._save_state(state, expected_revision)
+                rejected_memory_trace = self._reject_decision_memory_trace(
+                    memory_trace
+                )
+                base = self._result(
+                    state,
+                    decision,
+                    goal_changed=goal_changed,
+                    plan_changed=plan_changed,
+                    status=CooperativeTurnStatus.ACTION_REJECTED,
+                    authority_mode=AuthorityMode.FORBIDDEN,
+                    memory_usage_trace=rejected_memory_trace,
+                    error_code="action_outside_active_plan",
+                    public_rationale="本轮行动与当前计划步骤不一致，未执行。",
+                    **alignment_telemetry,
+                )
+                return self._attach_reflection(
+                    base,
+                    contribution=contribution,
+                    state=state,
+                    observation=observation,
+                    decision=decision,
+                    memory_trace=rejected_memory_trace,
+                    goal_changed=goal_changed,
+                    plan_changed=plan_changed,
+                )
             memory_trace = self._finalize_decision_memory_trace(
                 trace=memory_trace,
                 proposal=turn_proposal,
                 decision=decision,
             )
+        if self.decision_prepared_hook is not None:
+            # This is the final decision after structure/action repair and the
+            # final Plan check, but still before authority or tool execution.
+            self.decision_prepared_hook(decision)
         action = decision.proposal.action
         selected_tool = action.tool_call.name if action.tool_call is not None else None
         selected_public_target = self._public_target(action, observation)
 
         if action.action_type is AgentActionType.RESPOND:
+            # A non-tool PlanStep is executed by the public response itself.  Without
+            # this transition, discussion/explanation steps remain ACTIVE forever and
+            # can permanently block a following diagnosis or treatment step.
+            plan = state.current_plan
+            if (
+                planning_supported
+                and not (state.last_decision_feedback is not None and state.last_decision_feedback.stage == "budget")
+                and plan is not None
+                and plan.status is AgentPlanStatus.ACTIVE
+                and plan.steps[plan.current_step_index].suggested_tool is None
+            ):
+                transition = self.plan_evaluator.evaluate(
+                    pre_observation=observation,
+                    post_observation=observation,
+                    goal=state.current_goal,
+                    plan=plan,
+                    executed_action=action,
+                    tool_succeeded=True,
+                    turn_id=contribution.contribution_id,
+                )
+                state = state.model_copy(update={
+                    "current_goal": transition.goal,
+                    "current_plan": transition.plan,
+                    "last_plan_evaluation": transition.evaluation,
+                })
+                goal_changed = (
+                    goal_changed
+                    or transition.goal.status is AgentGoalStatus.COMPLETED
+                )
+                plan_changed = True
             state = self._advance_state_revision(state, contribution.contribution_id, expected_revision)
             self._save_state(state, expected_revision)
             base = self._result(
@@ -317,6 +519,7 @@ class CooperativeRuntime:
                 plan_changed=plan_changed,
             )
         if authority.mode is AuthorityMode.FORBIDDEN:
+            state = self._with_feedback(state, contribution, observation, "authority", "authority_rejected", "当前权限不允许该行动；此反馈不授予权限。")
             state = self._advance_state_revision(state, contribution.contribution_id, expected_revision)
             self._save_state(state, expected_revision)
             base = self._result(
@@ -341,7 +544,12 @@ class CooperativeRuntime:
             action=action,
         ))
         result = receipt.result
+        if receipt.world_commit_status == "unknown":
+            raise CooperativeCommitUncertainError(
+                "world commit result is unknown; tool replay is blocked"
+            )
         if not result.ok:
+            state = self._with_feedback(state, contribution, observation, "execution", "tool_execution_failed", "本轮工具执行未成功，请根据当前公开状态重新判断。")
             if state.current_plan is not None and planning_supported:
                 transition = self.plan_evaluator.evaluate(
                     pre_observation=observation,
@@ -381,20 +589,26 @@ class CooperativeRuntime:
 
         # The world commit is authoritative. Always reload its public projection before
         # evaluating or persisting the cooperative Agent projection.
-        post_observation = self._resume(contribution).observation
+        try:
+            post_observation = self._resume(contribution).observation
+        except Exception as exc:
+            raise CooperativePostCommitError("observation_reload") from exc
         if state.current_plan is not None and planning_supported:
-            transition = self.plan_evaluator.evaluate(
-                pre_observation=observation,
-                post_observation=post_observation,
-                goal=state.current_goal,
-                plan=state.current_plan,
-                executed_action=action,
-                tool_succeeded=True,
-                turn_id=contribution.contribution_id,
-                environment_message=result.message,
-                event_sequences=result.event_sequences,
-                pending_confirmation=pending,
-            )
+            try:
+                transition = self.plan_evaluator.evaluate(
+                    pre_observation=observation,
+                    post_observation=post_observation,
+                    goal=state.current_goal,
+                    plan=state.current_plan,
+                    executed_action=action,
+                    tool_succeeded=True,
+                    turn_id=contribution.contribution_id,
+                    environment_message=result.message,
+                    event_sequences=result.event_sequences,
+                    pending_confirmation=pending,
+                )
+            except Exception as exc:
+                raise CooperativePostCommitError("plan_evaluator") from exc
             state = state.model_copy(update={
                 "current_goal": transition.goal,
                 "current_plan": transition.plan,
@@ -417,7 +631,7 @@ class CooperativeRuntime:
         try:
             self._save_state(state, expected_revision)
             projection_error = None
-        except StorageError:
+        except Exception:
             projection_error = "agent_state_projection_pending"
         base = self._result(
             state, decision, goal_changed=goal_changed, plan_changed=plan_changed,
@@ -938,6 +1152,65 @@ class CooperativeRuntime:
         )
 
     @staticmethod
+    def _conversation_only_decision(contribution, state):
+        text = contribution.public_text.strip()
+        compact = "".join(text.split()).lower()
+        greetings = {
+            "你好", "你好啊", "您好", "您好啊", "嗨", "哈喽", "hello",
+            "在吗", "早上好", "下午好", "晚上好",
+        }
+        thanks = {"谢谢", "谢谢你", "多谢", "辛苦了"}
+        if compact.rstrip("！!。,.？?") in greetings:
+            dialogue = (
+                "你好，我在。你可以先和我讨论案情；在你明确提出要检查、"
+                "询问或观察某个目标前，我不会自行推进调查。"
+            )
+        elif compact.rstrip("！!。,.？?") in thanks:
+            dialogue = "不客气。案件进度保持不变，你想继续讨论或明确安排调查行动都可以。"
+        elif any(marker in compact for marker in ("下一步", "计划", "该做什么", "怎么办")):
+            plan = state.current_plan
+            if plan is not None and plan.status is AgentPlanStatus.ACTIVE:
+                step = plan.steps[plan.current_step_index].public_summary
+                dialogue = (
+                    f"当前计划的下一步是：{step}。这次我只说明计划，没有执行；"
+                    "如果希望我现在行动，请明确告诉我要调查什么。"
+                )
+            else:
+                dialogue = (
+                    "目前还没有确定下一项调查行动。这次我只回答问题，不会自行推进；"
+                    "你可以明确提出想检查、询问或观察的对象。"
+                )
+        else:
+            dialogue = (
+                "我明白了。这条消息先作为讨论，案件进度保持不变。"
+                "如果希望我采取行动，请明确说出要检查、询问或观察什么。"
+            )
+        return GameNPCDecision(
+            decision_id=f"decision_{contribution.contribution_id}",
+            turn_id=contribution.contribution_id,
+            proposal=GameNPCDecisionProposal(
+                contribution_evaluation=PlayerContributionEvaluation(
+                    contribution_id=contribution.contribution_id,
+                    disposition=SuggestionDisposition.ACCEPT,
+                    reason_code="conversation_only",
+                    explanation="已作为对话接收，不据此执行调查行动。",
+                ),
+                capability=NPCCapability.SPEAK,
+                action=AgentAction(
+                    action_id=f"npc_{contribution.contribution_id}",
+                    action_type=AgentActionType.RESPOND,
+                    dialogue=dialogue,
+                    confidence=1.0,
+                ),
+                explanation="普通对话不会自动推进案件或计划步骤。",
+            ),
+            llm_attempts=1,
+            used_fallback=False,
+            goal_id=state.current_goal.goal_id,
+            plan_id=(state.current_plan.plan_id if state.current_plan is not None else None),
+        )
+
+    @staticmethod
     def _associate_decision(decision, state):
         plan = state.current_plan
         if plan is None or plan.status is not AgentPlanStatus.ACTIVE:
@@ -958,6 +1231,22 @@ class CooperativeRuntime:
             return False
         target = next(iter(action.tool_call.arguments.values()), None)
         return target == step.public_target_id
+
+    @staticmethod
+    def _plan_alignment_rejection_decision(decision):
+        """Expose a truthful reply after rejecting a repaired tool action."""
+
+        proposal = decision.proposal.model_copy(update={
+            "capability": NPCCapability.EXPLAIN,
+            "action": AgentAction(
+                action_id=decision.proposal.action.action_id,
+                action_type=AgentActionType.RESPOND,
+                dialogue="修复后的行动与当前计划不一致，本轮未执行工具。",
+                confidence=0.0,
+            ),
+            "explanation": "最终行动未通过当前计划步骤对齐检查。",
+        })
+        return decision.model_copy(update={"proposal": proposal})
 
     @staticmethod
     def _alignment_telemetry(decision, state, observation):
@@ -1137,6 +1426,14 @@ class CooperativeRuntime:
             return repaired
         except PublicActionContractError:
             return self.agent.action_contract_fallback(repaired)
+
+    @staticmethod
+    def _with_feedback(state, contribution, observation, stage, reason_code, message):
+        return state.model_copy(update={"last_decision_feedback": PublicDecisionFeedback(
+            stage=stage, reason_code=reason_code, public_message=message,
+            related_action_id=f"npc_{contribution.contribution_id}",
+            observation_revision=observation.session_revision,
+        )})
 
     @staticmethod
     def _validated_pending(pending, contribution, revision):

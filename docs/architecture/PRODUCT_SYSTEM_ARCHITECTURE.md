@@ -13,13 +13,17 @@ Player
 → public Observation + Goal / Plan + scoped Memory
 → GameNPCAgent proposal
 → cooperative Decision
-→ PublicActionContract
 → GoalPlanPolicy
+→ Plan / Decision alignment
+→ PublicActionContract
+→ final Plan / Decision alignment
 → Authority Policy
 → bounded Tool
 → CaseEngine
-→ committed event / public result
+→ world commit / ordinary Memory projection
+→ refreshed Observation
 → PlanEvaluator / Replanning
+→ Agent state projection
 → evidence-grounded Reflection
 → conservative Experience Consolidation
 ```
@@ -37,6 +41,8 @@ Player
 - 当前 Observation 优先于历史 Memory；Reflection 不能未经验证直接写入长期记忆。
 
 ## 核心模块与权威边界
+
+各模块的当前细节以[架构目录](README.md)中的八份模块主文档为准；本文只保留跨模块关系与总权威边界。跨模块提交、并发和失败反馈统一见[提交一致性与失败安全](COMMIT_CONSISTENCY_DESIGN.md)。
 
 ### PlayerContribution 与合作决策
 
@@ -75,7 +81,7 @@ Reflection 只能基于已提交 Episode 结果及其 evidence 形成候选总�
 
 ### 持久化、恢复与回放
 
-Case、Player、Campaign、Cooperative Agent state 与 Memory 各自具有明确的 JSON/SQLite 权威边界。系统保证玩家隔离、修订检查、幂等、拒绝零写入、显式故障窗口和事件回放；LLM 没有文件或数据库写权限。
+Case、Player、Campaign、Cooperative Agent state 与 Memory 各自具有明确的 JSON/SQLite 权威边界。受控入口提供拒绝零写入、显式故障窗口、有限幂等与进程内 Session 串行；这些保证按入口不同，不构成跨存储事务、跨进程 CAS 或统一的跨重启幂等。LLM 没有文件或数据库写权限。
 
 ## 交互入口
 
@@ -106,12 +112,12 @@ M4.5 语义检索实验继续作为当前 Memory 实现的回归、benchmark 与
 1. 加载并校验玩家、案件、Cooperative Agent 与相关历史状态。
 2. 服务端构造权限过滤后的公开 Observation 和 Public Action Space。
 3. 接收 `PlayerContribution`，由 `GameNPCAgent` 形成结构化 proposal。
-4. 依次验证 Schema、Action Contract、Goal/Plan 与 Authority。
+4. 依次验证 Schema、Goal/Plan、初次 Plan—Decision 对齐、Action Contract、修复后的最终对齐与 Authority。
 5. 拒绝时不执行 Tool，不产生世界状态写入。
 6. 合法时每回合最多执行一个 Tool，由 `CaseEngine` 产生结果和连续事件。
-7. 保存权威状态，再从已提交结果构建公开反馈。
-8. `PlanEvaluator` 根据结果保持、修订、完成或结束计划。
-9. Episode 结束后，Reflection 只能基于 evidence 形成候选经验并经验证写入。
+7. 先保存权威 world，再从已提交事件投影普通 Memory 并尝试更新索引。
+8. Runtime 重读 post Observation，`PlanEvaluator` 根据真实结果保持、修订、完成或结束计划，然后保存 Agent state。
+9. 命中确定性生命周期边界后，Reflection 才能基于 evidence 形成候选经验并经验证写入。
 10. 重放从初始状态与事件序列重建，并与持久化终态核对。
 
 ## 架构声明门禁

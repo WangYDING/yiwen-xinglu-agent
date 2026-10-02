@@ -147,6 +147,8 @@ def test_same_inputs_produce_identical_result(
 
     assert first == second
     assert session.revision == 0
+    assert "。；" not in first.message and ".；" not in first.message
+    assert first.message.endswith("。")
 
 
 def test_locked_skill_rejects_advanced_investigation_without_mutation(

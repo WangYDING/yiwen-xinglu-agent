@@ -1,0 +1,32 @@
+{
+  "case_id": "c01_crossed_bell_testimony", "title": "错时钟声", "synopsis": "两名守夜人的证言互相冲突，需用公开物证核对钟声来源。", "difficulty": 2,
+  "patient": {"patient_id": "keeper_c01", "display_name": "守夜人阿岑", "public_profile": "每逢夜半听见两处钟声后失去方向感。", "hidden_information": ["西廊钟绳被回声灵借作定位媒介。"]},
+  "root_cause": "echo_spirit_bell_rope",
+  "causal_chain": ["回声灵附着旧钟绳。", "相反证言来自钟楼回声延迟。", "移除旧钟绳可解除异常。"],
+  "clues": {
+    "east_testimony": {"clue_id":"east_testimony","description":"东门守夜人坚称钟声来自东塔。","is_key":false,"is_misleading":true},
+    "west_testimony": {"clue_id":"west_testimony","description":"西门守夜人坚称钟声来自西廊。","is_key":false,"is_misleading":true},
+    "echo_delay": {"clue_id":"echo_delay","description":"两处录音显示东塔声晚于西廊三息，是回声而非第二次敲击。","is_key":true},
+    "rope_residue": {"clue_id":"rope_residue","description":"西廊旧钟绳残留稳定的回声灵附着痕迹。","is_key":true},
+    "orientation_link": {"clue_id":"orientation_link","description":"患者迷向发作与旧钟绳振动完全同步。","is_key":true}
+  },
+  "investigations": [
+    {"investigation_id":"question_east_keeper","action_type":"question_patient","target_id":"east_keeper","public_description":"询问东门守夜人的听声位置与时刻。","reveals_clue_ids":["east_testimony"],"required_skill_id":"ask_cause","minimum_skill_level":0,"required_clue_ids":[]},
+    {"investigation_id":"question_west_keeper","action_type":"question_patient","target_id":"west_keeper","public_description":"询问西门守夜人的听声位置与时刻。","reveals_clue_ids":["west_testimony"],"required_skill_id":"ask_cause","minimum_skill_level":0,"required_clue_ids":[]},
+    {"investigation_id":"compare_bell_recordings","action_type":"inspect_object","target_id":"bell_recordings","public_description":"比较两处公开留声记录的先后与波形。","reveals_clue_ids":["echo_delay"],"required_skill_id":"inspect_object","minimum_skill_level":0,"required_clue_ids":["east_testimony","west_testimony"]},
+    {"investigation_id":"inspect_west_rope","action_type":"observe_qi","target_id":"west_bell_rope","public_description":"检查西廊旧钟绳的附着痕迹。","reveals_clue_ids":["rope_residue","orientation_link"],"required_skill_id":"observe_qi","minimum_skill_level":0,"required_clue_ids":["echo_delay"]}
+  ],
+  "diagnosis_candidates": {
+    "echo_spirit_attachment":{"diagnosis_id":"echo_spirit_attachment","public_description":"回声灵借西廊钟绳制造延迟回声并扰乱方向。"},
+    "east_tower_haunting":{"diagnosis_id":"east_tower_haunting","public_description":"东塔存在独立作祟源。"},
+    "ordinary_fatigue":{"diagnosis_id":"ordinary_fatigue","public_description":"守夜疲劳导致错听。"}
+  },
+  "valid_diagnosis_ids":["echo_spirit_attachment"],
+  "treatments": {
+    "replace_rope_and_release_echo":{"treatment_id":"replace_rope_and_release_echo","public_description":"更换旧钟绳并释放附着回声。","description":"移除媒介并安置回声灵。","outcome":"resolved","required_clue_ids":["echo_delay","rope_residue","orientation_link"]},
+    "seal_east_tower":{"treatment_id":"seal_east_tower","public_description":"封闭东塔。","description":"错误封闭东塔。","outcome":"suppressed","required_clue_ids":[]},
+    "ring_both_bells":{"treatment_id":"ring_both_bells","public_description":"同时敲响两钟。","description":"强化回声。","outcome":"worsened","required_clue_ids":[]}
+  },
+  "hints":[{"level":1,"text":"先记录双方证言。","score_penalty":2},{"level":2,"text":"比较声音先后。","score_penalty":5},{"level":3,"text":"检查先响一侧的媒介。","score_penalty":10}],
+  "scoring":{"key_clue_points":40,"correct_diagnosis_points":30,"correct_treatment_points":30,"unsafe_treatment_penalty":20,"max_score":100}
+}

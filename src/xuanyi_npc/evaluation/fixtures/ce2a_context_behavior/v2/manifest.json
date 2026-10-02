@@ -1,0 +1,31 @@
+{
+  "schema_version": "ce2a_context_behavior_manifest_v2",
+  "fixture_id": "ce2a_context_behavior_v2",
+  "identity_note": "Hashes identify exact fixture, evaluator, request-budget, runtime, case and test contents in the preflighted working tree; v1 sources remain immutable inputs.",
+  "files": {
+    "src/xuanyi_npc/evaluation/fixtures/ce2a_context_behavior/v2/scenarios.json": "ab344a63edcd84e6e3adc2f440df705fe5eb88350d54ed0138535c5b7aaabb45",
+    "src/xuanyi_npc/evaluation/fixtures/ce2a_context_behavior/v2/rubric_private.json": "7c6db945725a9518322cd677b23dde3e6cde15b45ece49e0c2d320d509d86be8",
+    "src/xuanyi_npc/evaluation/fixtures/ce2a_context_behavior/v2/protocol.json": "a716673c3eecd01dca4194631042382a2ed3b20aec55aeb4b8f863b51ab58135",
+    "src/xuanyi_npc/evaluation/fixtures/ce2a_context_behavior/v1/scenarios.json": "82879d2ec13ca8520f0ddacaa079c2deed1462592a720d5d5c0c3636b91e6665",
+    "src/xuanyi_npc/evaluation/fixtures/ce2a_context_behavior/v1/rubric_private.json": "fc86d4412ff158580cef636c0e1e55a7449df9bb1e34d49c9706d1deec9e5aef",
+    "src/xuanyi_npc/evaluation/ce2a_context_behavior.py": "217a753e78acf866f2ac42eb5ec0bb7512ee42e5bd82ff55fc277dcc905327f6",
+    "src/xuanyi_npc/evaluation/costing.py": "19c091c40b9862968442ab1c1700af79553ff21720bc9c5d025ec2aab53a6259",
+    "src/xuanyi_npc/evaluation/request_ledger.py": "85eb84847f3bfaebc5d32f874006b73fc7f6b07ef53cbd7b00f59d39960db92e",
+    "src/xuanyi_npc/agents/deepseek.py": "960304b23a1547c9fdfdbb87eddfe4219edc373ba2b71f0ddd0613bcf6f86266",
+    "src/xuanyi_npc/agents/context.py": "3457037bbb6bd4c0bcb578002314f5d1f6333d13f1d4537ad72cca5f29f56a66",
+    "src/xuanyi_npc/agents/game_npc.py": "8cbc7dbc4b618498dd9930672d3279c1dd0ec456824fb5044eccf7d11cb68ab0",
+    "src/xuanyi_npc/agents/bounded_output.py": "4d14826f680b1724cb1e9a5bc2881436ef5cf73bcfc0064e723a7866b79f95d2",
+    "src/xuanyi_npc/application/clinic.py": "d6381bc3629633658d38ad2a6b2f82c3f886702454519c0bba35c37c3ea18fcc",
+    "src/xuanyi_npc/application/cooperative_context.py": "f53ce5dd1d9cbcb0c4924e8ad5d97df9eecd0cf73460d19a123134546735ddb4",
+    "src/xuanyi_npc/application/cooperative_runtime.py": "6c873a98da150e1800014048b8689b9358f507cf2f2052baa6a5359c99410284",
+    "src/xuanyi_npc/storage/sqlite_cooperation.py": "a71189bf4c2aa253dffe2b9426e0eb999a7dfbd7fa3d840e0fef0ab3fc9ccf05",
+    "src/xuanyi_npc/resources/cases/old_paper_umbrella.json": "0ac2bcdb4c8668b7a03cb4ef98fb4befad47ad81580cd04f381f68b1ad4a0d08",
+    "src/xuanyi_npc/resources/cases/gray_hearth_inn.json": "0dda51d4dfc0a73406e2847aa47d64746c62a568b6bc0c5f4e9d1f68bb6e85fa",
+    "src/xuanyi_npc/resources/cases/moon_well_echo.json": "6ca01cd1f054f0fdad7672aa27dce4c443e5d1079f85f88f06678678aaf1ea50",
+    "src/xuanyi_npc/resources/cases/lantern_alley_conflicting_testimony.json": "ccae84e846a88b9d36499fcabdbd62af9c66b2100c0ddb943a0a5b8fe751c036",
+    "src/xuanyi_npc/resources/cases/mist_ferry_borrowed_lantern.json": "2c0e7ee880f12a1a42b5fef5d0c3501a53002c5b2cfbcce471c2a3513661d25f",
+    "src/xuanyi_npc/resources/cases/returning_contract_nameless_shrine.json": "50f7179468849f7bec71c05459aa9733f04d7adffb50f2e337666356d5c1cbe7",
+    "tests/test_ce2a_context_behavior_evaluation.py": "feee8566a98812b01a1c47cdbc1fe869047fca2a56671cf2885e2663fe89e244",
+    "tests/test_deepseek_adapter.py": "800b877b150a9b486abb900750ac5257ec81ee7db340dea5acd5d16cf5f5e9ca"
+  }
+}

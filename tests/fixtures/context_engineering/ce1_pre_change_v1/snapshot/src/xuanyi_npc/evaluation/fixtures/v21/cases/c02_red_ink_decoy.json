@@ -1,0 +1,31 @@
+{
+  "case_id":"c02_red_ink_decoy","title":"红墨误痕","synopsis":"显眼红墨像诅咒，公开检查可区分干扰与真正媒介。","difficulty":2,
+  "patient":{"patient_id":"scribe_c02","display_name":"抄书人小沅","public_profile":"触碰账簿后手指发冷且字迹倒映。","hidden_information":["真正媒介是装订铜钉，红墨只是普通颜料。"]},
+  "root_cause":"mirror_moth_copper_binding","causal_chain":["镜蛾卵附于铜钉。","翻页时倒影逸出。","清除铜钉上的卵可解除异常。"],
+  "clues":{
+    "red_ink_stain":{"clue_id":"red_ink_stain","description":"封面有醒目的红墨污痕。","is_key":false,"is_misleading":true},
+    "ordinary_pigment":{"clue_id":"ordinary_pigment","description":"红墨不含异常成分。","is_key":true},
+    "cold_binding":{"clue_id":"cold_binding","description":"低温只集中于装订铜钉。","is_key":true},
+    "moth_eggs":{"clue_id":"moth_eggs","description":"铜钉缝内有镜蛾卵与倒影粉尘。","is_key":true},
+    "touch_timing":{"clue_id":"touch_timing","description":"症状在翻动装订处时出现，与墨迹接触无关。","is_key":true}
+  },
+  "investigations":[
+    {"investigation_id":"inspect_red_ink","action_type":"inspect_object","target_id":"red_ink","public_description":"检验醒目的红墨污痕。","reveals_clue_ids":["red_ink_stain","ordinary_pigment"],"required_skill_id":"inspect_object","minimum_skill_level":0,"required_clue_ids":[]},
+    {"investigation_id":"observe_touch_sequence","action_type":"observe_patient","target_id":"scribe_c02","public_description":"观察患者触碰账簿各部位时的反应。","reveals_clue_ids":["touch_timing"],"required_skill_id":"observe_form","minimum_skill_level":0,"required_clue_ids":[]},
+    {"investigation_id":"measure_binding_temperature","action_type":"inspect_object","target_id":"copper_binding","public_description":"比较书页、墨迹与装订处温度。","reveals_clue_ids":["cold_binding"],"required_skill_id":"inspect_object","minimum_skill_level":0,"required_clue_ids":["touch_timing"]},
+    {"investigation_id":"inspect_copper_binding","action_type":"observe_qi","target_id":"copper_binding","public_description":"检查装订铜钉缝隙中的粉尘与活性。","reveals_clue_ids":["moth_eggs"],"required_skill_id":"observe_qi","minimum_skill_level":0,"required_clue_ids":["cold_binding"]}
+  ],
+  "diagnosis_candidates":{
+    "mirror_moth_binding":{"diagnosis_id":"mirror_moth_binding","public_description":"镜蛾卵附着铜钉并在翻页时扰动倒影。"},
+    "red_ink_curse":{"diagnosis_id":"red_ink_curse","public_description":"红墨本身携带诅咒。"},
+    "cold_illness":{"diagnosis_id":"cold_illness","public_description":"普通寒症造成手冷。"}
+  },
+  "valid_diagnosis_ids":["mirror_moth_binding"],
+  "treatments":{
+    "remove_eggs_replace_binding":{"treatment_id":"remove_eggs_replace_binding","public_description":"清除镜蛾卵并更换铜钉。","description":"移除真正媒介。","outcome":"resolved","required_clue_ids":["ordinary_pigment","cold_binding","moth_eggs","touch_timing"]},
+    "wash_red_ink":{"treatment_id":"wash_red_ink","public_description":"洗去红墨。","description":"只去除干扰物。","outcome":"suppressed","required_clue_ids":[]},
+    "heat_whole_book":{"treatment_id":"heat_whole_book","public_description":"炙烤整本账簿。","description":"使镜蛾逸散。","outcome":"worsened","required_clue_ids":[]}
+  },
+  "hints":[{"level":1,"text":"显眼处未必是媒介。","score_penalty":2},{"level":2,"text":"比较触碰部位与发作时机。","score_penalty":5},{"level":3,"text":"检查装订铜钉。","score_penalty":10}],
+  "scoring":{"key_clue_points":40,"correct_diagnosis_points":30,"correct_treatment_points":30,"unsafe_treatment_penalty":20,"max_score":100}
+}

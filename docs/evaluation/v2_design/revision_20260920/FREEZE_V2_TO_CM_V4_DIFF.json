@@ -1,0 +1,17 @@
+{
+  "old_plan_sha256": "CC03954CFF992101B5D179BA0C6529A7A9EC74522D79FABA9F424C1E85A0EF5D",
+  "new_plan_sha256": "E890FB2365BBB68C157EE246E52A07AFCF9ED3E21682579F6B4EDFD213C158C1",
+  "old_experiment_id": "v2_1_slim_first_round_20260920_02",
+  "new_experiment_id": "v2_1_slim_cm_recovery_20260920_04",
+  "old_cm_subsequence_preserved": true,
+  "new_scope": {
+    "C": 24,
+    "M": 12
+  },
+  "hard_caps": {
+    "C": 6.0,
+    "M": 4.0,
+    "total": 10.0
+  },
+  "supersedes_candidate_v3": true
+}

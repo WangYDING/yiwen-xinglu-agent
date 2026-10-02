@@ -1,0 +1,64 @@
+{
+  "rules_version": "cross_episode_rules_v1",
+  "projection_version": "campaign_projection_v1",
+  "recommended_case_order": [
+    {
+      "case_id": "old_paper_umbrella",
+      "public_reason": "建议先从旧纸伞案熟悉人物问询、物证和契约线索。"
+    },
+    {
+      "case_id": "gray_hearth_inn",
+      "public_reason": "建议继续调查灰灶客栈，把核验范围扩展到契物和环境通路。"
+    },
+    {
+      "case_id": "moon_well_echo",
+      "public_reason": "建议最后处理月井回声，综合核对陈述、物证、地点和交接顺序。"
+    }
+  ],
+  "target_case_contexts": [
+    {
+      "case_id": "gray_hearth_inn",
+      "neutral_reaction": "道医请你先按眼前公开现象调查掌勺人、燃料与旧灶，不预设异常来源。"
+    },
+    {
+      "case_id": "moon_well_echo",
+      "neutral_reaction": "道医请你分别核对送信人的陈述、木简物证与月井现场，不凭回声先下结论。"
+    }
+  ],
+  "rules": [
+    {
+      "rule_id": "old_paper_contract_knowledge",
+      "source_case_id": "old_paper_umbrella",
+      "source_treatment_id": "return_token_and_fulfill_vow",
+      "source_outcome": "resolved",
+      "effect": {
+        "fact_id": "old_paper_vow_fulfilled",
+        "fact_type": "public_case_resolution",
+        "fact_public_text": "你曾归还旧纸伞所系木牌，并完成书生公开承认的雨夜承诺。",
+        "knowledge_id": "contract_provenance_check",
+        "knowledge_public_description": "你已掌握：遇到契约类异常时，先核对契物归属和承诺来源。",
+        "target_case_id": "gray_hearth_inn",
+        "history_reaction": "道医记得你在旧纸伞案中核对过契物来源，提醒你本案也可留意灶契归属。",
+        "recommended_investigation_id": "inspect_hearth_contract",
+        "recommendation_reason": "可在公开前置满足后优先核对灶契，但不会自动执行或发现线索。"
+      }
+    },
+    {
+      "rule_id": "gray_hearth_handoff_knowledge",
+      "source_case_id": "gray_hearth_inn",
+      "source_treatment_id": "restore_token_and_clear_flue",
+      "source_outcome": "resolved",
+      "effect": {
+        "fact_id": "gray_hearth_order_restored",
+        "fact_type": "public_case_resolution",
+        "fact_public_text": "你曾核对灰灶契物归属，并恢复客栈公开烟道通路。",
+        "knowledge_id": "handoff_sequence_check",
+        "knowledge_public_description": "你已掌握：涉及契物或消息转交时，应核对交接对象与先后顺序。",
+        "target_case_id": "moon_well_echo",
+        "history_reaction": "道医提起你在灰灶案中核对归属与通路的经历，建议本案也留意交接对象和先后记录。",
+        "recommended_investigation_id": "question_lantern_witness",
+        "recommendation_reason": "可在公开前置满足后询问见证人核对交接顺序，不会替你选择答案。"
+      }
+    }
+  ]
+}

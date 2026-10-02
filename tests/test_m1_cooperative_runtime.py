@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from xuanyi_npc.application.cooperative_runtime import CooperativeRuntime, CooperativeTurnInput
+from xuanyi_npc.application.clinic import message_requests_case_action
 from xuanyi_npc.application.multicase import CreatePlayerInput, StartEpisodeInput
 from xuanyi_npc.domain import AgentAction, AgentActionType, CaseActionType, ToolCallRequest, ToolName
 from xuanyi_npc.domain.cooperation import (
@@ -83,6 +84,16 @@ def contribution(player_id, session_id):
     )
 
 
+def test_natural_chat_requires_an_explicit_action_request() -> None:
+    assert message_requests_case_action("你好") is False
+    assert message_requests_case_action("下一步要做什么？") is False
+    assert message_requests_case_action("为什么不检查大门？") is False
+    assert message_requests_case_action("先不要检查大门") is False
+    assert message_requests_case_action("要不检查一下大门") is True
+    assert message_requests_case_action("请询问店主最近用的燃料") is True
+    assert message_requests_case_action("我认为可以形成辨证了") is True
+
+
 def test_runtime_executes_one_npc_selected_low_risk_tool(tmp_path: Path) -> None:
     service, player_id, opened = opened_case(tmp_path)
     option = opened.observation.available_investigations[0]
@@ -114,6 +125,43 @@ def test_runtime_executes_one_npc_selected_low_risk_tool(tmp_path: Path) -> None
     assert result.public_rationale == "执行一个可逆调查。"
     assert service.state_store.load_case_session(opened.session_id).revision == 1
     assert agent.inputs[0].player_contribution.public_text.startswith("我建议")
+
+
+def test_conversation_only_turn_cannot_execute_or_advance_plan(tmp_path: Path) -> None:
+    service, player_id, opened = opened_case(tmp_path)
+    option = opened.observation.available_investigations[0]
+    tool = {
+        CaseActionType.OBSERVE_PATIENT: ToolName.OBSERVE_PATIENT,
+        CaseActionType.QUESTION_PATIENT: ToolName.QUESTION_PATIENT,
+        CaseActionType.INSPECT_OBJECT: ToolName.INSPECT_OBJECT,
+        CaseActionType.OBSERVE_QI: ToolName.OBSERVE_QI,
+        CaseActionType.INVESTIGATE_LOCATION: ToolName.INVESTIGATE_LOCATION,
+    }[option.action_type]
+    agent = StubAgent(AgentAction(
+        action_id="npc_turn_001",
+        action_type=AgentActionType.USE_TOOL,
+        dialogue="模型试图继续执行调查。",
+        tool_call=ToolCallRequest(
+            name=tool,
+            arguments={"investigation_id": option.investigation_id},
+        ),
+        confidence=0.8,
+    ))
+    greeting = contribution(player_id, opened.session_id).model_copy(update={
+        "contribution_type": PlayerContributionType.GENERAL_MESSAGE,
+        "public_text": "你好",
+    })
+
+    result = CooperativeRuntime(service=service, agent=agent).handle(
+        CooperativeTurnInput(contribution=greeting, allow_world_action=False)
+    )
+
+    assert result.status is CooperativeTurnStatus.RESPONDED
+    assert result.decision.proposal.action.action_type is AgentActionType.RESPOND
+    assert "不会自行推进调查" in result.decision.proposal.action.dialogue
+    assert result.goal_changed is False and result.plan_changed is False
+    assert service.state_store.load_case_session(opened.session_id).revision == 0
+    assert agent.inputs == []
 
 
 def test_runtime_does_not_execute_diagnosis_without_negotiation(tmp_path: Path) -> None:

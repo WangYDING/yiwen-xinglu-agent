@@ -36,7 +36,7 @@ def test_only_planning_request_receives_larger_bounded_budget(case_definition, q
     simple = agent._request(value)
     planning = agent._planning_request(value)
 
-    assert not hasattr(simple, "max_output_tokens")
+    assert simple.max_output_tokens == 512
     assert planning.max_output_tokens == GAME_NPC_PLANNING_MAX_OUTPUT_TOKENS == 2048
 
 

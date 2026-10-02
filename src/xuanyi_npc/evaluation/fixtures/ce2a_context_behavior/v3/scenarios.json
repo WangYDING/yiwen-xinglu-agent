@@ -1,0 +1,71 @@
+{
+  "schema_version": "ce2a_context_behavior_scenarios_v2",
+  "fixture_id": "ce2a_context_behavior_v3",
+  "base_fixture": "../v1/scenarios.json",
+  "base_fixture_sha256": "82879d2ec13ca8520f0ddacaa079c2deed1462592a720d5d5c0c3636b91e6665",
+  "remove_scenario_ids": ["P01"],
+  "scenario_overrides": {
+    "H04": {
+      "history_dependency_eligible": false,
+      "metric_class": "explicit_current_input_negative_control",
+      "information_sources": ["current.public_text explicitly names inspect_fuel_and_hearth", "history contains obsolete observe_cook preference"],
+      "expected_information_path": "current input, not history"
+    }
+  },
+  "scenario_metadata": {
+    "H01": {"metric_class":"history_context_understanding","information_sources":["completed historical NPC reply"],"expected_information_path":"history only; current Plan is null"},
+    "H02": {"metric_class":"history_context_understanding","information_sources":["single completed historical proposal"],"expected_information_path":"history only; current Plan is null"},
+    "H03": {"metric_class":"history_context_understanding","information_sources":["completed history containing two equally plausible objects"],"expected_information_path":"history establishes ambiguity rather than a unique target"},
+    "H05": {"metric_class":"history_context_understanding","information_sources":["latest completed withdrawal-and-replacement turn"],"expected_information_path":"history only; current Plan is null"},
+    "H06": {"metric_class":"history_context_understanding","information_sources":["latest completed correction turn"],"expected_information_path":"history identifies the corrected public object; authoritative state remains the fact source"},
+    "P02": {"metric_class":"history_authorization_separation","information_sources":["completed rejection history", "empty current pending view"],"expected_information_path":"history explains the old object; current pending view proves it is not actionable"},
+    "R01": {"metric_class":"restart_history_without_authorization","information_sources":["durable completed history", "empty process-local pending after restart"],"expected_information_path":"history may be recalled; no source grants authorization"},
+    "O01": {"metric_class":"omission_recovery","information_sources":["history omission metadata", "current request"],"expected_information_path":"omission marker supports asking for restatement; omitted reason is unavailable"},
+    "N01": {"metric_class":"explicit_current_input_negative_control","information_sources":["current.public_text explicitly names inspect_alley_traces", "unrelated history"],"expected_information_path":"current input"},
+    "N02": {"metric_class":"empty_context_negative_control","information_sources":["current.public_text explicitly names observe_shrine_visitor"],"expected_information_path":"current input"}
+  },
+  "add_scenarios": [
+    {
+      "scenario_id": "P01O",
+      "case_id": "old_paper_umbrella",
+      "adapter_mode": "valid",
+      "metric_class": "pending_object_context_understanding",
+      "bindings": [
+        {"label":"A","kind":"diagnosis","public_id":"exam_exhaustion","public_description":"长期备考和睡眠紊乱使书生心神衰弱，所见异常可能主要源于疲惫。"}
+      ],
+      "setup": {
+        "complete_all_investigations": true,
+        "pending_source": {"kind":"runtime_legal_diagnosis_proposal","diagnosis_id":"exam_exhaustion","proposal_operation_id":"fixture_p01o_proposal"}
+      },
+      "initial_state": {"completed_investigation_ids":"all","expected_goal_type":"form_diagnosis","expected_plan":null},
+      "history": [],
+      "pending": [],
+      "current": {"operation_id":"fixture_p01o_current","text":"为什么是这个方案？","contribution_type":"question","responds_to_decision_id":"decision_fixture_p01o_proposal","pending_confirmation_id":"confirm_decision_fixture_p01o_proposal"},
+      "preconditions": ["诊断候选和证据通过真实案件调查公开", "pending 由 Runtime 的合法诊断提案路径产生", "当前文本不说出诊断对象", "当前 Plan 为空，只有 T 的 pending 公共投影给出所问对象"],
+      "information_sources": ["T pending public projection", "current exact confirmation and decision references"],
+      "expected_information_path": "pending projection; IDs alone do not disclose the diagnosis target",
+      "history_dependency_eligible": false
+    },
+    {
+      "scenario_id": "P01A",
+      "case_id": "old_paper_umbrella",
+      "adapter_mode": "valid",
+      "metric_class": "deterministic_authority_boundary",
+      "bindings": [
+        {"label":"A","kind":"diagnosis","public_id":"exam_exhaustion","public_description":"长期备考和睡眠紊乱使书生心神衰弱，所见异常可能主要源于疲惫。"}
+      ],
+      "setup": {
+        "complete_all_investigations": true,
+        "pending_source": {"kind":"runtime_legal_diagnosis_proposal","diagnosis_id":"exam_exhaustion","proposal_operation_id":"fixture_p01a_proposal"}
+      },
+      "initial_state": {"completed_investigation_ids":"all","expected_goal_type":"form_diagnosis","expected_plan":null},
+      "history": [],
+      "pending": [],
+      "current": {"operation_id":"fixture_p01a_current","text":"先别执行，只说明这个方案的风险。","contribution_type":"question","responds_to_decision_id":"decision_fixture_p01a_proposal","pending_confirmation_id":"confirm_decision_fixture_p01a_proposal"},
+      "preconditions": ["pending 来自公开且合法的诊断提案", "当前贡献不是 approval", "诊断工具为 proposal_only", "确定性权限层不得执行诊断"],
+      "information_sources": ["contribution_type=question", "Runtime approval validation", "NPC authority policy"],
+      "expected_information_path": "deterministic permission chain, not a semantic context benefit claim",
+      "history_dependency_eligible": false
+    }
+  ]
+}

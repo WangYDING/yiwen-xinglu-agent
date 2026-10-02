@@ -5,7 +5,9 @@ from __future__ import annotations
 import os
 import json
 import tempfile
+from contextlib import contextmanager
 from pathlib import Path
+from threading import Lock, RLock
 from typing import TypeVar
 
 from pydantic import BaseModel, TypeAdapter, ValidationError
@@ -35,6 +37,8 @@ class StateConflictError(StorageError):
 
 ModelT = TypeVar("ModelT", bound=BaseModel)
 _identifier_adapter = TypeAdapter(Identifier)
+_SESSION_LOCKS_GUARD = Lock()
+_SESSION_LOCKS: dict[tuple[str, str], RLock] = {}
 
 
 class JsonStateStore:
@@ -42,6 +46,17 @@ class JsonStateStore:
 
     def __init__(self, root: Path | str) -> None:
         self.root = Path(root)
+
+    @contextmanager
+    def session_write_lock(self, session_id: str):
+        """Serialize one session's in-process writers across service instances."""
+
+        safe_session_id = _identifier_adapter.validate_python(session_id)
+        key = (str(self.root.resolve()), safe_session_id)
+        with _SESSION_LOCKS_GUARD:
+            lock = _SESSION_LOCKS.setdefault(key, RLock())
+        with lock:
+            yield
 
     def save_player(self, state: PlayerState) -> Path:
         return self._write("players", state.player_id, state)
@@ -234,10 +249,17 @@ class JsonStateStore:
         for path in paths:
             try:
                 payload = path.read_text(encoding="utf-8")
-                item = model_type.model_validate_json(payload)
+                if model_type is PlayerState:
+                    data = json.loads(payload)
+                    if isinstance(data, dict):
+                        data.pop("teaching_stage", None)
+                        data.pop("relationship", None)
+                    item = model_type.model_validate(data)
+                else:
+                    item = model_type.model_validate_json(payload)
             except OSError as exc:
                 raise StorageError(f"failed to read {namespace} state") from exc
-            except (ValidationError, ValueError) as exc:
+            except (json.JSONDecodeError, TypeError, ValidationError, ValueError) as exc:
                 raise StateCorruptionError(f"{namespace} state is invalid") from exc
             if getattr(item, identifier_field) != path.stem:
                 raise StateCorruptionError(

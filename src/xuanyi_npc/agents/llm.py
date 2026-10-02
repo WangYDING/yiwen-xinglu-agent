@@ -26,7 +26,15 @@ class ChatMessage(DomainModel):
     model_config = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
 
     role: ChatRole
-    content: PromptText
+    content: Annotated[StrictStr, StringConstraints(strip_whitespace=True, min_length=1, max_length=2_000_000)]
+
+
+class ContextVariant(DomainModel):
+    """Assembler-owned alternatives; never populated from model output."""
+
+    messages: tuple[ChatMessage, ...]
+    reason: str
+    retained_memory_ids: tuple[str, ...] = ()
 
 
 class LLMRequest(DomainModel):
@@ -36,6 +44,9 @@ class LLMRequest(DomainModel):
 
     messages: tuple[ChatMessage, ...] = Field(min_length=2)
     response_schema: dict[str, JsonValue]
+    max_output_tokens: Annotated[int, Field(strict=True, ge=1)] | None = None
+    context_variants: tuple[ContextVariant, ...] = Field(default=(), exclude=True)
+    retained_memory_ids: tuple[str, ...] = Field(default=(), exclude=True)
 
 
 class LLMResponse(DomainModel):

@@ -282,6 +282,13 @@ def test_llm_defaults_to_semantic_but_offline_defaults_to_disabled():
     offline = clinic_server.build_parser().parse_args(["--npc-mode", "offline"])
     assert (llm.memory_mode or ("semantic" if llm.npc_mode == "llm" else "disabled")) == "semantic"
     assert (offline.memory_mode or ("semantic" if offline.npc_mode == "llm" else "disabled")) == "disabled"
+    assert llm.cooperative_record is True
+    assert llm.cooperative_context_v2 is True
+    opted_out = clinic_server.build_parser().parse_args([
+        "--no-cooperative-record", "--no-cooperative-context-v2"
+    ])
+    assert opted_out.cooperative_record is False
+    assert opted_out.cooperative_context_v2 is False
 
 
 def test_semantic_startup_failure_does_not_fall_back_to_fake(tmp_path, monkeypatch):

@@ -60,7 +60,9 @@ STYLE = """
 *{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.55 system-ui,sans-serif}
 header,main{max-width:980px;margin:auto;padding:1rem}header{border-bottom:1px solid var(--line)}
 h1,h2{font-family:serif;color:#294f40}nav a,a{color:var(--jade)}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem}
-.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:1rem;margin:.7rem 0}.case-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem}.partner{border-left:5px solid var(--jade)}
+.session-nav{display:flex;align-items:center;justify-content:space-between;gap:1rem}.session-nav-links{display:flex;gap:.45rem;align-items:center}.logout-form{margin:0}.logout-button{padding:0;border:0;background:transparent;color:var(--jade);text-decoration:underline;cursor:pointer;font:inherit}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:1rem;margin:.7rem 0}.case-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem}.case-card{display:flex;min-height:100%;flex-direction:column}.case-card h3{margin:.25rem 0 .65rem}.case-synopsis{flex:1}.case-card-active{border:2px solid var(--jade);box-shadow:0 5px 16px rgba(38,53,47,.12)}.case-card-completed{background:#f3f0e7}.case-meta{display:flex;gap:.45rem;align-items:center;flex-wrap:wrap;margin:.7rem 0}.status-badge,.case-type,.recommended{display:inline-block;border-radius:999px;padding:.18rem .58rem;font-size:.82rem}.status-badge{background:#ece7d8;color:#4f584f}.case-card-active .status-badge{background:var(--jade);color:white}.case-card-completed .status-badge{background:#dfe7df;color:#385047}.case-type{background:#f5ecd2;color:#6e552d}.recommended{background:#fff1bd;color:#755815}.case-footer{margin-top:auto;padding-top:.45rem}.case-footer form{margin:0}.case-footer button{margin:0}.case-footer button[disabled]{background:#aaa89e;color:#f4f1e8;cursor:not-allowed}
+.partner{border-left:5px solid var(--jade)}
 button{background:var(--jade);color:white;border:0;border-radius:6px;padding:.55rem .9rem}input,select,textarea{max-width:100%;width:100%;padding:.45rem;border:1px solid var(--line)}
 .notice{border-left:4px solid #9a7338;padding:.6rem;background:#fff8dc}.error{color:#8b2d2d}small{color:#58665f}
 .case-workspace{display:grid;grid-template-columns:minmax(220px,1fr) minmax(300px,1.4fr) minmax(240px,1fr);gap:1rem;align-items:start}.progress-done{color:var(--jade)}
@@ -70,7 +72,12 @@ button{background:var(--jade);color:white;border:0;border-radius:6px;padding:.55
 .bubble strong{font-size:.82rem}.bubble p{margin:.12rem 0 0;line-height:1.42}.bubble.player{margin-left:auto;background:#dff2e8}.bubble.case_character{margin-right:auto}
 .bubble.system,.bubble.clue,.bubble.rejection{width:auto;max-width:70%;margin:.3rem auto;padding:.3rem .65rem;text-align:center;border-radius:8px;background:#fff5d7}.bubble.rejection{background:#fff0eb}
 .composer{position:sticky;z-index:2;bottom:0;display:flex;gap:.5rem;align-items:center;margin:0;padding:.55rem .75rem;background:var(--paper);border-top:1px solid var(--line);box-shadow:0 -5px 14px rgba(38,32,22,.06)}.composer input[name=message]{flex:1;min-width:0;margin:0}.composer button{width:auto;flex:0 0 auto;margin:0;white-space:nowrap}.drawers{max-width:900px;margin:auto}.private-mark{color:#7656a8;font-size:.78rem}
-@media(max-width:640px){.chat{height:55dvh;min-height:390px;margin:.55rem -.35rem;border-radius:12px}.chat-log{padding:.2rem .45rem .35rem}.bubble{max-width:72%;padding:.32rem .6rem;margin:.22rem 0}.bubble.system,.bubble.clue,.bubble.rejection{max-width:72%;margin:.24rem auto}.composer{padding:.45rem}.composer button{padding:.65rem .8rem}}
+.cooperative-turn+.cooperative-turn{margin-top:1.25rem;padding-top:1.25rem;border-top:1px dashed var(--line)}
+.cooperative-card{overflow:hidden}.cooperative-log{min-height:220px;max-height:62vh;overflow-y:auto;scroll-margin-top:1rem;margin:.8rem 0 0;padding:.8rem 1rem;border:1px solid var(--line);border-radius:10px;background:#f8f4e9}.cooperative-empty{min-height:188px;display:grid;place-items:center;text-align:center;color:#8a867c}.cooperative-empty p{margin:0}.cooperative-composer{margin-top:.7rem}.cooperative-composer select{margin:0 0 .5rem}.cooperative-input-row{display:flex;gap:.6rem;align-items:flex-end}.cooperative-input-row textarea{flex:1;min-width:0;margin:0}.cooperative-input-row button{width:auto;flex:0 0 auto;margin:0;white-space:nowrap}.cooperative-hint{display:block;margin-top:.55rem}.turn-dialogue{padding:.35rem 0}.turn-message{display:flex;gap:.65rem;align-items:flex-start;margin:.9rem 0}.turn-message-player{justify-content:flex-end}.turn-avatar{width:42px;height:42px;flex:0 0 42px;display:grid;place-items:center;border-radius:10px;background:#d7c7a2;color:#3d3527;font-weight:700;box-shadow:0 1px 2px rgba(38,32,22,.12)}.turn-avatar-button{padding:0;border:0;cursor:pointer}.turn-avatar-button:hover{filter:brightness(.96)}.turn-avatar-button:focus-visible{outline:3px solid #7ea695;outline-offset:2px}.turn-message-player .turn-avatar{background:var(--jade);color:white}.turn-message-body{max-width:72%}.turn-speaker{display:block;font-size:.78rem;color:#66716c;margin:0 .35rem .2rem}.turn-message-player .turn-speaker{text-align:right}.turn-bubble{position:relative;margin:0;padding:.7rem .9rem;border-radius:9px;background:#fff;border:1px solid var(--line);line-height:1.55;overflow-wrap:anywhere}.turn-message-partner .turn-bubble:before{content:"";position:absolute;left:-7px;top:12px;border-width:6px 7px 6px 0;border-style:solid;border-color:transparent var(--line) transparent transparent}.turn-message-player .turn-bubble{background:#cfe8d8;border-color:#a8cbb6}.turn-message-player .turn-bubble:after{content:"";position:absolute;right:-7px;top:12px;border-width:6px 0 6px 7px;border-style:solid;border-color:transparent transparent transparent #a8cbb6}.decision-chip{display:inline-block;padding:.16rem .55rem;border-radius:999px;background:#edf4ef;color:#315848;font-weight:700}.turn-action{padding:.65rem 0}.discovery{border-left:5px solid #9a7338;background:#fff3c9;padding:.8rem 1rem;margin:1rem 0}.discovery h4{margin:0 0 .35rem;color:#6f4d19}.discovery p{margin:0}.next-step{border-left:4px solid var(--jade);background:#edf4ef;padding:.7rem}.plan-details{margin-top:.8rem}
+.partner-assessment-modal{position:fixed;z-index:20;inset:0;display:grid;place-items:center;padding:1rem;background:rgba(25,35,30,.42)}.partner-assessment-modal[hidden]{display:none}.partner-assessment-dialog{position:relative;width:min(560px,calc(100vw - 2rem));max-height:min(76vh,620px);overflow:auto;padding:1.25rem 1.35rem;border:1px solid var(--line);border-radius:14px;background:var(--card);box-shadow:0 18px 50px rgba(20,27,24,.25)}.partner-assessment-dialog h3{margin:.1rem 2.5rem 1rem 0}.partner-assessment-body{color:#46564f}.partner-assessment-body .decision-chip{margin-right:.55rem}.partner-assessment-body p{margin:.85rem 0 0}.partner-assessment-close{position:absolute;right:.7rem;top:.6rem;width:2.2rem;height:2.2rem;padding:0;border-radius:50%;font-size:1.35rem;line-height:1;background:transparent;color:var(--ink)}.partner-assessment-close:hover{background:#eee6d4}
+.save-list{list-style:none;margin:.6rem 0 0;padding:0;display:grid;gap:.55rem}.save-link{display:block;padding:.7rem .8rem;border:1px solid var(--line);border-radius:8px;background:#fffdf7;text-decoration:none}.save-link:hover{border-color:var(--jade);background:#f7fbf7}.save-link strong,.save-link span{display:block}.save-link span{margin-top:.15rem;color:#66716c;font-size:.9rem}
+.cooperative-pending{margin-top:.7rem;padding:.65rem .8rem;border-left:4px solid var(--jade);background:#edf4ef}.cooperative-pending:after{content:"";display:inline-block;width:.8em;height:.8em;margin-left:.55rem;border:2px solid #9ab5aa;border-top-color:var(--jade);border-radius:50%;animation:waiting-spin .8s linear infinite}@keyframes waiting-spin{to{transform:rotate(360deg)}}
+@media(max-width:640px){.chat{height:55dvh;min-height:390px;margin:.55rem -.35rem;border-radius:12px}.chat-log{padding:.2rem .45rem .35rem}.bubble{max-width:72%;padding:.32rem .6rem;margin:.22rem 0}.bubble.system,.bubble.clue,.bubble.rejection{max-width:72%;margin:.24rem auto}.composer{padding:.45rem}.composer button{padding:.65rem .8rem}.cooperative-log{min-height:190px;margin-left:-.35rem;margin-right:-.35rem;padding:.6rem}.cooperative-empty{min-height:158px}.cooperative-input-row{display:block}.cooperative-input-row button{width:100%;margin-top:.5rem}.turn-avatar{width:36px;height:36px;flex-basis:36px}.turn-message-body{max-width:82%}}
 @media(max-width:700px){.case-grid,.case-workspace{grid-template-columns:1fr}header,main{padding:.75rem}.card{overflow-wrap:anywhere}}
 """
 
@@ -79,8 +86,115 @@ def _esc(value: object) -> str:
     return html.escape(str(value), quote=True)
 
 
+_INTERNAL_ID_PATTERN = re.compile(r"\b[a-z][a-z0-9]*(?:_[a-z0-9]+)+\b")
+
+
+def _player_copy(value: object, *, action_label: str = "") -> str:
+    """Replace implementation identifiers and system jargon in player-facing text."""
+
+    replacement = str(action_label).strip().rstrip("。！？；，,.!?;") or "当前调查行动"
+    replacement = replacement.replace("公开痕迹", "现场痕迹")
+    text = str(value)
+    text = re.sub(
+        rf"公开调查项\s+{_INTERNAL_ID_PATTERN.pattern}\s*",
+        f"调查方向“{replacement}”",
+        text,
+    )
+    text = _INTERNAL_ID_PATTERN.sub(replacement, text)
+    text = text.replace("当前公开调查动作只覆盖", "目前能够调查的方向包括")
+    text = text.replace("公开调查动作", "调查方向")
+    text = re.sub(
+        r"没有针对([^，；。]+)的可用调查入口",
+        r"暂时没有直接调查\1的办法",
+        text,
+    )
+    text = re.sub(
+        r"([^，；。]+)也不在已公开的异常线索范围内",
+        r"现有线索暂未指向\1",
+        text,
+    )
+    return (
+        text.replace("公开调查项", "调查方向")
+        .replace("公开痕迹", "现场痕迹")
+        .replace("。；", "；")
+        .replace(".；", "；")
+    )
+
+
 def _page(title: str, body: str) -> bytes:
-    document = f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{_esc(title)} · 异闻行录</title><style>{STYLE}</style></head><body><header><h1>异闻行录 · 志怪异案</h1><p class="notice">全部异案、人物与术法均为架空游戏内容，不对应现实事件或现实医疗建议。</p></header><main>{body}</main></body></html>"""
+    document = f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{_esc(title)} · 异闻行录</title><style>{STYLE}</style></head><body><header><h1>异闻行录 · 志怪异案</h1><p class="notice">全部异案、人物与术法均为架空游戏内容，不对应现实事件或现实医疗建议。</p></header><main>{body}</main><div class="partner-assessment-modal" id="partner-assessment-modal" hidden onclick="if(event.target===this)closePartnerAssessment()"><section class="partner-assessment-dialog" role="dialog" aria-modal="true" aria-labelledby="partner-assessment-title"><button class="partner-assessment-close" type="button" aria-label="关闭" onclick="closePartnerAssessment()">×</button><h3 id="partner-assessment-title">搭档的判断</h3><div class="partner-assessment-body" id="partner-assessment-body"></div></section></div><script>
+async function submitCooperativeForm(form,event){{
+  event.preventDefault();
+  if(form.dataset.submitting==='1') return false;
+  form.dataset.submitting='1';
+  const button=form.querySelector('button');
+  const input=form.querySelector('textarea[name="text"]');
+  const log=document.getElementById('turn-result');
+  button.disabled=true;
+  button.textContent='搭档思考中…';
+  const empty=log&&log.querySelector('.cooperative-empty');
+  if(empty) empty.remove();
+  let pending=null;
+  if(log){{
+    pending=document.createElement('section');
+    pending.className='cooperative-turn';
+    const dialogue=document.createElement('div');
+    dialogue.className='turn-dialogue';
+    const message=document.createElement('article');
+    message.className='turn-message turn-message-player';
+    const body=document.createElement('div');
+    body.className='turn-message-body';
+    const speaker=document.createElement('span');
+    speaker.className='turn-speaker';speaker.textContent='你';
+    const bubble=document.createElement('p');
+    bubble.className='turn-bubble';bubble.textContent=input.value;
+    const avatar=document.createElement('div');
+    avatar.className='turn-avatar';avatar.textContent='你';
+    body.append(speaker,bubble);message.append(body,avatar);dialogue.append(message);
+    const status=document.createElement('p');
+    status.className='cooperative-pending';status.textContent='调查搭档正在结合现场线索思考';
+    pending.append(dialogue,status);log.append(pending);log.scrollTop=log.scrollHeight;
+  }}
+  try{{
+    let response=await fetch(form.action,{{method:'POST',body:new FormData(form),credentials:'same-origin'}});
+    while(response.url.includes('/cases/wait')){{
+      await new Promise(resolve=>setTimeout(resolve,1200));
+      response=await fetch(response.url,{{credentials:'same-origin'}});
+    }}
+    if(!response.ok) throw new Error('request failed');
+    const nextDocument=await response.text();
+    if(response.url) history.replaceState(null,'',response.url);
+    document.open();document.write(nextDocument);document.close();
+  }}catch(error){{
+    form.dataset.submitting='0';button.disabled=false;button.textContent='重新发送';
+    const status=pending&&pending.querySelector('.cooperative-pending');
+    if(status) status.textContent='暂时未能取得回答，请检查连接后重新发送。';
+  }}
+  return false;
+}}
+function focusLatestCooperativeTurn(){{
+  const log=document.getElementById('turn-result');
+  if(!log) return;
+  const turns=Array.from(log.children).filter(item=>item.classList.contains('cooperative-turn'));
+  const latest=turns[turns.length-1];
+  if(latest) log.scrollTop=Math.max(0,latest.offsetTop-log.offsetTop-10);
+}}
+function showPartnerAssessment(button){{
+  const turn=button.closest('.cooperative-turn');
+  const source=turn&&turn.querySelector('.turn-assessment-data');
+  const modal=document.getElementById('partner-assessment-modal');
+  const body=document.getElementById('partner-assessment-body');
+  if(!source||!modal||!body) return;
+  body.innerHTML=source.innerHTML;modal.hidden=false;
+  modal.querySelector('.partner-assessment-close').focus();
+}}
+function closePartnerAssessment(){{
+  const modal=document.getElementById('partner-assessment-modal');
+  if(modal) modal.hidden=true;
+}}
+document.addEventListener('keydown',event=>{{if(event.key==='Escape')closePartnerAssessment();}});
+requestAnimationFrame(focusLatestCooperativeTurn);
+</script></body></html>"""
     return document.encode("utf-8")
 
 
@@ -124,6 +238,8 @@ def build_clinic_service(
     memory_index_service=None,
     memory_mode="disabled",
     reflection_service=None,
+    cooperative_record_enabled=False,
+    cooperative_context_v2_enabled=False,
 ) -> ClinicService:
     service = ClinicService(
         store=store or JsonStateStore(state_dir), base_catalog=CaseCatalog(resources.case_dir),
@@ -134,6 +250,8 @@ def build_clinic_service(
         memory_index_service=memory_index_service,
         memory_mode=memory_mode,
         reflection_service=reflection_service,
+        cooperative_record_enabled=cooperative_record_enabled,
+        cooperative_context_v2_enabled=cooperative_context_v2_enabled,
     )
     if memory_mode == "semantic":
         for session in service.store.list_case_sessions():
@@ -317,13 +435,15 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
             parsed = urlparse(self.path)
             query = self._query()
             if parsed.path == "/":
-                self._start()
+                self._start(query.get("notice", ""))
             elif parsed.path == "/clinic":
                 self._home(self._player_id(query))
             elif parsed.path == "/welcome":
                 self._welcome(self._player_id(query))
             elif parsed.path == "/cases":
                 self._cases(self._player_id(query), query.get("case_id"), query.get("session_id"))
+            elif parsed.path == "/cases/wait":
+                self._wait_for_operation(query)
             elif parsed.path == "/static/clinic.css":
                 self._send(200, read_runtime_text("clinic/clinic.css").encode(), "text/css; charset=utf-8")
             elif parsed.path == "/static/clinic.js":
@@ -338,6 +458,8 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
             self._error(500, "异案调查入口暂时无法处理请求，已保留最后一次成功进度。")
 
     def do_POST(self):
+        path = ""
+        form = {}
         try:
             path = urlparse(self.path).path
             form = self._form()
@@ -355,23 +477,34 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
                 location = "/cases?" + urlencode({"player_id": player_id})
             elif path in {"/cases/natural", "/cases/cooperate"}:
                 player_id=self._player_id(form);case_id=form.get("case_id","");session_id=form.get("session_id","")
+                player_text=form.get("text","")
+                contribution_type=(
+                    PlayerContributionType.GENERAL_MESSAGE
+                    if path == "/cases/cooperate"
+                    else PlayerContributionType.SUGGESTION
+                )
                 result=self.server.clinic_service.submit_player_contribution(ClinicContributionInput(
                     player_id=player_id,case_id=case_id,session_id=session_id,
-                    operation_id=token,text=form.get("text",""),
-                    contribution_type=PlayerContributionType(form.get("contribution_type","suggestion")),
+                    operation_id=token,text=player_text,
+                    contribution_type=contribution_type,
                 ))
-                location="/cases?"+urlencode(self._cooperative_query(player_id,case_id,session_id,result))
+                location="/cases?"+urlencode(self._cooperative_query(
+                    player_id,case_id,session_id,result,player_text=player_text
+                ))+"#turn-result"
             elif path == "/cases/cooperate/respond":
                 player_id=self._player_id(form);case_id=form.get("case_id","");session_id=form.get("session_id","")
                 approved=form.get("response")=="approve"
+                player_text=("我批准这项行动，请你依据最新状态再次判断。" if approved else "我不同意这项行动，请提出其他方案。")
                 result=self.server.clinic_service.submit_player_contribution(ClinicContributionInput(
                     player_id=player_id,case_id=case_id,session_id=session_id,operation_id=token,
-                    text=("我批准这项行动，请你依据最新状态再次判断。" if approved else "我不同意这项行动，请提出其他方案。"),
+                    text=player_text,
                     contribution_type=(PlayerContributionType.APPROVAL if approved else PlayerContributionType.REJECTION),
                     responds_to_decision_id=form.get("decision_id") or None,
                     pending_confirmation_id=form.get("confirmation_id") or None,
                 ))
-                location="/cases?"+urlencode(self._cooperative_query(player_id,case_id,session_id,result))
+                location="/cases?"+urlencode(self._cooperative_query(
+                    player_id,case_id,session_id,result,player_text=player_text
+                ))+"#turn-result"
             elif path == "/cases/chat":
                 player_id=self._player_id(form);case_id=form.get("case_id","");session_id=form.get("session_id","")
                 self.server.clinic_service.case_chat_message(player_id,case_id,session_id,token,form.get("message", ""))
@@ -381,6 +514,18 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
                 player_id = self._player_id(form)
                 result = self.server.clinic_service.start_case(player_id, form.get("case_id", ""), cooperative=True)
                 location = "/cases?" + urlencode({"player_id": player_id, "case_id": result.case_id, "session_id": result.session_id})
+            elif path == "/cases/resume":
+                player_id = self._player_id(form)
+                case_id = form.get("case_id", "")
+                session_id = form.get("session_id", "")
+                result = self.server.clinic_service.resume_case(
+                    player_id, case_id, session_id
+                )
+                location = "/cases?" + urlencode({
+                    "player_id": player_id,
+                    "case_id": result.case_id,
+                    "session_id": result.session_id,
+                })
             elif path == "/cases/action":
                 request = ClinicActionInput(
                     player_id=self._player_id(form), case_id=form.get("case_id", ""), session_id=form.get("session_id", ""),
@@ -395,16 +540,37 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
                 raise ClinicError("route_not_found", "该操作不存在。")
             self.server.operation_results[token] = location
             self._redirect(location)
-        except (ClinicError, ValidationError, ValueError) as exc:
+        except ClinicError as exc:
+            if exc.code == "player_name_exists" and path == "/players":
+                self._redirect("/?" + urlencode({"notice": str(exc)}))
+                return
+            if (
+                exc.code == "operation_in_progress"
+                and path in {"/cases/natural", "/cases/cooperate", "/cases/cooperate/respond"}
+                and form.get("operation_id", "").startswith("op_")
+            ):
+                wait_query = urlencode({
+                    "operation_id": form["operation_id"],
+                    "player_id": form.get("player_id", ""),
+                    "case_id": form.get("case_id", ""),
+                    "session_id": form.get("session_id", ""),
+                })
+                self._redirect("/cases/wait?" + wait_query)
+                return
+            self._error(400, str(exc))
+        except (ValidationError, ValueError) as exc:
             self._error(400, str(exc))
         except Exception:
             self._error(500, "操作未完成；已保留最后一次成功进度。")
 
     @staticmethod
-    def _cooperative_query(player_id,case_id,session_id,result):
+    def _cooperative_query(
+        player_id,case_id,session_id,result,*,player_text=""
+    ):
         evaluation=result.decision.proposal.contribution_evaluation
         trace=result.memory_usage_trace
         values={"player_id":player_id,"case_id":case_id,"session_id":session_id,
+                "player_text":player_text,
                 "npc_reply":result.decision.proposal.action.dialogue,
                 "npc_action":result.decision.proposal.capability.value,
                 "npc_tool_public":result.selected_public_target or "",
@@ -461,18 +627,59 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
 
     def _nav(self, player_id):
         q = urlencode({"player_id": player_id})
-        return f'<nav><a href="/clinic?{q}">调查主页</a> · <a href="/cases?{q}">调查异案</a></nav>'
+        return f'''<nav class="session-nav"><span class="session-nav-links"><a href="/clinic?{q}">调查主页</a><span aria-hidden="true">·</span><a href="/cases?{q}">调查异案</a></span><form class="logout-form" method="post" action="/quit"><input type="hidden" name="operation_id" value="{self._token()}"><button class="logout-button" type="submit">退出登录</button></form></nav>'''
 
     def _welcome(self, player_id):
         player=self.server.clinic_service.home(player_id).player_summary
-        body=f'''<h2>初次同行</h2><section class="card"><h3>系统旁白</h3><p>你将与一名游侠型自主 NPC 结伴，调查人与契、物、炁息交缠而成的古风志怪异案。你可以提供线索、质疑、建议和判断；同行 NPC 会自主规划并推进调查，重大或不可逆处置仍需要你的明确确认。</p></section><section class="card partner"><h3>调查搭档</h3><p>各地已有数桩异事待查。我们先核对公开证据，再协商判断；我会自行决定下一步准备调查什么，真正的行动结果仍由案件规则裁定。</p></section><form method="post" action="/welcome/complete"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="operation_id" value="{self._token()}"><button>与搭档同行，前往选案</button></form>'''
+        body=f'''{self._nav(player_id)}<h2>初次同行</h2><section class="card"><h3>同行须知</h3><p>你将与一名独立行动的调查搭档结伴，查访人与契、旧物和炁息交缠而成的志怪异案。你可以提出线索、疑问、建议和判断；搭档会结合现场情况安排调查，重大或不可逆的决定仍会先征得你的明确同意。</p></section><section class="card partner"><h3>调查搭档</h3><p>各地已有数桩异事待查。我们先核对眼前线索，再商量判断和去向。我会说明自己的想法并决定下一步；最终能发现什么，仍要以实际调查为准。</p></section><form method="post" action="/welcome/complete"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="operation_id" value="{self._token()}"><button>与搭档同行，前往选案</button></form>'''
         body=f'<p>调查者：{_esc(player.display_name)}</p>'+body
         self._send(200,_page("初次同行",body))
 
-    def _start(self):
+    def _start(self, notice=""):
         players = self.server.clinic_service.list_players()
-        restored = "".join(f'<li><a href="/clinic?player_id={_esc(item.player_id)}">{_esc(item.display_name)}</a></li>' for item in players) or "<li>尚无调查档案</li>"
-        body = f"""<h2>进入志怪异案调查</h2><p>你将与一名自主 NPC 组成调查搭档，共同调查异事。</p><div class="grid"><section class="card"><h3>创建玩家档案</h3><form method="post" action="/players"><label>玩家名 <input name="display_name" maxlength="40" required></label><input type="hidden" name="operation_id" value="{self._token()}"><button>创建并进入</button></form></section><section class="card"><h3>恢复调查档案</h3><ul>{restored}</ul></section></div><p>无需输入工具名、JSON、Session ID 或内部规则；页面会把自然语言选择转换为严格应用命令。</p>"""
+        sessions = self.server.clinic_service.store.list_case_sessions()
+        name_counts = {}
+        for item in players:
+            key = item.display_name.casefold()
+            name_counts[key] = name_counts.get(key, 0) + 1
+        name_ordinals = {}
+        save_items = []
+        for item in players:
+            key = item.display_name.casefold()
+            name_ordinals[key] = name_ordinals.get(key, 0) + 1
+            label = item.display_name
+            if name_counts[key] > 1:
+                label = f"{label}（档案 {name_ordinals[key]}）"
+            owned_sessions = tuple(
+                session for session in sessions if session.player_id == item.player_id
+            )
+            active = next(
+                (session for session in owned_sessions if session.status.value == "active"),
+                None,
+            )
+            completed_count = sum(
+                session.status.value == "completed" for session in owned_sessions
+            )
+            if active is not None:
+                case = self.server.clinic_service.base_catalog.get(active.case_id)
+                detail = f"正在调查：{case.title}"
+                href = "/cases?" + urlencode({
+                    "player_id": item.player_id,
+                    "case_id": active.case_id,
+                    "session_id": active.session_id,
+                })
+            elif completed_count:
+                detail = f"已完成 {completed_count} 桩异案"
+                href = "/clinic?" + urlencode({"player_id": item.player_id})
+            else:
+                detail = "尚未接案"
+                href = "/clinic?" + urlencode({"player_id": item.player_id})
+            save_items.append(
+                f'<li><a class="save-link" href="{_esc(href)}"><strong>{_esc(label)}</strong><span>{_esc(detail)}</span></a></li>'
+            )
+        restored = "".join(save_items) or "<li>尚无调查档案</li>"
+        notice_html = f'<p class="notice">{_esc(notice)}</p>' if notice else ""
+        body = f"""<h2>进入志怪异案调查</h2><p>你将与一名自主 NPC 组成调查搭档，共同调查异事。</p>{notice_html}<div class="grid"><section class="card"><h3>创建玩家档案</h3><form method="post" action="/players"><label>玩家名 <input name="display_name" maxlength="40" required></label><input type="hidden" name="operation_id" value="{self._token()}"><button>创建并进入</button></form></section><section class="card"><h3>恢复调查档案</h3><ul class="save-list">{restored}</ul></section></div><p>直接输入想说的话即可，调查进度会自动保存。</p>"""
         self._send(200, _page("开始", body))
 
     def _home(self, player_id):
@@ -486,9 +693,44 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
         service = self.server.clinic_service._service(player_id)
         if not case_id:
             view = self.server.clinic_service.home(player_id)
-            labels={"not_started":"未开始","active":"调查中","completed":"已完成"}
-            cards = "".join(f'<section class="card"><h3>{_esc(item.title)}</h3><p>{_esc(item.synopsis)}</p><p><strong>难度：</strong>异象案</p><p class="status">状态：{_esc(labels.get(item.status,item.status))}</p>{"<p class=\"recommended\">调查建议</p>" if item.recommended else ""}<form method="post" action="/cases/start"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="case_id" value="{_esc(item.case_id)}"><input type="hidden" name="operation_id" value="{self._token()}"><button>{"继续调查" if item.status=="active" else "接案"}</button></form></section>' for item in view.visible_cases)
-            self._send(200, _page("异案大厅", self._nav(player_id) + '<h2>志怪异案选案大厅</h2><p>同行 NPC 的调查建议仅供参考，六案均可选择。</p><div class="case-grid">' + cards + "</div>"))
+            active_case_id=next(
+                (item.case_id for item in view.visible_cases if item.status == "active"),
+                None,
+            )
+            labels={"available":"可接案","active":"当前调查","completed":"已完成"}
+            cards = ""
+            for item in view.visible_cases:
+                if item.status == "active" and item.active_session_id:
+                    action = "/cases/resume"
+                    session_input = f'<input type="hidden" name="session_id" value="{_esc(item.active_session_id)}">'
+                    button_label = "继续调查"
+                    card_modifier = " case-card-active"
+                    action_html = f'''<form method="post" action="{action}"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="case_id" value="{_esc(item.case_id)}">{session_input}<input type="hidden" name="operation_id" value="{self._token()}"><button>{button_label}</button></form>'''
+                elif item.status == "completed":
+                    card_modifier = " case-card-completed"
+                    action_html = '<button type="button" disabled>案件已完成</button>'
+                elif active_case_id is not None:
+                    card_modifier = " case-card-locked"
+                    action_html = '<button type="button" disabled>先完成当前案件</button>'
+                else:
+                    card_modifier = ""
+                    action_html = f'''<form method="post" action="/cases/start"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="case_id" value="{_esc(item.case_id)}"><input type="hidden" name="operation_id" value="{self._token()}"><button>接案</button></form>'''
+                visible_status=(
+                    "等待当前案件完成"
+                    if item.status == "available" and active_case_id is not None
+                    else labels.get(item.status, "状态已更新")
+                )
+                recommended_html=(
+                    '<span class="recommended">搭档建议</span>'
+                    if item.recommended and active_case_id is None else ""
+                )
+                cards += f'''<section class="card case-card{card_modifier}"><h3>{_esc(item.title)}</h3><p class="case-synopsis">{_esc(item.synopsis)}</p><div class="case-meta"><span class="case-type">类型：异象案</span><span class="status-badge">{_esc(visible_status)}</span>{recommended_html}</div><div class="case-footer">{action_html}</div></section>'''
+            lobby_intro=(
+                "你已有一桩异案正在调查。完成当前案件后，便可接取其他案件。"
+                if active_case_id is not None
+                else "选择一桩异案，与调查搭档共同查明真相。"
+            )
+            self._send(200, _page("异案大厅", self._nav(player_id) + f'<h2>志怪异案选案大厅</h2><p>{_esc(lobby_intro)}</p><div class="case-grid">' + cards + "</div>"))
             return
         if not session_id:
             raise ClinicError("session_required", "缺少案件进度。")
@@ -505,14 +747,14 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
         embedded=f'''<div class="case-workspace"><section class="card"><h3>调查提纲</h3><ul>{stage_html}</ul></section><section class="card"><h3>案中人物对话</h3><p>在下方输入框中说明交谈对象和要核对的事实。</p></section></div>'''
         body=body.replace(f'<h2>{_esc(observation.title)}</h2>',f'<h2>{_esc(observation.title)}</h2>'+embedded)
         participants=case_participants(case_id);names={x.participant_id:x.display_name for x in participants}|{"player":"你"}
-        empty_dialogue='<p class="notice">尚未开始交谈。默认交谈对象为当前案中人物；与调查搭档协作请使用上方协作框。</p>'
+        empty_dialogue='<p class="notice">尚未与案中人物交谈。这里用于询问当前案件中的人物；与调查搭档商议行动请使用上方协作框。</p>'
         bubbles="".join(f'<article class="bubble {_esc(msg.message_type)}"><strong>{_esc(names.get(msg.speaker_id,"系统"))}</strong><p>{_esc(msg.public_text)}</p></article>' for msg in dialogue.recent_messages) or empty_dialogue
         options=''.join(f'<option value="@{_esc(x.display_name)} "></option>' for x in participants)
         current=names.get(dialogue.current_target,"请选择")
-        chat=f'''<section class="chat"><p>当前交谈对象：<strong>{_esc(current)}</strong></p><div class="chat-log">{bubbles}</div><form class="composer" method="post" action="/cases/chat"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="case_id" value="{_esc(case_id)}"><input type="hidden" name="session_id" value="{_esc(session_id)}"><input type="hidden" name="operation_id" value="{self._token()}"><textarea name="message" rows="3" list="case-recipients" required placeholder="与案中人物交谈；与调查搭档协作请使用上方协作框"></textarea><datalist id="case-recipients">{options}</datalist><button>发送</button></form></section>'''
+        chat=f'''<section class="card chat"><h3>与案中人物交谈</h3><p>当前人物：<strong>{_esc(current)}</strong></p><div class="chat-log">{bubbles}</div><form class="composer" method="post" action="/cases/chat"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="case_id" value="{_esc(case_id)}"><input type="hidden" name="session_id" value="{_esc(session_id)}"><input type="hidden" name="operation_id" value="{self._token()}"><textarea name="message" rows="3" list="case-recipients" required placeholder="询问案中人物；例如：@{_esc(current)} 请说说你最后一次见到异常的经过。"></textarea><datalist id="case-recipients">{options}</datalist><button>询问案中人物</button></form></section>'''
         chat=chat.replace('<textarea name="message" rows="3" list="case-recipients"','<input name="message" list="case-recipients"').replace('</textarea><datalist','><datalist')
         drawers=f'''<section class="drawers"><details class="card"><summary>调查提纲与进度</summary><ul>{stage_html}</ul></details><details class="card"><summary>已发现线索</summary><ul>{clues}</ul></details><details class="card"><summary>案中人物</summary><ul>{''.join(f'<li>{_esc(x.display_name)}</li>' for x in participants)}</ul></details><details class="card"><summary>辨证与处置</summary><p>达到规则要求后，下方将显示可提交入口。</p></details></section>'''
-        query=self._query();npc_reply=query.get("npc_reply","");disposition=query.get("suggestion_disposition","")
+        query=self._query();player_text=query.get("player_text","");npc_reply=query.get("npc_reply","");disposition=query.get("suggestion_disposition","")
         suggestion_explanation=query.get("suggestion_explanation","");npc_action=query.get("npc_action","")
         environment_feedback=query.get("environment_feedback","");confirmation_id=query.get("confirmation_id","")
         decision_id=query.get("decision_id","");authority_mode=query.get("authority_mode","")
@@ -520,21 +762,30 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
         runtime_kind=query.get("runtime_kind","");debug_tool_name=query.get("debug_tool_name","")
         llm_attempts=query.get("llm_attempts","");llm_used_fallback=query.get("llm_used_fallback","")=="1"
         llm_repair_kind=query.get("llm_repair_kind","")
+        disposition_labels={
+            "accept":"已采纳",
+            "partial_accept":"部分采纳",
+            "reject":"未采纳",
+            "request_more_evidence":"需要更多证据",
+            "propose_alternative":"提出替代方案",
+        }
+        disposition_label=disposition_labels.get(disposition,"已回应")
         if runtime_kind=="deterministic_fallback":
-            npc_runtime_notice="离线确定性模式：本轮未调用语言模型。"
+            npc_runtime_notice="调查搭档已依据现场线索完成本轮判断。"
         elif llm_used_fallback:
-            npc_runtime_notice="LLM 本轮未能产生有效决策，NPC 已安全停步，未执行工具。"
+            npc_runtime_notice="调查搭档暂时无法形成可靠判断，已停止本轮行动，现场状态未改变。"
         elif llm_repair_kind:
-            npc_runtime_notice="LLM 输出经结构化修复后通过验证。"
+            npc_runtime_notice="调查搭档已核对并完成本轮判断。"
         elif runtime_kind=="real_llm":
-            npc_runtime_notice="LLM Agent 已完成本轮受约束决策。"
+            npc_runtime_notice="调查搭档已完成本轮判断。"
         else:
-            npc_runtime_notice="当前 NPC 运行状态未标识。"
+            npc_runtime_notice="调查搭档已完成本轮处理。"
         goal_changed=query.get("goal_changed","")=="1";plan_changed=query.get("plan_changed","")=="1"
         contribution_id=query.get("contribution_id","")
         memory_public_effect=query.get("memory_public_effect","")
         memory_accepted_ids=query.get("memory_accepted_used_ids","")
-        memory_effect_html=(f'<p class="notice"><strong>过往经验：</strong>{_esc(memory_public_effect)}</p>' if memory_public_effect and memory_accepted_ids else "")
+        memory_player_copy=memory_public_effect.replace("NPC ","搭档").replace("NPC","搭档")
+        memory_effect_html=(f'<p class="notice"><strong>过往经验：</strong>{_esc(memory_player_copy)}</p>' if memory_player_copy and memory_accepted_ids else "")
         memory_debug_html=(
             f'<p>memory retrieval status：{_esc(query.get("memory_retrieval_status","") or "none")}</p>'
             f'<p>retrieval ID：{_esc(query.get("memory_retrieval_id","") or "none")}</p>'
@@ -552,11 +803,7 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
             f'<p>written memory IDs：{_esc(query.get("memory_written_ids",""))}</p>'
         )
         reflection_written_ids=query.get("reflection_written_memory_ids","")
-        reflection_learning_html=(
-            f'<p class="notice"><strong>经验沉淀：</strong>{_esc(query.get("public_consolidation_summary",""))}</p>'
-            if reflection_written_ids and query.get("public_consolidation_summary","")
-            else ""
-        )
+        reflection_learning_html=""
         reflection_debug_html=(
             f'<p>reflection trigger type：{_esc(query.get("reflection_trigger_type","") or "none")}</p>'
             f'<p>reflection trigger ID：{_esc(query.get("reflection_trigger_id","") or "none")}</p>'
@@ -581,7 +828,6 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
                 agent_state=None
             if agent_state is not None:
                 goal=agent_state.current_goal;plan=agent_state.current_plan
-                goal_type=GOAL_TYPE_LABELS[goal.goal_type];goal_status=GOAL_STATUS_LABELS[goal.status]
                 plan_items="";current_step="";plan_debug="<p>plan：none</p>"
                 if plan is not None:
                     for step in plan.steps:
@@ -593,33 +839,146 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
                 evaluation=agent_state.last_plan_evaluation
                 evaluation_html="";evaluation_debug="<p>evaluation：none</p>"
                 if evaluation is not None:
-                    evaluation_label=PLAN_EVALUATION_LABELS[evaluation.outcome]
                     if evaluation.outcome is PlanEvaluationOutcome.COMPLETE_GOAL:
-                        evaluation_html='<p class="notice"><strong>当前目标已完成。</strong></p>'
-                    else:
-                        evaluation_html=f'<p><strong>计划状态：</strong>{_esc(evaluation_label)}</p><p><strong>原因：</strong>{_esc(evaluation.public_summary)}</p>'
+                        evaluation_html='<p class="notice"><strong>当前调查目标已经完成。</strong></p>'
                     evaluation_debug=f'<p>evaluation outcome：{_esc(evaluation.outcome.value)}</p><p>evaluation reason：{_esc(evaluation.reason_code.value)}</p><p>observation revision：{evaluation.observation_revision_after}</p>'
                 player_changed=(goal_changed and goal.source_contribution_id==contribution_id) or (plan_changed and plan is not None and plan.source_contribution_id==contribution_id)
-                changed_html='<p class="notice">NPC 根据你的建议调整了调查计划。</p>' if player_changed else ''
-                memory_plan_html='<p class="notice">NPC 根据过往经验调整了调查计划。</p>' if memory_public_effect and memory_accepted_ids and plan_changed else ''
-                planning_card=f'''<section class="card npc-thinking"><h3>NPC 当前思路</h3><p><strong>当前目标：</strong>{_esc(goal.public_description)}</p><p><strong>方向：</strong>{_esc(goal_type)} · <strong>状态：</strong>{_esc(goal_status)}</p>{f'<h4>当前计划</h4><ul>{plan_items}</ul>' if plan_items else '<p>当前计划尚待形成。</p>'}{f'<p class="notice"><strong>NPC 当前准备：</strong>{_esc(current_step)}</p>' if current_step else ''}{changed_html}{memory_plan_html}{evaluation_html}<details><summary>开发信息</summary><p>goal ID：{_esc(goal.goal_id)}</p><p>goal revision：{goal.revision}</p>{plan_debug}{evaluation_debug}<p>runtime：{_esc(runtime_kind or 'unknown')}</p>{memory_debug_html}</details></section>'''
+                changed_html='<p class="notice">搭档已根据你的建议更新调查计划。</p>' if player_changed else ''
+                memory_plan_html='<p class="notice">搭档参考过往经验调整了调查顺序。</p>' if memory_public_effect and memory_accepted_ids and plan_changed else ''
+                full_plan_html=(
+                    f'<details class="plan-details"><summary>查看完整计划</summary><ul>{plan_items}</ul></details>'
+                    if plan_items else '<p>调查计划尚待形成。</p>'
+                )
+                planning_card=f'''<section class="card npc-thinking"><h3>搭档的调查计划</h3><p><strong>当前目标：</strong>{_esc(goal.public_description)}</p>{f'<p class="next-step"><strong>下一步：</strong>{_esc(current_step)}</p>' if current_step else ''}{changed_html}{memory_plan_html}{evaluation_html}{full_plan_html}</section>'''
+        def render_cooperative_turn(
+            *,
+            turn_player_text,
+            turn_npc_reply,
+            turn_disposition,
+            turn_explanation,
+            turn_action,
+            turn_feedback,
+            turn_runtime,
+            turn_attempts,
+            turn_repair,
+            turn_capability,
+            turn_raw_tool,
+            turn_rationale,
+            turn_fallback,
+            turn_memory_html="",
+            turn_reflection_html="",
+            turn_debug_html="",
+        ):
+            player_turn_html=(
+                f'<article class="turn-message turn-message-player" aria-label="你说"><div class="turn-message-body"><span class="turn-speaker">你</span><p class="turn-bubble">{_esc(turn_player_text)}</p></div><div class="turn-avatar" aria-hidden="true">你</div></article>'
+                if turn_player_text else ""
+            )
+            partner_avatar=(
+                '<button class="turn-avatar turn-avatar-button" type="button" aria-label="查看搭档的判断" aria-haspopup="dialog" onclick="showPartnerAssessment(this)">伴</button>'
+                if turn_disposition else '<div class="turn-avatar" aria-hidden="true">伴</div>'
+            )
+            npc_turn_html=(
+                f'<article class="turn-message turn-message-partner" aria-label="调查搭档说">{partner_avatar}<div class="turn-message-body"><span class="turn-speaker">调查搭档</span><p class="turn-bubble">{_esc(_player_copy(turn_npc_reply, action_label=turn_action))}</p></div></article>'
+                if turn_npc_reply else ""
+            )
+            suggestion_player_copy=_player_copy(
+                turn_explanation, action_label=turn_action
+            )
+            turn_disposition_label=disposition_labels.get(
+                turn_disposition, "已回应"
+            )
+            assessment_html=(
+                f'<div class="turn-assessment-data" hidden><span class="decision-chip">{_esc(turn_disposition_label)}</span><p>{_esc(suggestion_player_copy)}</p></div>'
+                if turn_disposition else ""
+            )
+            action_heading = {
+                "reject": "搭档改为调查：",
+                "propose_alternative": "搭档改为调查：",
+                "request_more_evidence": "搭档先行调查：",
+            }.get(turn_disposition, "采取行动：")
+            action_html=(
+                f'<p class="turn-action"><strong>{action_heading}</strong>{_esc(_player_copy(turn_action))}</p>'
+                if turn_action else ""
+            )
+            discovery_title=(
+                "发现新线索"
+                if "发现" in turn_feedback
+                else "现场反馈"
+            )
+            discovery_html=(
+                f'<section class="discovery"><h4>{discovery_title}</h4><p>{_esc(_player_copy(turn_feedback))}</p></section>'
+                if turn_feedback else ""
+            )
+            fallback_html=(
+                '<p class="notice">调查搭档暂时无法形成可靠判断，已停止本轮行动，现场状态未改变。</p>'
+                if turn_fallback else ""
+            )
+            return f'''<section class="cooperative-turn"><div class="turn-dialogue">{player_turn_html}{npc_turn_html}</div>{assessment_html}{action_html}{discovery_html}{turn_memory_html}{turn_reflection_html}{fallback_html}</section>'''
+
         cooperative_result=""
-        if npc_reply or disposition or environment_feedback:
-            cooperative_result=f'''<section class="card"><h3>NPC 协作结果</h3><p class="notice"><strong>运行状态：</strong>{_esc(npc_runtime_notice)}</p>{f'<p><strong>建议评价：</strong>{_esc(disposition)} · {_esc(suggestion_explanation)}</p>' if disposition else ''}{f'<p><strong>NPC 回应：</strong>{_esc(npc_reply)}</p>' if npc_reply else ''}{memory_effect_html}{reflection_learning_html}{f'<p><strong>采取行动：</strong>{_esc(npc_tool_public)}</p>' if npc_tool_public else ''}{f'<p><strong>行动依据：</strong>{_esc(npc_rationale)}</p>' if npc_rationale else ''}{f'<p><strong>环境反馈：</strong>{_esc(environment_feedback)}</p>' if environment_feedback else ''}<details><summary>开发信息</summary><p>runtime：{_esc(runtime_kind or 'unknown')}</p><p>LLM attempts：{_esc(llm_attempts or 'none')}</p><p>repair：{_esc(llm_repair_kind or 'none')}</p><p>capability：{_esc(npc_action)}</p><p>raw tool：{_esc(debug_tool_name or 'none')}</p>{memory_debug_html}{reflection_debug_html}</details></section>'''
+        stored_turns=self.server.clinic_service.cooperative_turn_history(
+            player_id, case_id, session_id
+        )
+        if stored_turns:
+            rendered_turns=[]
+            for stored_contribution, stored_result in stored_turns:
+                stored_evaluation=(
+                    stored_result.decision.proposal.contribution_evaluation
+                )
+                stored_trace=stored_result.memory_usage_trace
+                stored_memory_html=(
+                    f'<p class="notice"><strong>过往经验：</strong>{_esc(stored_result.public_memory_effect_summary.replace("NPC ","搭档").replace("NPC","搭档"))}</p>'
+                    if stored_result.public_memory_effect_summary
+                    and stored_trace is not None
+                    and stored_trace.accepted_used_memory_ids else ""
+                )
+                stored_reflection_html=""
+                rendered_turns.append(render_cooperative_turn(
+                    turn_player_text=stored_contribution.public_text,
+                    turn_npc_reply=stored_result.decision.proposal.action.dialogue,
+                    turn_disposition=(stored_evaluation.disposition.value if stored_evaluation else ""),
+                    turn_explanation=(stored_evaluation.explanation if stored_evaluation else ""),
+                    turn_action=stored_result.selected_public_target or "",
+                    turn_feedback=stored_result.environment_message or "",
+                    turn_runtime=stored_result.runtime_kind.value,
+                    turn_attempts=str(stored_result.decision.llm_attempts),
+                    turn_repair=stored_result.decision.repair_kind or "",
+                    turn_capability=stored_result.decision.proposal.capability.value,
+                    turn_raw_tool=(stored_result.selected_tool.value if stored_result.selected_tool else ""),
+                    turn_rationale=stored_result.public_rationale,
+                    turn_fallback=stored_result.decision.used_fallback,
+                    turn_memory_html=stored_memory_html,
+                    turn_reflection_html=stored_reflection_html,
+                ))
+            cooperative_result="".join(rendered_turns)
+        elif npc_reply or disposition or environment_feedback:
+            cooperative_result=render_cooperative_turn(
+                turn_player_text=player_text,
+                turn_npc_reply=npc_reply,
+                turn_disposition=disposition,
+                turn_explanation=suggestion_explanation,
+                turn_action=npc_tool_public,
+                turn_feedback=environment_feedback,
+                turn_runtime=runtime_kind,
+                turn_attempts=llm_attempts,
+                turn_repair=llm_repair_kind,
+                turn_capability=npc_action,
+                turn_raw_tool=debug_tool_name,
+                turn_rationale=npc_rationale,
+                turn_fallback=llm_used_fallback,
+                turn_memory_html=memory_effect_html,
+                turn_reflection_html=reflection_learning_html,
+                turn_debug_html=memory_debug_html+reflection_debug_html,
+            )
         confirmation=""
         if confirmation_id and decision_id:
             label="同意诊断提议" if authority_mode=="proposal_only" else "确认高风险处置"
             hidden=f'<input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="case_id" value="{_esc(case_id)}"><input type="hidden" name="session_id" value="{_esc(session_id)}"><input type="hidden" name="confirmation_id" value="{_esc(confirmation_id)}"><input type="hidden" name="decision_id" value="{_esc(decision_id)}">'
-            confirmation=f'''<section class="card notice"><h3>需要玩家协商</h3><p>该行动尚未执行。NPC 会在你回应后依据最新案件状态再次判断。</p><form method="post" action="/cases/cooperate/respond">{hidden}<input type="hidden" name="operation_id" value="{self._token()}"><input type="hidden" name="response" value="approve"><button>{label}</button></form><form method="post" action="/cases/cooperate/respond">{hidden}<input type="hidden" name="operation_id" value="{self._token()}"><input type="hidden" name="response" value="reject"><button>拒绝并要求替代方案</button></form></section>'''
-        configured_runtime=getattr(self.server.clinic_service.game_npc_agent,"runtime_kind",None)
-        memory_mode=self.server.clinic_service.memory_mode
-        configured_notice=(
-            f"当前调查搭档：LLM GameNPCAgent；长期 Memory {'已启用语义检索' if memory_mode == 'semantic' else '已禁用'}；Reflection {'已启用' if self.server.clinic_service.reflection_service is not None else '未启用'}。"
-            if getattr(configured_runtime,"value",None)=="real_llm"
-            else f"当前调查搭档：离线确定性 NPC（未调用语言模型）；长期 Memory {'已启用语义检索' if memory_mode == 'semantic' else '已禁用'}。"
-        )
-        cooperative_form=f'''<section class="card"><h3>与调查搭档协作</h3><p class="notice">{_esc(configured_notice)}</p><form method="post" action="/cases/cooperate"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="case_id" value="{_esc(case_id)}"><input type="hidden" name="session_id" value="{_esc(session_id)}"><input type="hidden" name="operation_id" value="{self._token()}"><select name="contribution_type"><option value="suggestion">建议调查方向</option><option value="hypothesis">提出假设</option><option value="challenge">质疑 NPC</option><option value="evidence_interpretation">解释证据</option><option value="question">询问判断</option></select><textarea name="text" rows="3" required placeholder="表达你的假设或建议；NPC 会独立评价并决定具体行动。"></textarea><button>与 NPC 讨论并推进</button></form><small>你的输入是建议或判断，不会由页面直接转换为工具调用。</small></section>'''
-        body=f'''{self._nav(player_id)}<h2>{_esc(observation.title)}</h2><p>{_esc(observation.synopsis)}</p>{cooperative_form}{planning_card}{cooperative_result}{confirmation}{chat}{drawers}'''
+            confirmation=f'''<section class="card notice"><h3>需要你的决定</h3><p>该行动尚未执行。搭档会在你回应后依据最新案件状态再次判断。</p><form method="post" action="/cases/cooperate/respond">{hidden}<input type="hidden" name="operation_id" value="{self._token()}"><input type="hidden" name="response" value="approve"><button>{label}</button></form><form method="post" action="/cases/cooperate/respond">{hidden}<input type="hidden" name="operation_id" value="{self._token()}"><input type="hidden" name="response" value="reject"><button>拒绝并要求替代方案</button></form></section>'''
+        configured_notice="调查搭档已就绪，将独立评估你的建议，并结合已有线索推进调查。"
+        cooperative_empty='''<div class="cooperative-empty"><p>还没有聊天记录。<br>在下方告诉调查搭档你的判断或调查方向。</p></div>'''
+        cooperative_form=f'''<section class="card cooperative-card"><h3>与调查搭档协作</h3><p class="notice">{_esc(configured_notice)}</p><div class="cooperative-log" id="turn-result" aria-live="polite">{cooperative_result or cooperative_empty}</div><form class="cooperative-composer" method="post" action="/cases/cooperate" onsubmit="return submitCooperativeForm(this,event)"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="case_id" value="{_esc(case_id)}"><input type="hidden" name="session_id" value="{_esc(session_id)}"><input type="hidden" name="operation_id" value="{self._token()}"><div class="cooperative-input-row"><textarea name="text" rows="3" required placeholder="可以聊天、询问案情，或明确说出想调查什么。"></textarea><button>发送</button></div></form><small class="cooperative-hint">像聊天一样直接输入即可。普通聊天和提问不会推进案件；明确提出检查、询问或观察等行动后，搭档才会执行下一步。</small></section>'''
+        body=f'''{self._nav(player_id)}<h2>{_esc(observation.title)}</h2><p>{_esc(observation.synopsis)}</p>{cooperative_form}{confirmation}{planning_card}{chat}{drawers}'''
         if observation.can_submit_diagnosis:
             evidence = ",".join(item.clue_id for item in observation.discovered_clues)
             body += f'<details class="card"><summary>Manual / baseline：直接提交辨证</summary><form method="post" action="/cases/action"><input type="hidden" name="player_id" value="{_esc(player_id)}"><input type="hidden" name="case_id" value="{_esc(case_id)}"><input type="hidden" name="session_id" value="{_esc(session_id)}"><input type="hidden" name="operation_id" value="{self._token()}"><input type="hidden" name="action_type" value="diagnosis"><input type="hidden" name="evidence_clue_ids" value="{_esc(evidence)}"><select name="selection_id">{diagnoses}</select><button>提交辨证</button></form></details>'
@@ -630,6 +989,32 @@ class ClinicRequestHandler(BaseHTTPRequestHandler):
 
     def _error(self, status, message):
         self._send(status, _page("安全错误", f'<h2 class="error">无法完成</h2><p>{_esc(message)}</p><p><a href="/">返回开始页</a></p>'))
+
+    def _wait_for_operation(self, query):
+        token = query.get("operation_id", "")
+        if not re.fullmatch(r"op_[A-Za-z0-9_-]{1,120}", token):
+            raise ClinicError("operation_required", "操作令牌无效，请返回案件页面重试。")
+        player_id = self._player_id(query)
+        case_id = query.get("case_id", "")
+        session_id = query.get("session_id", "")
+        completed_location = self.server.operation_results.get(token)
+        if completed_location:
+            self._redirect(completed_location)
+            return
+        case_location = "/cases?" + urlencode({
+            "player_id": player_id,
+            "case_id": case_id,
+            "session_id": session_id,
+        })
+        body = (
+            self._nav(player_id)
+            + '<section class="card"><h2>调查搭档正在思考</h2>'
+            + '<p class="notice">你的消息已经收到，正在结合现场线索形成回答。请稍候，本页会自动返回案件。</p>'
+            + '<p>请不要重复提交，也不需要重新选择玩家。</p>'
+            + f'<p><a href="{_esc(case_location)}">立即返回案件</a></p></section>'
+            + '<script>setTimeout(function(){window.location.reload()},1500)</script>'
+        )
+        self._send(200, _page("搭档思考中", body))
 
 
 def build_parser():
@@ -646,6 +1031,18 @@ def build_parser():
     parser.add_argument("--memory-batch-size", type=int, default=8)
     parser.add_argument("--confirm-paid-agent",action="store_true")
     parser.add_argument("--agent-budget-cny")
+    parser.add_argument(
+        "--cooperative-record",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="启用协作回合账本、幂等保护和历史记录（默认启用）",
+    )
+    parser.add_argument(
+        "--cooperative-context-v2",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="启用 CE-2A 协作上下文（默认启用，依赖协作记录）",
+    )
     return parser
 
 
@@ -695,6 +1092,8 @@ def main(argv=None):
                 memory_index_service=memory_index_service,
                 memory_mode=memory_mode,
                 reflection_service=reflection_service,
+                cooperative_record_enabled=args.cooperative_record,
+                cooperative_context_v2_enabled=args.cooperative_context_v2,
             )
             server = ClinicHTTPServer((args.host, args.port), service)
             host, port = server.server_address
@@ -702,6 +1101,8 @@ def main(argv=None):
             print(f"NPC mode={args.npc_mode}", flush=True)
             print(f"Memory mode={memory_mode}", flush=True)
             print(f"Reflection mode={'enabled' if reflection_service is not None else 'disabled'}", flush=True)
+            print(f"Cooperative record={'enabled' if args.cooperative_record else 'disabled'}", flush=True)
+            print(f"Cooperative context v2={'enabled' if args.cooperative_context_v2 else 'disabled'}", flush=True)
             try:
                 server.serve_forever(poll_interval=0.1)
             except KeyboardInterrupt:

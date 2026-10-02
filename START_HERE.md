@@ -20,6 +20,8 @@ New-Item -ItemType Directory -Force .\runtime_data\clinic | Out-Null
 
 启动前在项目根目录的 `.env` 中配置 `DEEPSEEK_API_KEY`。LLM 配置、模型发现、授权或预算校验失败时程序会拒绝启动，不会静默切换到离线 NPC。
 
+正式 CLI 默认启用协作回合记录与 CE-2A 上下文。若需要回滚上下文策略，可使用 `--no-cooperative-context-v2` 保留记录但停止历史注入；若要同时关闭两者，必须同时传入 `--no-cooperative-context-v2 --no-cooperative-record`。
+
 仅用于离线、测试或调试的显式模式：
 
 ```powershell

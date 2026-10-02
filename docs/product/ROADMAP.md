@@ -17,9 +17,9 @@
 - 请求、修复、provider ID、usage、费用、Trace 和不可变 artifact 遥测；
 - A0 `SimpleActionGameNPCAgent` 与 A1 `GameNPCAgent` 两个真实模型入口，以及共享的安全执行链；
 - 评测冻结哈希、唯一调度、预检、分池预算、停止门控和离线重评分基础设施；
-- 当前工作区 590 项 pytest 回归通过。
+- 已建立覆盖案件、协作运行时、Planning、Context、Memory、Reflection 与 Evaluation 的回归套件；各历史报告中的通过数量只属于对应轮次，当前状态不以一个可能过期的累计数字表示。
 
-恢复能力的准确边界是：**支持权威状态快照、事件回放、记忆投影对账和部分故障恢复。pending confirmation 重启恢复、严格的同 session 原子并发以及部分跨存储恢复路径仍未完成。**
+恢复能力的准确边界是：**支持权威状态快照、事件回放、记忆投影对账、正常单进程同 Session 串行化和部分故障恢复。pending confirmation 重启恢复、跨进程同 Session 原子并发以及部分跨存储恢复路径仍未完成。**
 
 ## Frozen / Evaluation Status
 
@@ -47,10 +47,10 @@
 
 ### 状态、一致性与恢复
 
-- **Same-session atomic concurrency**：当前 revision 检查和文件替换不是数据库级原子 CAS；还没有证明并发旧 revision 请求只能提交一次或严格排序。
+- **Cross-process same-session concurrency**：正常单进程产品入口已用共享 Session `RLock` 串行化完整读改写链，并通过不同 operation 并发提交测试证明不会发生线程级 lost update；但该锁不跨进程，直接 Store 写也可绕过它，JSON revision 检查和文件替换仍不是数据库级原子 CAS。
 - **Pending confirmation restart restoration**：pending 主要保存在进程内，重启后不能完整恢复原确认 ID、动作摘要、owner 和失效语义。
 - **Complete cross-store recovery**：world、AgentState 与 SQLite memory 分开提交；部分对账已经实现，完整的故障注入、重启修复和不重复副作用证据链尚未闭环。
-- **Concurrency/crash drills**：尚未系统执行并发竞争、各提交边界崩溃、重启和恢复演练。
+- **Concurrency/crash drills**：已完成同 Session 不同 operation 线程竞争、原子替换后抛错、post-commit Observation/PlanEvaluator 失败和重启禁止盲重放等定向故障注入；尚未覆盖多进程竞争及所有提交边界的系统矩阵。
 
 ### 模型与能力证据
 
@@ -73,7 +73,7 @@
 
 1. 对齐 A0/A1 的公开 action space、参数契约和修复反馈，冻结新的 C-only 配对评测；
 2. 修复 schema 失败响应的 usage 保留与 artifact 汇总，再执行完整可重评分验证；
-3. 为同 session 引入可证明的串行化或原子事务边界，并完成冲突注入；
+3. 在已完成单进程 Session 串行化与冲突注入的基础上，引入跨进程单写者或数据库原子 CAS，并覆盖直接 Store 写边界；
 4. 持久化 pending confirmation，并验证重启后的匹配、过期和失效行为；
 5. 完成 world / AgentState / memory 各提交边界的故障注入和对账恢复；
 6. 在独立冻结协议下扩展 Memory、Reflection、真实攻击和真人试玩证据。

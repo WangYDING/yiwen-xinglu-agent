@@ -262,6 +262,16 @@ class PlanEvaluation(DomainModel):
         return self
 
 
+class PublicDecisionFeedback(DomainModel):
+    """Safe, one-turn feedback; never a permission or a plan evaluation."""
+    stage: Literal["model", "budget", "planning", "alignment", "action_contract", "authority", "execution"]
+    reason_code: Identifier
+    public_message: NonEmptyText
+    retryable: bool = False
+    related_action_id: Identifier
+    observation_revision: Annotated[StrictInt, Field(ge=0)]
+
+
 class CooperativeAgentState(DomainModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -273,6 +283,7 @@ class CooperativeAgentState(DomainModel):
     current_goal: AgentGoalState
     current_plan: AgentPlan | None = None
     last_plan_evaluation: PlanEvaluation | None = None
+    last_decision_feedback: PublicDecisionFeedback | None = None
     revision: Annotated[StrictInt, Field(ge=1)]
     updated_turn_id: Identifier
 

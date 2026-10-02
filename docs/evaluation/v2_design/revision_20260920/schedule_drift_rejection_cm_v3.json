@@ -1,0 +1,7 @@
+{
+  "schema_version": "v2.1_schedule_drift_rejection_v3",
+  "tamper": "swap first two frozen C entries",
+  "rejected": true,
+  "provider_initialization_reached": false,
+  "error": "schedule order differs from canonical at index 0"
+}

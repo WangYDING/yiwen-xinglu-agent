@@ -1,0 +1,29 @@
+{
+  "case_id":"c09_three_lock_cistern","title":"三锁水窖","synopsis":"每一步调查都依赖上一阶段公开证据。","difficulty":3,
+  "patient":{"patient_id":"keeper_c09","display_name":"窖守老谭","public_profile":"靠近水窖便听见自己的回声提前回答。","hidden_information":["三道锁依次对应水位、铜片与回声核。"]},
+  "root_cause":"forecast_echo_core","causal_chain":["水位标记定位暗格。","暗格铜片显出导声纹。","导声纹指向回声核。","封存回声核解除异常。"],
+  "clues":{
+    "water_marks":{"clue_id":"water_marks","description":"水位痕组成三段重复标记。","is_key":true},
+    "hidden_latch":{"clue_id":"hidden_latch","description":"标记末端对应一处暗格锁舌。","is_key":true},
+    "copper_score":{"clue_id":"copper_score","description":"暗格铜片刻有导声纹。","is_key":true},
+    "core_location":{"clue_id":"core_location","description":"导声纹汇向北壁回声核。","is_key":true}
+  },
+  "investigations":[
+    {"investigation_id":"map_water_marks","action_type":"investigate_location","target_id":"cistern_floor","public_description":"记录水窖地面水位痕。","reveals_clue_ids":["water_marks"],"required_skill_id":"inspect_evidence","minimum_skill_level":0,"required_clue_ids":[]},
+    {"investigation_id":"open_hidden_latch","action_type":"inspect_object","target_id":"north_latch","public_description":"依据水位标记检查暗格锁舌。","reveals_clue_ids":["hidden_latch"],"required_skill_id":"inspect_object","minimum_skill_level":0,"required_clue_ids":["water_marks"]},
+    {"investigation_id":"read_copper_score","action_type":"inspect_object","target_id":"copper_plate","public_description":"打开暗格后读取铜片刻纹。","reveals_clue_ids":["copper_score"],"required_skill_id":"inspect_object","minimum_skill_level":0,"required_clue_ids":["hidden_latch"]},
+    {"investigation_id":"trace_echo_core","action_type":"observe_qi","target_id":"north_wall","public_description":"沿导声纹追踪回声核。","reveals_clue_ids":["core_location"],"required_skill_id":"observe_qi","minimum_skill_level":0,"required_clue_ids":["copper_score"]}
+  ],
+  "diagnosis_candidates":{
+    "forecast_echo_core":{"diagnosis_id":"forecast_echo_core","public_description":"北壁回声核沿铜片导声纹提前回放话语。"},
+    "water_ghost":{"diagnosis_id":"water_ghost","public_description":"水中灵体模仿声音。"},
+    "keeper_delusion":{"diagnosis_id":"keeper_delusion","public_description":"守窖人产生错觉。"}
+  },"valid_diagnosis_ids":["forecast_echo_core"],
+  "treatments":{
+    "isolate_echo_core":{"treatment_id":"isolate_echo_core","public_description":"依导声纹封存北壁回声核。","description":"隔离根因。","outcome":"resolved","required_clue_ids":["water_marks","hidden_latch","copper_score","core_location"]},
+    "drain_cistern":{"treatment_id":"drain_cistern","public_description":"排空水窖。","description":"暂时降低回响。","outcome":"suppressed","required_clue_ids":[]},
+    "shout_into_core":{"treatment_id":"shout_into_core","public_description":"向北壁高声喊话。","description":"增强回声核。","outcome":"worsened","required_clue_ids":[]}
+  },
+  "hints":[{"level":1,"text":"先从地面标记开始。","score_penalty":2},{"level":2,"text":"每条新线索开启下一步。","score_penalty":5},{"level":3,"text":"按水痕、暗格、铜片、北壁顺序。","score_penalty":10}],
+  "scoring":{"key_clue_points":40,"correct_diagnosis_points":30,"correct_treatment_points":30,"unsafe_treatment_penalty":20,"max_score":100}
+}

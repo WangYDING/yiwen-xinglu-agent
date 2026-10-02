@@ -58,7 +58,7 @@ before distributing model weights; this project does not distribute them.
 
 DeepSeek is an optional external API service used only by explicitly authorized
 experiments and the guarded `deepseek-v0` mode. It is not a Python dependency,
-no provider code or model is redistributed, and no API Key is included. Use is
+no model weights or API Key are included. The offline tokenizer data is listed below. Use is
 governed by DeepSeek's current service terms, privacy terms, model availability,
 and pricing rather than this project's Apache-2.0 license.
 
@@ -71,3 +71,10 @@ and pricing rather than this project's Apache-2.0 license.
 The project-owned narrative and documentation rights are described in
 `CONTENT_RIGHTS.md`. Nothing in this inventory relicenses third-party software,
 services, models, or the reserved project content.
+
+## DeepSeek V4 tokenizer data
+
+The unmodified tokenizer JSON from the official API documentation download is included in `src/xuanyi_npc/resources/tokenizer/`. Source, retrieval date and SHA-256 are recorded in `provenance.json`. This attribution does not relicense third-party data under the project license.
+
+Source: https://cdn.deepseek.com/api-docs/deepseek_v4_tokenizer.zip
+Documentation: https://api-docs.deepseek.com/quick_start/token_usage

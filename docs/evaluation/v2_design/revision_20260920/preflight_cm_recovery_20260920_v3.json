@@ -1,0 +1,118 @@
+{
+  "status": "READY",
+  "paid_model_calls": 0,
+  "errors": [],
+  "episode_counts": {
+    "C": 24,
+    "M": 12
+  },
+  "reachability": {
+    "c01_crossed_bell_testimony": {
+      "reachable": true,
+      "investigations": [
+        "compare_bell_recordings",
+        "inspect_west_rope",
+        "question_east_keeper",
+        "question_west_keeper"
+      ],
+      "clues": [
+        "east_testimony",
+        "echo_delay",
+        "orientation_link",
+        "rope_residue",
+        "west_testimony"
+      ],
+      "resolved_treatment_count": 1
+    },
+    "c02_red_ink_decoy": {
+      "reachable": true,
+      "investigations": [
+        "inspect_copper_binding",
+        "inspect_red_ink",
+        "measure_binding_temperature",
+        "observe_touch_sequence"
+      ],
+      "clues": [
+        "cold_binding",
+        "moth_eggs",
+        "ordinary_pigment",
+        "red_ink_stain",
+        "touch_timing"
+      ],
+      "resolved_treatment_count": 1
+    },
+    "c09_three_lock_cistern": {
+      "reachable": true,
+      "investigations": [
+        "map_water_marks",
+        "open_hidden_latch",
+        "read_copper_score",
+        "trace_echo_core"
+      ],
+      "clues": [
+        "copper_score",
+        "core_location",
+        "hidden_latch",
+        "water_marks"
+      ],
+      "resolved_treatment_count": 1
+    },
+    "c10_ink_gate_sequence": {
+      "reachable": true,
+      "investigations": [
+        "compare_damaged_letters",
+        "illuminate_gate_ink",
+        "inspect_right_hinge",
+        "sample_hinge_sand"
+      ],
+      "clues": [
+        "hinge_cavity",
+        "ink_flow",
+        "missing_pattern",
+        "text_drain_sand"
+      ],
+      "resolved_treatment_count": 1
+    }
+  },
+  "bge_preflight": {
+    "python_executable": "E:\\yiwen-xinglu-agent\\yiwen-npc\\.venv\\Scripts\\python.exe",
+    "numpy": "2.4.6",
+    "scipy": "1.18.0",
+    "scikit_learn": "1.9.0",
+    "sentence_transformers": "5.7.0",
+    "embedding_space_id": "bge_m3_142964af7e05_dense_fp32_d1024_cpu_l512_v1",
+    "dimension": 1024,
+    "l2_norm": 1.0,
+    "actual_embedding_computed": true
+  },
+  "schedule_validation": {
+    "canonical_entries": 36,
+    "errors": [],
+    "entrypoints": {
+      "C": {
+        "entries": 24,
+        "matches_frozen": true
+      },
+      "M": {
+        "entries": 12,
+        "matches_frozen": true
+      }
+    }
+  },
+  "a0_shared_runtime_branch": true,
+  "budget": {
+    "currency": "CNY",
+    "non_transferable": true,
+    "expected": {
+      "C": 3.7,
+      "M": 2.5,
+      "total": 6.2
+    },
+    "hard_caps": {
+      "C": 6.0,
+      "M": 4.0,
+      "total": 10.0
+    },
+    "price_snapshot": "fea89d8e2e8022aefa6bde17f45b2f7a2143a031bebf1d82b185d5fe441fb419"
+  }
+}

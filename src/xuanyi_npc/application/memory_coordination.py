@@ -77,7 +77,7 @@ class V1MemoryCoordinator:
                 projections.append(
                     self.memory_repository.write_projection(source, memory)
                 )
-            except MemoryError as exc:
+            except Exception as exc:
                 return MemoryCommitResult(
                     status=MemoryCommitStatus.MEMORY_PROJECTION_PENDING,
                     session_id=result.session.session_id,
@@ -86,7 +86,7 @@ class V1MemoryCoordinator:
                         self._event_source_id(item)
                         for item in result.events[index:]
                     ),
-                    error_code=exc.code,
+                    error_code=getattr(exc, "code", "memory_projection_failed"),
                 )
         return MemoryCommitResult(
             status=MemoryCommitStatus.COMPLETE,

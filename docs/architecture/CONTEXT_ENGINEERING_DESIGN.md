@@ -82,16 +82,16 @@ Runtime 每轮重新恢复公开观察、玩家、Goal/Plan 和可选 Memory 检
 
 历史中的分歧、撤回和改口保留为时间有序的完整回合。旧意见不会被删除，但明确属于历史；当前贡献和当前权威状态位于最后一个 user context 中。普通案中人物对话 `CaseDialogueState.recent_messages` 不会被误接为协作历史。
 
-Memory 只向 A1 提供已经由 Memory 模块隔离和选择的非权威投影；上下文工程不改变检索、写入或纠正语义。Reflection 在回合后由独立服务生成/附加，不能反向改写本轮 snapshot，也不能自行成为权威事实或授权。相关模块的完整设计分别见 [Memory 实现报告](../PHASE_B_MEMORY_IMPLEMENTATION_REPORT.md) 和 [Reflection 实现报告](../PHASE_C_REFLECTION_IMPLEMENTATION_REPORT.md)。
+Memory 只向 A1 提供已经由 Memory 模块隔离和选择的非权威投影；上下文工程不改变检索、写入或纠正语义。Reflection 在回合后由独立服务生成/附加，不能反向改写本轮 snapshot，也不能自行成为权威事实或授权。相关模块的完整设计分别见 [Memory 主文档](MEMORY_DESIGN.md) 和 [Reflection 主文档](REFLECTION_DESIGN.md)。
 
 ## 4. 六个工程维度
 
 | 维度 | 当前机制 | 已验证范围 | 未实现或不能宣称的能力 |
 |---|---|---|---|
-| 选择 | 当前事实、贡献、规划、权限和有效 pending 为必要内容；completed 历史按同 scope、当前 sequence 之前选择 | scope 隔离、当前 contribution 不重复、多个 pending 保留、旧存档空历史 | 没有意图感知选择、相关性重排或统一全请求 token 预算 |
+| 选择 | 当前事实、贡献、规划、权限和有效 pending 为必要内容；completed 历史按同 scope、当前 sequence 之前选择 | scope 隔离、当前 contribution 不重复、多个 pending 保留、旧存档空历史 | 没有意图感知选择；最终 provider 请求已有 tokenizer 预算与确定性裁剪 |
 | 分层 | system 规则、历史非权威消息、当前权威/意图/玩家信念分区；审计 trace 与模型内容分离 | 最终请求角色、标签、schema 和 trace 不泄漏有冻结/专项证据 | 标签不能证明模型一定遵守权威边界，仍需真实模型验证 |
 | 排序 | `system → 完整历史 pair（时间正序）→ 当前 user context`；pending 以 confirmation ID 稳定排序 | A0/A1 首次和修复边界、撤回/改口、C/T 请求差异已离线核对 | 稳定、可重现的顺序不等于经模型实验验证的最优顺序 |
-| 压缩 | 使用公开字段投影，历史按完整 pair 裁剪，省略时只发元数据和重述提示 | O01 和超限测试证明不会截断半个回合，也不伪造被省略内容 | 没有语义摘要、自动压缩或来源回链摘要；公开投影与精简不能冒充语义摘要 |
+| 压缩 | 使用公开字段投影，历史按完整 pair 裁剪，省略时只发元数据和重述提示 | O01 和超限测试证明不会截断半个回合，也不伪造被省略内容 | 没有语义摘要或来源回链摘要；已支持预算驱动的确定性裁剪；公开投影与精简不能冒充语义摘要 |
 | 生命周期管理 | turn 有 started/prepared/completed/failed_before_reply/recovery_required；snapshot 每 operation 一次；completed 才进入历史 | replay、payload conflict、重启历史、过期 pending、完成写失败不重放工具 | pending 授权仍是进程内；无跨进程执行锁、跨存储原子事务或 world exactly-once |
 | 验证 | 请求冻结、adapter 边界捕获、fault injection、ContextBuildTrace、行为 C/T 离线 runner 和有限质量验收 | 可确定请求内容、顺序、来源边界、调用次数和无工具副作用 | 模拟输出不能证明指代理解、改口处理、澄清质量或任务成功率提升 |
 
@@ -104,14 +104,16 @@ Memory 只向 A1 提供已经由 Memory 模块隔离和选择的非权威投影�
 - 从最新 completed turn 向旧选择，恢复为时间正序；下一完整回合超限时，省略该回合及更旧回合，保持连续后缀。
 - omission marker 只给精确省略数量、原因和“必要时请玩家重述”的公开提示，不包含摘要。
 - pending 公开投影有独立 12,000 字符静态上限；所有当前有效项必须完整保留，不能为了腾空间提前消费或只留最新。
-- assembler 还会拒绝超过当前 `PromptText` 静态限制的必要 user context。项目尚无覆盖 messages、schema、provider framing 和输出预留的统一 token 预算，因此完整 CE-3 仍未完成。
+- DeepSeek 发送前由 `prepare_request()` 计算最终 payload 的 messages 内容 tokens，包含 provider 追加的完整 Schema；另预留 framing、输出和安全余量。默认应用窗口 65,536，安全余量 1,024；这不是对 provider 最大窗口的声明。
+- 先移除 Memory 检索诊断字段，再删除最旧完整历史 pair，再按相关度删除整条 Memory；保留当前事实、完整 Goal/Plan、当前贡献、权限、pending 和 contracts。必选内容仍超限则返回 `context_budget_exceeded`，不发网络请求、不预留费用。
+- `ChatMessage` 输入字符保护提高到 2,000,000，避免 20k 输入字符限制先于 token 治理触发；响应 `PromptText` 仍有 20k 字符保护。上游 history/Memory/pending 的局部边界继续保留。
 
 ### 5.2 snapshot 与请求形状
 
 - 首次请求只构建一次历史/pending snapshot；A0/A1 格式修复复用 `original.messages`，不重读状态。
 - 行动契约修复复用同一 Agent input/snapshot，但保持既有 **A0 request shape** 和 `GameNPCDecisionProposal` schema。
-- A1 首次请求明确预留 `max_output_tokens=2048`；A0 首次、两类格式修复和行动契约修复使用 adapter 默认上限，当前为 512。
-- 这些差异是冻结的兼容事实。本模块不以“整理上下文”为由改变输出上限、schema 或调用次数。
+- A1 initial 与 format repair 显式设置 2048；A0 initial/format repair 和 action-contract repair 显式设置 512。通用 `LLMRequest` 允许未设置时使用 adapter 默认值。
+- 历史冻结 fixture 保持不变；测试只迁移显式输出额度断言，仍校验历史消息与 Schema 等价。修复仍有界，不重新读取世界；每次 repair 加入无效输出及反馈后重新检查完整预算。
 
 ### 5.3 pending 与授权
 
@@ -138,7 +140,7 @@ SQLite 协作日志、JSON 世界状态和 Agent state 之间没有跨存储事�
 
 ### 5.6 开关与回滚
 
-两个开关默认都关闭：
+正式 CLI 默认使用 `true/true`，并提供 `--no-cooperative-context-v2` 与 `--no-cooperative-record` 回滚开关。`build_clinic_service()` 的程序化默认值仍为 `false/false`，供测试和显式嵌入组合使用：
 
 | `cooperative_record_enabled` | `cooperative_context_v2_enabled` | 行为 |
 |---:|---:|---|
@@ -202,7 +204,7 @@ CE-0 v1 必须继续表述为“历史请求快照可用，重构前独立来源
 - **CE-3：预算与选择。** 尚未完整实施。只有 CE-2A 局部的完整回合/字符预算和 required-context fail-closed。
 - **CE-4：行为评测。** 离线 harness、预检、盲评材料和安全运行边界已实现；真实模型语义收益评测尚未执行。
 
-CE-2B、统一 token 预算、自动摘要、意图识别、讨论回合、跨进程并发和真实效果评测都不是默认必须继续的待办。只有生产使用暴露了明确、可复现的缺口，或项目确实需要证明上下文带来的模型行为收益时，才重新启动相应阶段，并重新冻结范围和证据身份。
+CE-2B、自动摘要、意图识别、讨论回合、跨进程并发和真实效果评测都不是默认必须继续的待办。只有生产使用暴露了明确、可复现的缺口，或项目确实需要证明上下文带来的模型行为收益时，才重新启动相应阶段，并重新冻结范围和证据身份。
 
 若未来需要 CE-2B，应先单独设计 durable pending 单一授权源、原子 claim/consume/reject、重启恢复和权限回归；若要自动把不确定 operation 恢复为成功，还需先实现所有权威 mutation 入口的 durable operation correlation。若未来需要真实 CE-4，应另行选择并冻结模型、价格、payload 上界、样本和授权；本文不执行这些工作。
 
@@ -242,3 +244,10 @@ CE-2B、统一 token 预算、自动摘要、意图识别、讨论回合、跨�
 ### 验收
 
 - [CE-2A 最终请求上下文有限质量验收](../archive/context_engineering/ce2a_context_quality_acceptance_20260926.md)：代表性最终请求、确定性边界、27 项定向测试及真实模型待验证事项。
+
+
+## 统一 token 预算与公开拒绝反馈（2026-09-27）
+
+实现与限制详见 [TOKEN_BUDGET_DESIGN.md](TOKEN_BUDGET_DESIGN.md)。`ContextBuildTrace` 保持 assembler 字符/字节口径；新增 `ContextBudgetTrace` 记录最终 provider payload 的 tokenizer 计数、framing 估算、输出额度、安全余量、选择结果及 tokenizer/payload 哈希。两者均不进入 Prompt。
+
+`CooperativeAgentState.last_decision_feedback` 独立于 PlanEvaluation。Runtime 对模型输出失败、预算不足、规划/对齐拒绝、行动契约失败、权限拒绝和工具失败写入固定公开反馈。仅在观察 revision 相同时注入下一轮，消费后清除，新失败替换旧反馈；不复制内部异常、不恢复授权。未完成或提交不确定的操作仍走原有故障恢复，不承诺将所有异常返回模型。

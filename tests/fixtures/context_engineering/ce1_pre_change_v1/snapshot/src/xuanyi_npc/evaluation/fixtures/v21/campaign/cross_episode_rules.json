@@ -1,0 +1,17 @@
+{
+  "rules_version": "cross_episode_rules_v1",
+  "projection_version": "campaign_projection_v1",
+  "recommended_case_order": [
+    {"case_id":"c01_crossed_bell_testimony","public_reason":"先核对相互冲突的公开证言。"},
+    {"case_id":"c02_red_ink_decoy","public_reason":"继续区分显眼干扰与真实媒介。"},
+    {"case_id":"c09_three_lock_cistern","public_reason":"按公开前置逐步调查水窖。"},
+    {"case_id":"c10_ink_gate_sequence","public_reason":"按公开依赖核对信件与门轴。"}
+  ],
+  "target_case_contexts": [
+    {"case_id":"c01_crossed_bell_testimony","neutral_reaction":"请并列记录双方证言，再用公开物证核对。"},
+    {"case_id":"c02_red_ink_decoy","neutral_reaction":"请区分醒目标记与可验证的因果媒介。"},
+    {"case_id":"c09_three_lock_cistern","neutral_reaction":"请依据当前可见前置条件逐步调查。"},
+    {"case_id":"c10_ink_gate_sequence","neutral_reaction":"请按当前公开依赖顺序推进。"}
+  ],
+  "rules": []
+}

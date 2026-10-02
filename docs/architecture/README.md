@@ -1,18 +1,32 @@
 # 架构与决策
 
-包含系统权威边界、项目总纲、技术说明和追加式 ADR。当前产品状态以 [`../product/ROADMAP.md`](../product/ROADMAP.md) 为准。
+包含系统权威边界、模块主文档、项目总纲、技术说明和追加式 ADR。当前产品状态以 [`../product/ROADMAP.md`](../product/ROADMAP.md) 为准。
 
-- [上下文工程模块主文档](CONTEXT_ENGINEERING_DESIGN.md)：当前实现、数据流、信息边界、六个工程维度、故障契约、证据和阶段状态的首选入口。当前范围完成到 CE-2A；CE-2B、完整 CE-3 与真实模型语义收益验证暂缓。
+## 模块主文档
 
-以下文件保留为历史或专项证据；当前结论以主文档为准：
+以下八份文档是理解当前实现的首选入口：
 
-- [上下文工程历史文档目录](../archive/context_engineering/README.md)：集中保存以下原始设计、报告、修复与验收记录。
+- [案件与 Campaign](CASE_AND_CAMPAIGN_DESIGN.md)：案件定义、权威执行、评分、Campaign、入口与持久化边界。
+- [协作运行时](COOPERATIVE_RUNTIME_DESIGN.md)：单回合编排、玩家贡献、pending、提交顺序、账本和恢复。
+- [提交一致性与失败安全](COMMIT_CONSISTENCY_DESIGN.md)：world-first 提交、Session 串行、提交三态、入口幂等与恢复边界。
+- [Planning 与行动契约](PLANNING_AND_ACTION_DESIGN.md)：Goal/Plan、公开行动空间、修复、对齐、Authority 与计划评估。
+- [Context Engineering](CONTEXT_ENGINEERING_DESIGN.md)：最终模型请求、信息边界、选择/排序/预算、快照和版本轴。
+- [Memory](MEMORY_DESIGN.md)：权威记录、投影、索引、跨 Session 检索、安全曝光和使用归因。
+- [Reflection](REFLECTION_DESIGN.md)：触发、evidence、生成/修复、consolidation、幂等和失败隔离。
+- [Evaluation](EVALUATION_SYSTEM_DESIGN.md)：冻结身份、执行保障、artifact、版本轴和结论边界。
 
-- [上下文工程 CE-0 / CE-1 实施报告](../archive/context_engineering/context_engineering_ce0_ce1_implementation_report.md)：请求基线、实际数据路径、构建记录、验证结果与 CE-2 前置条件。
-- [上下文工程 CE-0 / CE-1 独立审查](../archive/context_engineering/context_engineering_ce0_ce1_review.md)：基线证据强度、请求覆盖、trace 风险和有保留验收结论。
-- [上下文工程 CE-1.1 实施报告](../archive/context_engineering/context_engineering_ce11_implementation_report.md)：可独立重建的当前工作区基线、trace 语义和 adapter 边界验证。
-- [行动修复后的计划对齐记录](../archive/context_engineering/action_contract_repair_plan_alignment_fix.md)：已复现缺口、执行前复核和回归证据。
-- [上下文工程 CE-2 详细设计](../archive/context_engineering/CONTEXT_ENGINEERING_CE2_DESIGN.md)：已实施的 CE-2A 历史/公开投影与尚未实施的 CE-2B durable pending/授权消费。
-- [上下文工程 CE-2A 实施报告](../archive/context_engineering/context_engineering_ce2a_implementation_report.md)：SQLite 回合日志、完整回合选择、进程内 pending 投影、请求夹具、恢复与保证边界。
-- [CE-2A replay 与 pending 标记修补](../archive/context_engineering/context_engineering_ce2a_replay_fix.md)：completed replay 检查顺序、无效新 pending 生命周期和双 ID 响应标记。
-- [CE-2A 最终请求上下文有限质量验收](../archive/context_engineering/ce2a_context_quality_acceptance_20260926.md)：代表性最终请求与确定性边界验收；不构成真实模型语义收益证明。
+Web/CLI/MCP 是入口适配层，JSON/SQLite 是横切持久化边界，分别在案件、运行时和 Memory 文档中说明，不单独包装成业务模块。全系统关系仍以 [`PRODUCT_SYSTEM_ARCHITECTURE.md`](PRODUCT_SYSTEM_ARCHITECTURE.md) 为准。
+
+## 历史与专项证据
+
+模块主文档描述当前状态；实施报告、修复记录、评测报告保留各自形成时的范围、测试数量和结论，不应被当作当前总状态。
+
+- [上下文工程历史文档目录](../archive/context_engineering/README.md)：集中保存 CE 原始设计、实施、修复、预检和验收。
+- [协作运行时历史目录](../archive/cooperative_runtime/README.md)：M1–M5 综合架构与面试指南。
+- [Planning 与行动契约历史目录](../archive/planning_and_action/README.md)：P0–P5 修复链。
+- [Memory 历史目录](../archive/memory/README.md)：Phase B 与 E9–E10。
+- [Reflection 历史目录](../archive/reflection/README.md)：Phase C 与 E11–E13。
+- [Evaluation 历史目录](../archive/evaluation/README.md)：早期 benchmark、E2–E8 和最终 3×1。
+- [评测历史入口](../evaluation/README.md)：M/E/V2/V2.1、Memory、Reflection 与 Context 行为证据。
+- [第一步提交一致性审计](COMMIT_CONSISTENCY_FAILURE_SAFETY_AUDIT_STEP1.md)：故障注入、修复前反例和当轮测试记录；当前设计口径以模块主文档为准。
+- [产品路线图](../product/ROADMAP.md)：跨模块已实现、评测状态和明确缺口。

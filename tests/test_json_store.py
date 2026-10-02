@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import pytest
@@ -21,6 +22,20 @@ def test_player_state_save_and_load(
 
     assert saved_path.exists()
     assert store.load_player(player_state.player_id) == player_state
+
+
+def test_list_players_accepts_removed_growth_fields(
+    tmp_path: Path,
+    player_state: PlayerState,
+) -> None:
+    store = JsonStateStore(tmp_path)
+    path = store.save_player(player_state)
+    legacy = player_state.model_dump(mode="json")
+    legacy["teaching_stage"] = "novice"
+    legacy["relationship"] = {"affinity": 0, "trust": 0, "recognition": 0}
+    path.write_text(json.dumps(legacy), encoding="utf-8")
+
+    assert store.list_players() == (player_state,)
 
 
 def test_case_session_save_and_load(

@@ -14,7 +14,12 @@ from xuanyi_npc.agents import (
     ScriptedFakeLLM,
 )
 from xuanyi_npc.application.action_contract import INVESTIGATION_TOOL_BY_ACTION
-from xuanyi_npc.application.clinic import ClinicContributionInput, ClinicService
+from xuanyi_npc.application.clinic import (
+    ClinicActionInput,
+    ClinicContributionInput,
+    ClinicError,
+    ClinicService,
+)
 from xuanyi_npc.application.multicase import CaseCatalog
 from xuanyi_npc.application.memory_retrieval import MemoryIndexService
 from xuanyi_npc.clinic import server as clinic_server
@@ -28,7 +33,12 @@ from xuanyi_npc.domain.cooperation import (
     PlayerContributionType,
     SuggestionDisposition,
 )
-from xuanyi_npc.domain.cooperative_planning import GoalCondition, GoalConditionType
+from xuanyi_npc.domain.cooperative_planning import (
+    AgentPlanStatus,
+    GoalCondition,
+    GoalConditionType,
+    PlanStepStatus,
+)
 from xuanyi_npc.domain.planning_contract import (
     GameNPCTurnProposal,
     GoalUpdateKind,
@@ -42,6 +52,7 @@ from xuanyi_npc.memory import DeterministicFakeEmbedding
 from xuanyi_npc.storage import JsonStateStore, SQLiteMemoryRepository
 from tests.r1_helpers import FixedClock, FixedPlayerIds, FixedSessionIds
 from tests.clinic_helpers import request
+from tests.test_p2_plan_decision_alignment import _proposal as diagnosis_proposal
 
 
 ROOT = Path(__file__).parents[1] / "src" / "xuanyi_npc" / "resources"
@@ -404,6 +415,184 @@ def test_malformed_first_output_can_repair_to_valid_llm_turn(tmp_path):
     assert len(clinic.store.load_case_session(opened.session_id).action_history) == 1
 
 
+def test_repeated_fallback_revises_exhausted_non_tool_plan_without_crashing(tmp_path):
+    """Exercise the production service path that aborted five V2 batch runs."""
+    clinic, player_id, opened = opened_clinic(tmp_path, DeterministicCooperativeNPC())
+    agent = GameNPCAgent(ScriptedFakeLLM(["{}"] * 6))
+    clinic.game_npc_agent = agent
+
+    first = clinic.submit_player_contribution(contribution(player_id, opened, "fallback_chain_1"))
+    first_state = clinic.store.load_cooperative_agent_state(opened.session_id)
+    assert first.decision.used_fallback
+    assert first_state.current_plan.status is AgentPlanStatus.ACTIVE
+    assert first_state.current_plan.current_step_index == 1
+    assert first_state.current_plan.steps[0].status is PlanStepStatus.COMPLETED
+
+    second = clinic.submit_player_contribution(contribution(player_id, opened, "fallback_chain_2"))
+    second_state = clinic.store.load_cooperative_agent_state(opened.session_id)
+    assert second.decision.used_fallback
+    assert second_state.current_plan.status is AgentPlanStatus.NEEDS_REVISION
+
+    third = clinic.submit_player_contribution(contribution(player_id, opened, "fallback_chain_3"))
+    third_state = clinic.store.load_cooperative_agent_state(opened.session_id)
+    assert third.decision.used_fallback
+    assert third_state.current_plan.revision > second_state.current_plan.revision
+    assert third_state.current_plan.status is AgentPlanStatus.ACTIVE
+    assert third_state.current_plan.current_step_index == 1
+    assert agent.last_planning_execution().attempts == 2
+    assert clinic.store.load_case_session(opened.session_id).action_history == ()
+
+
+def test_runtime_safely_rejects_unexpected_plan_policy_mismatch(tmp_path):
+    clinic, player_id, opened = opened_clinic(tmp_path, DeterministicCooperativeNPC())
+    valid = proposal_for(opened.observation, "policy_mismatch")
+    invalid_steps = list(valid.plan_update.draft.steps)
+    invalid_steps[0] = invalid_steps[0].model_copy(
+        update={"public_target_id": "hidden_target"}
+    )
+    invalid = valid.model_copy(update={
+        "plan_update": valid.plan_update.model_copy(update={
+            "draft": valid.plan_update.draft.model_copy(
+                update={"steps": tuple(invalid_steps)}
+            ),
+        }),
+    })
+
+    class InvalidPlanningAgent:
+        runtime_kind = AgentRuntimeKind.TEST_DOUBLE
+
+        def propose_turn(self, value):
+            del value
+            return invalid
+
+        def last_planning_execution(self):
+            return SimpleNamespace(
+                attempts=1, output=invalid, repair_kind=None, usages=(),
+                attempt_telemetry=(),
+            )
+
+    clinic.game_npc_agent = InvalidPlanningAgent()
+
+    result = clinic.submit_player_contribution(
+        contribution(player_id, opened, "policy_mismatch")
+    )
+
+    assert result.status.value == "action_rejected"
+    assert result.error_code == "goal_plan_policy_rejected"
+    assert result.decision.proposal.action.action_type is AgentActionType.RESPOND
+    assert result.decision.proposal.action.tool_call is None
+    assert clinic.store.load_case_session(opened.session_id).action_history == ()
+
+
+def test_production_rejection_invalidates_pending_then_allows_new_proposal_and_confirmation(
+    tmp_path,
+):
+    clinic, player_id, opened = opened_clinic(tmp_path, DeterministicCooperativeNPC())
+    completed = set()
+    while True:
+        observation = clinic.resume_case(
+            player_id, opened.case_id, opened.session_id
+        ).observation
+        available = [
+            item for item in observation.available_investigations
+            if item.investigation_id not in completed
+        ]
+        if not available:
+            break
+        for item in available:
+            clinic.submit_case_action(ClinicActionInput(
+                player_id=player_id,
+                case_id=opened.case_id,
+                session_id=opened.session_id,
+                operation_id=f"reject_flow_inv_{len(completed):02d}",
+                action_type="investigation",
+                selection_id=item.investigation_id,
+            ))
+            completed.add(item.investigation_id)
+
+    class ReproposalAgent:
+        runtime_kind = AgentRuntimeKind.TEST_DOUBLE
+
+        def __init__(self):
+            self.last = None
+
+        def propose_turn(self, value):
+            proposal, _, _ = diagnosis_proposal(value)
+            evidence = [item.clue_id for item in value.case_observation.discovered_clues]
+            action = proposal.decision.action.model_copy(update={
+                "tool_call": proposal.decision.action.tool_call.model_copy(update={
+                    "arguments": {
+                        **proposal.decision.action.tool_call.arguments,
+                        "evidence_clue_ids": evidence,
+                    },
+                }),
+            })
+            proposal = proposal.model_copy(update={
+                "decision": proposal.decision.model_copy(update={"action": action}),
+            })
+            if value.current_plan is not None:
+                proposal = proposal.model_copy(update={
+                    "plan_update": PlanUpdateProposal(
+                        update=PlanUpdateKind.KEEP,
+                        public_rationale="保持当前公开诊断步骤。",
+                    ),
+                })
+            self.last = proposal
+            return proposal
+
+        def last_planning_execution(self):
+            return SimpleNamespace(
+                attempts=1, output=self.last, repair_kind=None, usages=(),
+                attempt_telemetry=(),
+            )
+
+    clinic.game_npc_agent = ReproposalAgent()
+    first = clinic.submit_player_contribution(ClinicContributionInput(
+        player_id=player_id, case_id=opened.case_id, session_id=opened.session_id,
+        operation_id="reject_flow_first", text="请提出诊断。",
+        contribution_type=PlayerContributionType.SUGGESTION,
+    ))
+    old_pending = first.pending_action
+    assert first.status.value == "proposal_pending"
+    assert old_pending is not None
+
+    rejected = clinic.submit_player_contribution(ClinicContributionInput(
+        player_id=player_id, case_id=opened.case_id, session_id=opened.session_id,
+        operation_id="reject_flow_reject", text="我拒绝当前提案，请重新判断。",
+        contribution_type=PlayerContributionType.REJECTION,
+        responds_to_decision_id=old_pending.decision_id,
+        pending_confirmation_id=old_pending.confirmation_id,
+    ))
+    new_pending = rejected.pending_action
+    assert new_pending is not None
+    assert new_pending.confirmation_id != old_pending.confirmation_id
+    assert old_pending.confirmation_id not in clinic.cooperative_pending
+    assert new_pending.confirmation_id in clinic.cooperative_pending
+    assert clinic.store.load_case_session(opened.session_id).submitted_diagnosis_id is None
+
+    approved = clinic.submit_player_contribution(ClinicContributionInput(
+        player_id=player_id, case_id=opened.case_id, session_id=opened.session_id,
+        operation_id="reject_flow_approve", text="我批准新的具体提案。",
+        contribution_type=PlayerContributionType.APPROVAL,
+        responds_to_decision_id=new_pending.decision_id,
+        pending_confirmation_id=new_pending.confirmation_id,
+    ))
+    assert approved.status.value == "action_executed"
+    session = clinic.store.load_case_session(opened.session_id)
+    assert session.submitted_diagnosis_id is not None
+    assert new_pending.confirmation_id not in clinic.cooperative_pending
+
+    with pytest.raises(ClinicError, match="已失效"):
+        clinic.submit_player_contribution(ClinicContributionInput(
+            player_id=player_id, case_id=opened.case_id,
+            session_id=opened.session_id, operation_id="reject_flow_duplicate",
+            text="重复批准。", contribution_type=PlayerContributionType.APPROVAL,
+            responds_to_decision_id=new_pending.decision_id,
+            pending_confirmation_id=new_pending.confirmation_id,
+        ))
+    assert len(clinic.store.load_case_session(opened.session_id).action_history) == len(completed) + 1
+
+
 def test_query_exposes_distinct_llm_and_offline_statuses(tmp_path):
     offline, player_id, opened = opened_clinic(tmp_path / "offline", DeterministicCooperativeNPC())
     offline_result = offline.submit_player_contribution(contribution(player_id, opened, "offline_turn"))
@@ -443,8 +632,9 @@ def test_player_page_distinguishes_offline_and_llm_fallback(tmp_path):
         _, _, offline_page = request(
             server.server_address[1], "GET", "/cases?" + urlencode(offline_query)
         )
-        assert "离线确定性模式：本轮未调用语言模型" in offline_page
-        assert "当前调查搭档：离线确定性 NPC" in offline_page
+        assert "与调查搭档协作" in offline_page
+        assert "调查搭档已就绪，将独立评估你的建议" in offline_page
+        assert "离线确定性 NPC" not in offline_page
 
         clinic.game_npc_agent = GameNPCAgent(
             ScriptedFakeLLM(["not json", "still not json"])
@@ -458,10 +648,59 @@ def test_player_page_distinguishes_offline_and_llm_fallback(tmp_path):
         _, _, fallback_page = request(
             server.server_address[1], "GET", "/cases?" + urlencode(fallback_query)
         )
-        assert "LLM 本轮未能产生有效决策" in fallback_page
-        assert "已安全停步，未执行工具" in fallback_page
-        assert "当前调查搭档：LLM GameNPCAgent" in fallback_page
-        assert "长期 Memory 已禁用；Reflection 未启用" in fallback_page
+        assert "调查搭档暂时无法形成可靠判断" in fallback_page
+        assert "已停止本轮行动，现场状态未改变" in fallback_page
+        assert "调查搭档已就绪，将独立评估你的建议" in fallback_page
+        assert "LLM GameNPCAgent" not in fallback_page
+        assert "长期 Memory" not in fallback_page
+        assert "Reflection" not in fallback_page
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=3)
+
+
+def test_active_case_continue_button_resumes_existing_session(tmp_path):
+    clinic, player_id, opened = opened_clinic(
+        tmp_path, DeterministicCooperativeNPC()
+    )
+    server = ClinicHTTPServer(("127.0.0.1", 0), clinic)
+    thread = threading.Thread(
+        target=server.serve_forever, kwargs={"poll_interval": 0.01}
+    )
+    thread.start()
+    try:
+        status, _, lobby = request(
+            server.server_address[1],
+            "GET",
+            "/cases?" + urlencode({"player_id": player_id}),
+        )
+        assert status == 200
+        assert 'action="/cases/resume"' in lobby
+        assert f'name="session_id" value="{opened.session_id}"' in lobby
+
+        status, headers, _ = request(
+            server.server_address[1],
+            "POST",
+            "/cases/resume",
+            {
+                "player_id": player_id,
+                "case_id": opened.case_id,
+                "session_id": opened.session_id,
+                "operation_id": "op_resume_existing_case",
+            },
+        )
+        assert status == 303
+        location = headers["Location"]
+        assert f"case_id={opened.case_id}" in location
+        assert f"session_id={opened.session_id}" in location
+
+        status, _, resumed_page = request(
+            server.server_address[1], "GET", location
+        )
+        assert status == 200
+        assert "旧纸伞与失约书生" in resumed_page
+        assert "该玩家在此病例中已有未完成进度" not in resumed_page
     finally:
         server.shutdown()
         server.server_close()

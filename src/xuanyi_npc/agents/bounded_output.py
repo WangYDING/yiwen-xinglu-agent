@@ -1,6 +1,7 @@
 """Shared bounded structured-output execution used by V0 and cooperative agents."""
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
+import time
 from typing import Callable, Generic, TypeVar
 
 from pydantic import ValidationError
@@ -23,6 +24,8 @@ class BoundedAttemptTelemetry:
     output_tokens: int | None
     finish_reason: str | None
     response_returned: bool
+    duration_ms: float | None = None
+    response_content: str | None = None
     failure_stage: str | None = None
     failure_code: str | None = None
     exception_class: str | None = None
@@ -34,6 +37,7 @@ class BoundedAttemptTelemetry:
     decision_action_type: str | None = None
     decision_tool: str | None = None
     decision_public_target: str | None = None
+    context_budget: dict | None = None
 
 
 @dataclass(frozen=True)
@@ -72,6 +76,7 @@ class BoundedStructuredOutput:
     ) -> BoundedOutputResult[OutputT]:
         responses: list[LLMResponse] = []
         self._emit("attempt_started", attempt_index=1)
+        attempt_started = time.perf_counter()
         try:
             first = self.adapter.complete(request)
         except Exception as exc:
@@ -82,9 +87,12 @@ class BoundedStructuredOutput:
             return self.failure_result(
                 exc, attempts=1, repair_kind=None,
                 attempt_index=1, attempt_kind="initial",
+                duration_ms=(time.perf_counter() - attempt_started) * 1000,
             )
         responses.append(first)
-        first_attempt = self.response_attempt(first, 1, "initial")
+        first_attempt = self.response_attempt(
+            first, 1, "initial", (time.perf_counter() - attempt_started) * 1000
+        )
         self._emit("response_received", attempt_index=1, response_length=len(first.content), finish_reason="stop")
         try:
             output = parse(first)
@@ -97,6 +105,7 @@ class BoundedStructuredOutput:
             first_attempt = self.validation_failure_attempt(first_attempt, error)
             self._emit("attempt_validation_failed", attempt_index=1, error_code=type(error).__name__)
             self._emit("repair_started", attempt_index=2)
+            repair_started = time.perf_counter()
             try:
                 repaired = self.adapter.complete(repair_request(request, first, error))
             except Exception as exc:
@@ -114,9 +123,12 @@ class BoundedStructuredOutput:
                     prior_attempts=(first_attempt,),
                     attempt_index=2,
                     attempt_kind="repair",
+                    duration_ms=(time.perf_counter() - repair_started) * 1000,
                 )
             responses.append(repaired)
-            repair_attempt = self.response_attempt(repaired, 2, "repair")
+            repair_attempt = self.response_attempt(
+                repaired, 2, "repair", (time.perf_counter() - repair_started) * 1000
+            )
             self._emit("response_received", attempt_index=2, response_length=len(repaired.content), finish_reason="stop")
             try:
                 output = parse(repaired)
@@ -164,6 +176,7 @@ class BoundedStructuredOutput:
         prior_attempts: tuple[BoundedAttemptTelemetry, ...] = (),
         attempt_index: int,
         attempt_kind: str,
+        duration_ms: float | None = None,
     ) -> BoundedOutputResult:
         usage = error.usage if isinstance(error, LLMAdapterError) else None
         attempt = BoundedAttemptTelemetry(
@@ -177,6 +190,8 @@ class BoundedStructuredOutput:
             output_tokens=usage.output_tokens if usage else None,
             finish_reason=getattr(error, "finish_reason", None),
             response_returned=False,
+            duration_ms=duration_ms,
+            context_budget=asdict(error.budget_trace) if getattr(error, "budget_trace", None) is not None else None,
             failure_stage=getattr(error, "failure_stage", "adapter"),
             failure_code=getattr(error, "code", type(error).__name__),
             exception_class=type(error).__name__,
@@ -199,11 +214,19 @@ class BoundedStructuredOutput:
         )
 
     def response_attempt(
-        self, response: LLMResponse, attempt_index: int, attempt_kind: str
+        self,
+        response: LLMResponse,
+        attempt_index: int,
+        attempt_kind: str,
+        duration_ms: float | None = None,
     ) -> BoundedAttemptTelemetry:
         usage = response.usage
         config = getattr(self.adapter, "config", None)
         configured_max = getattr(config, "max_output_tokens", None)
+        reader = getattr(self.adapter, "last_context_budget", None)
+        budget = reader() if callable(reader) else None
+        if budget is not None:
+            configured_max = budget.output_tokens
         return BoundedAttemptTelemetry(
             attempt_index=attempt_index,
             attempt_kind=attempt_kind,
@@ -215,6 +238,9 @@ class BoundedStructuredOutput:
             output_tokens=usage.output_tokens if usage else None,
             finish_reason="stop",
             response_returned=True,
+            duration_ms=duration_ms,
+            response_content=response.content,
+            context_budget=asdict(budget) if budget is not None else None,
         )
 
     @staticmethod

@@ -23,7 +23,15 @@
 - [产品系统架构](architecture/PRODUCT_SYSTEM_ARCHITECTURE.md)：当前组件、数据流与持久化边界。
 - [技术总览](architecture/TECHNICAL_OVERVIEW.md)：简洁运行链和资源边界。
 - [架构决策记录](architecture/DECISIONS.md)：模型提案/规则提交、玩家贡献、记忆来源和安全失败等 ADR。
+- [案件与 Campaign 模块主文档](architecture/CASE_AND_CAMPAIGN_DESIGN.md)：案件定义、权威执行、评分、跨案投影、入口与持久化边界。
+- [协作运行时模块主文档](architecture/COOPERATIVE_RUNTIME_DESIGN.md)：单回合编排、pending、提交顺序、账本、幂等与恢复。
+- [提交一致性与失败安全模块主文档](architecture/COMMIT_CONSISTENCY_DESIGN.md)：world-first 提交、进程内 Session 串行、提交三态、入口重试边界与恢复限制。
+- [提交一致性第一步审计](architecture/COMMIT_CONSISTENCY_FAILURE_SAFETY_AUDIT_STEP1.md)：修复前反例、离线故障注入与当轮测试记录；当前设计口径以上述模块主文档为准。
+- [Planning 与行动契约模块主文档](architecture/PLANNING_AND_ACTION_DESIGN.md)：Goal/Plan、公开行动空间、修复、对齐、Authority 和计划评估。
 - [上下文工程模块主文档](architecture/CONTEXT_ENGINEERING_DESIGN.md)：当前架构、信息边界、六个工程维度、故障契约、版本轴、验证证据和阶段状态的首选入口。当前范围完成到 CE-2A，离线质量验收已通过；CE-2B、完整 CE-3 与真实模型语义收益验证暂缓。
+- [Memory 模块主文档](architecture/MEMORY_DESIGN.md)：长期记忆来源、SQLite 权威记录、索引检索、安全投影、使用归因和证据边界。
+- [Reflection 模块主文档](architecture/REFLECTION_DESIGN.md)：post-commit 触发、grounding、consolidation、receipt、失败隔离和真实效果边界。
+- [Evaluation 模块主文档](architecture/EVALUATION_SYSTEM_DESIGN.md)：冻结身份、执行保障、artifact、版本轴与当前评测结论口径。
 - 上下文工程的原始设计、实施、审查、修复和评测材料由主文档的[历史文档索引](architecture/CONTEXT_ENGINEERING_DESIGN.md#9-历史文档索引)统一导航，保留为各轮历史与专项证据。
 - [主 Agent](../src/xuanyi_npc/agents/game_npc.py)：A1 结构化决策、Goal/Plan proposal、修复与 fallback。
 - [协作运行时](../src/xuanyi_npc/application/cooperative_runtime.py)：单回合编排、确认、执行、状态推进与遥测。
@@ -43,25 +51,21 @@
 
 - [协作领域契约](../src/xuanyi_npc/domain/cooperation.py)：玩家贡献、评价、决策、确认和回合结果。
 - [玩家体验编排](../src/xuanyi_npc/application/player_experience.py)：贡献记录与协作体验投影。
-- [M1–M5 架构与面试审计](final_agent_architecture_and_interview.md)：当前能力映射与表达边界；形成于 V2.1 前，涉及评测结论时应以后续 V2/V2.1 报告为准。
+- [M1–M5 架构与面试审计](archive/cooperative_runtime/final_agent_architecture_and_interview.md)：当前能力映射与表达边界；形成于 V2.1 前，涉及评测结论时应以后续 V2/V2.1 报告为准。
 
 ## Planning / Replanning
 
+- [Planning 与行动契约模块主文档](architecture/PLANNING_AND_ACTION_DESIGN.md)：当前合并后的设计、契约与边界。
 - [规划领域契约](../src/xuanyi_npc/domain/cooperative_planning.py)：Goal、Plan、Step、Evaluation 和状态转换。
-- [P0 计划行动恢复修复](p0_plan_action_recovery_fix_report.md)：历史修复阶段。
-- [P1 诊断行动审计](p1_diagnosis_action_selection_audit.md)与[修复报告](p1_diagnosis_action_selection_fix_report.md)：历史修复阶段。
-- [P2 Plan/Decision 对齐审计](p2_plan_decision_alignment_audit.md)、[修复报告](p2_plan_decision_alignment_fix_report.md)与[P2a 遥测](p2a_alignment_telemetry_report.md)。
-- [P3 模型可见诊断契约](p3_model_visible_diagnosis_contract_fix_report.md)、[结构化修复失败审计](p3_structured_repair_failure_audit.md)与[P3a 修复遥测](p3a_repair_attempt_telemetry_report.md)。
-- [P4 处置动作契约修复](p4_treatment_action_contract_fix_report.md)与[停滞审计](p4_treatment_stall_quick_audit.md)。
-- [P5 可执行步骤承诺修复](p5_executable_step_decision_commitment_fix_report.md)与[旧纸伞审计](p5_old_paper_treatment_decision_audit.md)。
+- [P0–P5 历史修复目录](archive/planning_and_action/README.md)：计划行动恢复、诊断/处置契约、对齐、修复 telemetry 与停滞审计。
 
 P0–P5 是从失败轨迹到当前行为的修复链，不是六组可以相加的独立效果实验。
 
 ## Memory
 
-- [Memory 实现报告](PHASE_B_MEMORY_IMPLEMENTATION_REPORT.md)：权威来源、投影、检索、隔离和生命周期。
+- [Memory 模块主文档](architecture/MEMORY_DESIGN.md)：当前设计与证据边界的首选入口。
+- [Memory 历史目录](archive/memory/README.md)：Phase B 接入、E9 harness 与 E10 真实 Agent pilot。
 - [Memory 评测说明](evaluation/memory_evaluation.md)：机制证据、真实 Agent 曝光和非结论。
-- [跨 session Memory 暴露实现](e9_cross_session_memory_exposure_implementation.md)与[真实 Agent pilot](e10_real_agent_memory_exposure_pilot.md)。
 - [SQLite Memory repository](../src/xuanyi_npc/storage/sqlite_memory.py)：事务写入、来源回执、纠正、失效、删除、embedding 和 Reflection 回执。
 - [Memory 检索](../src/xuanyi_npc/application/memory_retrieval.py)与[生产协调](../src/xuanyi_npc/application/memory_coordination.py)。
 - [M4.5 语义 Memory 实验归档](archive/M45_SEMANTIC_MEMORY_EXPERIMENT.md)：BGE-M3、Gold/Holdout 和负结果的历史依据；它是有限工程证据，不是生产成功率或行为收益证明。
@@ -71,37 +75,34 @@ P0–P5 是从失败轨迹到当前行为的修复链，不是六组可以相加
 
 ## Reflection
 
-- [Reflection 实现报告](PHASE_C_REFLECTION_IMPLEMENTATION_REPORT.md)与[生产审计](PHASE_C_REFLECTION_PRODUCTION_AUDIT.md)。
+- [Reflection 模块主文档](architecture/REFLECTION_DESIGN.md)：当前设计与证据边界的首选入口。
+- [Reflection 历史目录](archive/reflection/README.md)：生产审计、实施、E11 harness、E12 pilot 与 E13 根因审计。
 - [Reflection 评测说明](evaluation/reflection_evaluation.md)：确定性机制、真实生成与证据边界。
-- [E11 OFAT harness](e11_reflection_ofat_harness_implementation.md)：固定候选下的机制验证。
-- [E12 真实模型 pilot](e12_real_agent_reflection_ofat_pilot.md)与[E13 no-write 根因审计](e13_reflection_no_write_root_cause_audit.md)。
 - [Reflection 生成与校验](../src/xuanyi_npc/application/reflection.py)、[生命周期](../src/xuanyi_npc/application/reflection_lifecycle.py)和[Memory consolidation](../src/xuanyi_npc/application/reflection_memory.py)。
 
 当前证明的是机制和有限真实生成，不是模型参数训练、稳定下游收益或持续自我进化。
 
 ## Evaluation History
 
+[Evaluation 模块主文档](architecture/EVALUATION_SYSTEM_DESIGN.md)统一解释冻结身份、执行保障、版本轴和结论边界；下列文件保留具体轮次的历史证据。
+
 ### M1–M5：早期 Cooperative Agent 验证
 
 - [M5 Agent Benchmark](benchmarks/m5/agent_benchmark_report.md)与[M5 pre/post summary](benchmarks/m5/m5_12_pre_post_summary.json)。
-- [早期 Agent benchmark 报告](agent_task_benchmark_report.md)、[失败审计](agent_task_benchmark_failure_audit.md)与[评测审计](agent_evaluation_benchmark_audit.md)。
+- [Evaluation 历史目录](archive/evaluation/README.md)：早期 Agent benchmark、失败审计和后续 E2–E8 证据。
 
 这些材料保留为历史能力建设证据。涉及当前可靠性时，应继续阅读 E 系列、V2 和 V2.1；不能把 M1–M5 的局部结果包装成当前最终成绩。
 
 ### E2–E13：冻结基线、Memory 与 Reflection
 
-- [E2 招聘评测冻结](e2_recruitment_evaluation_freeze.md)。
-- [E3 冻结 3×3 统计报告](e3_frozen_3x3_statistical_evaluation_report.md)与[E4 失败审计](e4_frozen_3x3_failure_audit.md)。
-- [E5 structured fallback 修复](e5_structured_fallback_policy_fix_report.md)。
-- [E6 post-E5 冻结 3×3 可靠性报告](e6_post_e5_frozen_3x3_reliability_report.md)：历史冻结基线，3 案 × 3 次，Task Success 8/9。该结果只适用于该协议，不是线上成功率。
-- [E7 Memory/Reflection 消融设计](e7_memory_reflection_ablation_design.md)与[E8 评测协议](e8_memory_reflection_evaluation_protocol.md)：设计与协议材料，不等于已经获得收益结论。
+- [E2–E8 历史材料](archive/evaluation/README.md)：招聘评测冻结、3×3 报告与审计、structured fallback、Memory/Reflection 消融设计和协议。其中 E6 的 8/9 只适用于该冻结协议，不是线上成功率。
 - [E9–E13 Memory/Reflection 材料](evaluation/README.md)：统一说明其机制证据和非结论。
 - [能力稳定化历史](evaluation/capability_stabilization.md)与[任务结果说明](evaluation/task_benchmark_and_results.md)。
 
 ### V2：完整运行与失败暴露
 
 - [V2 原设计](evaluation/v2_design/README.md)：historical design，后续已由 V2.1 修订。
-- [V2 stall remediation](evaluation/v2_stall_remediation_20260919.md)与[两次小批次计划](evaluation/v2_small_batch_regression_plan_20260919.md)、[修订计划](evaluation/v2_small_batch_regression_plan_20260920.md)。
+- [V2 stall remediation 与两次小批次计划](archive/evaluation/README.md)：历史执行计划，后续状态以 V2.1 设计和结果为准。
 - [V2 任务全量运行结果目录](../evaluation_results/v2/v2_task_full_20260918_01/)和[Memory 全量运行结果目录](../evaluation_results/v2/v2_memory_full_20260918_01/)：暴露了严重任务推进与评测问题；这些失败结果推动 P0–P5 修复，不是当前产品成功率。
 - [最新诊断修复验证](../evaluation_results/v2/v2_diagnosis_validation_20260920_05/RESULTS_REPORT.md)：6 个 T 与 M01 三条件共 9/9，仅证明该小批次关键路径恢复；病例均为 development 或 validation-exposed，不是正式可靠性或 Memory 收益结论。
 
@@ -132,7 +133,7 @@ V2.1 没有一个可合并的总成功率。G 属于原冻结实验；C/M 属于
 
 ## Known Limitations
 
-- 同一 session 的状态提交没有数据库级原子 CAS，严格并发安全尚未证明；
+- 正常单进程产品入口的同 session 线程写入已串行化；多进程、直接 Store 写和数据库级原子 CAS 仍未覆盖，详见[提交一致性与失败安全](architecture/COMMIT_CONSISTENCY_DESIGN.md)；
 - pending confirmation 没有完整的重启恢复；
 - world、AgentState 与 SQLite memory 的跨存储恢复尚未完全闭环；
 - 原始 structured output schema 遵循仍不稳定；

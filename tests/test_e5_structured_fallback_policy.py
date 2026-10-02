@@ -8,6 +8,7 @@ from xuanyi_npc.application.cooperative_runtime import CooperativeRuntime
 from xuanyi_npc.application.goal_plan_policy import GoalPlanPolicy, GoalPlanPolicyError
 from xuanyi_npc.application.npc_authority import NPCAuthorityPolicy
 from xuanyi_npc.domain import AgentActionType
+from xuanyi_npc.domain.cooperative_planning import AgentGoalStatus, AgentPlanStatus, PlanStepStatus
 from xuanyi_npc.domain.planning_contract import GoalUpdateKind, PlanUpdateKind
 from tests.test_p2_plan_decision_alignment import _diagnosis_input, _proposal as diagnosis_proposal
 from tests.test_p4_treatment_action_contract import _proposal as treatment_proposal, _treatment_input
@@ -74,6 +75,55 @@ def test_pending_confirmation_preserves_plan_and_remains_policy_valid(case_defin
     assert fallback.goal_update.update is GoalUpdateKind.KEEP
     assert fallback.plan_update.update is PlanUpdateKind.KEEP
     assert fallback.decision.action.tool_call is None
+    _validate(value, fallback)
+
+
+@pytest.mark.parametrize(
+    "status, expected_plan_update, expected_goal_update",
+    [
+        (AgentPlanStatus.NEEDS_REVISION, PlanUpdateKind.REVISE, GoalUpdateKind.KEEP),
+        (AgentPlanStatus.COMPLETED, PlanUpdateKind.REVISE, GoalUpdateKind.KEEP),
+        (AgentPlanStatus.ABANDONED, PlanUpdateKind.ABANDON, GoalUpdateKind.ABANDON),
+    ],
+)
+def test_fallback_is_legal_for_each_inactive_plan_status(
+    case_definition, qualified_player_state, status, expected_plan_update, expected_goal_update
+):
+    value = _treatment_input(case_definition, qualified_player_state)
+    value = _persist_first_plan(value, treatment_proposal(value))
+    steps = tuple(step.model_copy(update={
+        "status": (
+            PlanStepStatus.COMPLETED if status is AgentPlanStatus.COMPLETED
+            else PlanStepStatus.OBSOLETE
+        )
+    }) for step in value.current_plan.steps)
+    value = value.model_copy(update={
+        "current_plan": value.current_plan.model_copy(update={"status": status, "steps": steps})
+    })
+
+    fallback = GameNPCAgent(ScriptedFakeLLM([]))._fallback_turn_proposal(value)
+
+    assert fallback.goal_update.update is expected_goal_update
+    assert fallback.plan_update.update is expected_plan_update
+    assert fallback.decision.action.tool_call is None
+    _validate(value, fallback)
+
+
+def test_fallback_safely_ends_when_goal_is_already_terminal(
+    case_definition, qualified_player_state
+):
+    value = _treatment_input(case_definition, qualified_player_state)
+    value = _persist_first_plan(value, treatment_proposal(value))
+    value = value.model_copy(update={
+        "current_goal": value.current_goal.model_copy(
+            update={"status": AgentGoalStatus.COMPLETED}
+        )
+    })
+
+    fallback = GameNPCAgent(ScriptedFakeLLM([]))._fallback_turn_proposal(value)
+
+    assert fallback.goal_update.update is GoalUpdateKind.ABANDON
+    assert fallback.plan_update.update is PlanUpdateKind.ABANDON
     _validate(value, fallback)
 
 

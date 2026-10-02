@@ -1,0 +1,554 @@
+{
+  "environment.json": {
+    "bytes": 1029,
+    "sha256": "d64a02c5d2fdb75a30a333d135c750e46d3de1cf04d20ebf248da8c6c61e50b9"
+  },
+  "provider_payloads.json": {
+    "bytes": 81842,
+    "sha256": "56ac1a329fb355c7d56b568803342297e953b1ecf83d73ae76a07b9946d29ad0"
+  },
+  "rebuild_verification.json": {
+    "bytes": 253,
+    "sha256": "a210baa6de7023721370709ec4ee9a322348a52a66dbc76a090a9ee54a5bbf33"
+  },
+  "requests.json": {
+    "bytes": 98460,
+    "sha256": "ae11bf9e98cf1e54274edd69d3044a88f3730977e73c08d4f64c15bd8ae79841"
+  },
+  "snapshot/pyproject.toml": {
+    "bytes": 1880,
+    "sha256": "4d5938373923a26a7570be32bee48a31d9adfc300a010b67ff36df1d71e0d828"
+  },
+  "snapshot/rebuild_requests.py": {
+    "bytes": 2337,
+    "sha256": "9b8cdbc2422dc17bac828c649c4c2fc65a7f590217106a96254315e47174f838"
+  },
+  "snapshot/src/xuanyi_npc/__init__.py": {
+    "bytes": 72,
+    "sha256": "0baa443684a33b924f7978255a612ca69d8bcc1823fcf9f71b4fea53b3e1674f"
+  },
+  "snapshot/src/xuanyi_npc/agents/__init__.py": {
+    "bytes": 2209,
+    "sha256": "f0ca6208cbe0ac138047bb02bb5894efa037fce75b12e2d8d4b0383cce84f0bc"
+  },
+  "snapshot/src/xuanyi_npc/agents/bounded_output.py": {
+    "bytes": 11393,
+    "sha256": "4d14826f680b1724cb1e9a5bc2881436ef5cf73bcfc0064e723a7866b79f95d2"
+  },
+  "snapshot/src/xuanyi_npc/agents/context.py": {
+    "bytes": 18968,
+    "sha256": "e1ba14a429e031c39a36e223a2d07564d2d9d326b99c1906ede8c831991520eb"
+  },
+  "snapshot/src/xuanyi_npc/agents/deepseek.py": {
+    "bytes": 24395,
+    "sha256": "6e0132b64bc91d95b74f4d4984b236a4297db5941f18ef33fb69f8377118667a"
+  },
+  "snapshot/src/xuanyi_npc/agents/fake_llm.py": {
+    "bytes": 1012,
+    "sha256": "e0656979d24371e7fb9c51b80e2b1e0c39d05cf7229b5fc758a64a8183a6a86a"
+  },
+  "snapshot/src/xuanyi_npc/agents/game_npc.py": {
+    "bytes": 32809,
+    "sha256": "4f47ba3d6fda959396167ea99b61d3b6b02e06635b93a7989eb5ddb6b7eb6ae7"
+  },
+  "snapshot/src/xuanyi_npc/agents/llm.py": {
+    "bytes": 2183,
+    "sha256": "73d13d5c54cff42ea91007d1ecd9acbfb8da18f9cfa88ae35c26c54b219fe793"
+  },
+  "snapshot/src/xuanyi_npc/agents/model_usage.py": {
+    "bytes": 1824,
+    "sha256": "7378bd7c820188f698668c07a8fe601ddfcf1473af5fbb1c59b83586d00dac6d"
+  },
+  "snapshot/src/xuanyi_npc/agents/simple_action.py": {
+    "bytes": 2150,
+    "sha256": "0684e9c82901f4ebe0e34934e0ccb13729342c71d4c7532d65c893f4e8498a23"
+  },
+  "snapshot/src/xuanyi_npc/application/__init__.py": {
+    "bytes": 6021,
+    "sha256": "7fa6cb7c1b67433d61e26cde7110fe973237b36cc7aac2711d7627d93fd0b0b8"
+  },
+  "snapshot/src/xuanyi_npc/application/action_contract.py": {
+    "bytes": 10432,
+    "sha256": "fb3dd032c8248732ffd13842a976c84e6037cd0f20a0c51e907863d5609496cf"
+  },
+  "snapshot/src/xuanyi_npc/application/campaign.py": {
+    "bytes": 22277,
+    "sha256": "c25889960967a5f535533b38b6dcf798dbffc934a3f461bbbc09170248e561e5"
+  },
+  "snapshot/src/xuanyi_npc/application/case_dialogue.py": {
+    "bytes": 6269,
+    "sha256": "6a77f77d9bd397460094499029417c727b0d2ff58abcabd68bf0f6de26ccbc8d"
+  },
+  "snapshot/src/xuanyi_npc/application/case_tools.py": {
+    "bytes": 8846,
+    "sha256": "246452fbe7190870065fecb68796874d77dd8be3c9effcd341fd3a3f110a8a67"
+  },
+  "snapshot/src/xuanyi_npc/application/clinic.py": {
+    "bytes": 20265,
+    "sha256": "720cf8a39cb3e57ca27d692e66f00879b0e16e061097663c8a208c715d18ca9d"
+  },
+  "snapshot/src/xuanyi_npc/application/cooperative_runtime.py": {
+    "bytes": 59700,
+    "sha256": "e143bf2347dedf96cda420d7988eb15d9c972d34e09124a0140d0b887a4d01ca"
+  },
+  "snapshot/src/xuanyi_npc/application/diagnosis_readiness.py": {
+    "bytes": 1708,
+    "sha256": "3de0ae5038935e8ee95df345a24d806455e017cef352a541e10828979a0514c5"
+  },
+  "snapshot/src/xuanyi_npc/application/game_npc_memory.py": {
+    "bytes": 18239,
+    "sha256": "0740248f802a81f82d20fc93887a0cc68f517304f24f66cd368b8af5face1fe6"
+  },
+  "snapshot/src/xuanyi_npc/application/goal_plan_policy.py": {
+    "bytes": 13312,
+    "sha256": "1dfa809590a9dc8f0526163f3fcb483ca369cb796fa649be9389d0ac3bb40d9b"
+  },
+  "snapshot/src/xuanyi_npc/application/mcp_facade.py": {
+    "bytes": 10744,
+    "sha256": "a2c6f1cd3abe6fc47fd7b5a984b200b6e057745fd72b4e50c588de5131d7f7fa"
+  },
+  "snapshot/src/xuanyi_npc/application/memory_coordination.py": {
+    "bytes": 8618,
+    "sha256": "9ad3fe4accd93daa314da2970261df13fe05ee8cbe7bbbc4a2b5bc9a2519d172"
+  },
+  "snapshot/src/xuanyi_npc/application/memory_retrieval.py": {
+    "bytes": 18544,
+    "sha256": "03f560ad5cd04ac64c0a098310bef87a946781ce08950f92ed415c400d1ae9f1"
+  },
+  "snapshot/src/xuanyi_npc/application/multicase.py": {
+    "bytes": 50011,
+    "sha256": "ed0adddff6e5383f40113ea6334cca15914d8df2cce13154159584482c7a8453"
+  },
+  "snapshot/src/xuanyi_npc/application/npc_authority.py": {
+    "bytes": 2102,
+    "sha256": "16a750a3c77e3b9562b22316ca763ba9185ba476147c67e8d80a7b6797ba7f6f"
+  },
+  "snapshot/src/xuanyi_npc/application/plan_evaluator.py": {
+    "bytes": 9804,
+    "sha256": "a57d3169e3cb6d9626299989167722aa510987d829fa2de7b5bd99fc1cdfa236"
+  },
+  "snapshot/src/xuanyi_npc/application/player_experience.py": {
+    "bytes": 5069,
+    "sha256": "c52b48394db322ec7ec9e431f26181ccaa84d112eb6a94ae95e15c377aba9477"
+  },
+  "snapshot/src/xuanyi_npc/application/reflection.py": {
+    "bytes": 34222,
+    "sha256": "cf6abefe17f3102c71bfaca75938db51389ad7b4b84dc36bbbd570968531af6c"
+  },
+  "snapshot/src/xuanyi_npc/application/reflection_lifecycle.py": {
+    "bytes": 11892,
+    "sha256": "6dbe9a21d40b34125a71780d419b49d7da59f3e944488357fe1789e9765c646f"
+  },
+  "snapshot/src/xuanyi_npc/application/reflection_memory.py": {
+    "bytes": 27600,
+    "sha256": "d696e1203fc506a675fb8748ee6eb6934185e53cef405ea8fd360d7df24359ba"
+  },
+  "snapshot/src/xuanyi_npc/application/retrieval_query.py": {
+    "bytes": 2996,
+    "sha256": "bac0fbca5de6ac86af398b56b2299d0c62fc9d7049a939cfe9eaf324d66b6ebc"
+  },
+  "snapshot/src/xuanyi_npc/application/views.py": {
+    "bytes": 10691,
+    "sha256": "ece29c2b99b60e1a3b636bd663d34549a4353004de66dc6fc69eb63650bdfb57"
+  },
+  "snapshot/src/xuanyi_npc/cli/__init__.py": {
+    "bytes": 45,
+    "sha256": "c4a60a18c2b1a4d3824975f78b015f44e31c226deba0bcd91578aefa178daec8"
+  },
+  "snapshot/src/xuanyi_npc/clinic/__init__.py": {
+    "bytes": 169,
+    "sha256": "e658bd96d791400f28cb2310c54e581b2a2c2ceff1dad762be2c8e809e22d37d"
+  },
+  "snapshot/src/xuanyi_npc/clinic/server.py": {
+    "bytes": 51678,
+    "sha256": "9f099fc12f4f8521df76d690d646bbae4353c0325b0988646880914955ad59bf"
+  },
+  "snapshot/src/xuanyi_npc/demo_case.py": {
+    "bytes": 3871,
+    "sha256": "97ae6e88127e18748c4cb1f28d52bb4d8c61558458b3ac55f2d697a08558d2d1"
+  },
+  "snapshot/src/xuanyi_npc/domain/__init__.py": {
+    "bytes": 6202,
+    "sha256": "3d074e579631f5a7acffcdc94a00ecf3ecb90c26f5921a43a1e834fb1fcd09ac"
+  },
+  "snapshot/src/xuanyi_npc/domain/actions.py": {
+    "bytes": 1541,
+    "sha256": "8abfd29db58dc16839efad8b6493621964469c500b41e152e9945c8a588b2f73"
+  },
+  "snapshot/src/xuanyi_npc/domain/base.py": {
+    "bytes": 732,
+    "sha256": "810d9caa1b190fcdeed4fcf84858f0d88723e0154ed71ef3c45da7497327ab5c"
+  },
+  "snapshot/src/xuanyi_npc/domain/campaign.py": {
+    "bytes": 11457,
+    "sha256": "d46d59fc8892208e958e76a05d1091e7591bac9e8471ff548c51a92be22850e5"
+  },
+  "snapshot/src/xuanyi_npc/domain/cases.py": {
+    "bytes": 12214,
+    "sha256": "2427cbe1ff6c41995b06c4921cd46aadce75bcaf0dcfcfa71504693fca352e6b"
+  },
+  "snapshot/src/xuanyi_npc/domain/commands.py": {
+    "bytes": 1840,
+    "sha256": "264dbb7777a1fb0f5744d4eb0e045b1e41a59edca181f0e4eb8a102dbcb7b448"
+  },
+  "snapshot/src/xuanyi_npc/domain/cooperation.py": {
+    "bytes": 8280,
+    "sha256": "30f59777fd0ab858cc5ee0b124d10a239bd160ca65fd4dbefeb30ad9abf6f24b"
+  },
+  "snapshot/src/xuanyi_npc/domain/cooperative_memory.py": {
+    "bytes": 5758,
+    "sha256": "7b6f4694c1b4d415d8a55acb04a472e5d6e3001dd4328af45c31d2722778e64b"
+  },
+  "snapshot/src/xuanyi_npc/domain/cooperative_planning.py": {
+    "bytes": 12002,
+    "sha256": "14a39eccb1cb2905b8b43c8ad6db22ad9d49960aa2c41fab7c16d8e3595668e4"
+  },
+  "snapshot/src/xuanyi_npc/domain/events.py": {
+    "bytes": 1813,
+    "sha256": "d1d848ea574abeb2401f8fbc71af6cb2f63c962f4904fa2e35894ef3925d432d"
+  },
+  "snapshot/src/xuanyi_npc/domain/memory.py": {
+    "bytes": 1453,
+    "sha256": "8e592a2d983c8aaa7f4fe6f1d9b622f4235fb38d169f46b4dee8f4e18bcd6924"
+  },
+  "snapshot/src/xuanyi_npc/domain/memory_taxonomy.py": {
+    "bytes": 342,
+    "sha256": "e3faf75082529a2d01ee0ade8faa450e58fbba2cc56754f5c089dcab38de4b1f"
+  },
+  "snapshot/src/xuanyi_npc/domain/npc_authority.py": {
+    "bytes": 622,
+    "sha256": "bbdb270c7615077333e6cd9501ebf0e0a2e5e3a6c3c8afdad21bf3109d2b9ea6"
+  },
+  "snapshot/src/xuanyi_npc/domain/planning_contract.py": {
+    "bytes": 6649,
+    "sha256": "a167c7446d76445a72295d6c7031a039c1fa66bff35af16f14bc07329013c09f"
+  },
+  "snapshot/src/xuanyi_npc/domain/player.py": {
+    "bytes": 1513,
+    "sha256": "65d011a2e73485b3ff72d165ccf859083faa4b8ddf6022454eebc99bff83ecbe"
+  },
+  "snapshot/src/xuanyi_npc/domain/reflection.py": {
+    "bytes": 10512,
+    "sha256": "9d5fd58b78a5500324278ea801a7ec8fe23bd7f7c2b87b8efd9cf147a86d8100"
+  },
+  "snapshot/src/xuanyi_npc/domain/reflection_lifecycle.py": {
+    "bytes": 3066,
+    "sha256": "a76c9d389838c7665da89f1ecd5ff941be1f0ab4312dc58f4f262385010deccf"
+  },
+  "snapshot/src/xuanyi_npc/domain/reflection_memory.py": {
+    "bytes": 3090,
+    "sha256": "26f4c725c78cdebb1921ff8a64fb7895e115e5d977a0e9e04e4324892d1c3253"
+  },
+  "snapshot/src/xuanyi_npc/domain/skills.py": {
+    "bytes": 805,
+    "sha256": "150bb63976226e91601ff29eb2e3226bdec4eb4787dfa8447efbdefdb14ae21a"
+  },
+  "snapshot/src/xuanyi_npc/engine/__init__.py": {
+    "bytes": 1212,
+    "sha256": "2ea37b5bf126bfceba70d88d0a89dcc4d5d7bd7f3b35960bd7eb9d8bbae5f7b9"
+  },
+  "snapshot/src/xuanyi_npc/engine/case_engine.py": {
+    "bytes": 13228,
+    "sha256": "bb84481e3d4de8d4e23d0d2c5e461b88da002d4d5313f4f24c10ad5ab4241390"
+  },
+  "snapshot/src/xuanyi_npc/engine/errors.py": {
+    "bytes": 1478,
+    "sha256": "ec561893f1c28b9201dc493807faa5db8288dcb9c2716061169b1766c50f187a"
+  },
+  "snapshot/src/xuanyi_npc/engine/replay.py": {
+    "bytes": 4970,
+    "sha256": "833fda37008b0147b25f38c148941f615a3315f2aa18d7263891f233461e7142"
+  },
+  "snapshot/src/xuanyi_npc/engine/results.py": {
+    "bytes": 902,
+    "sha256": "1132cae64cda6dcffa5a0fcf29359eb9cc6f65971c4f2073f64672172f0a46f5"
+  },
+  "snapshot/src/xuanyi_npc/evaluation/__init__.py": {
+    "bytes": 1095,
+    "sha256": "e9f1543e7c008edc10419d68b996adefa5c99ac2d76f994e45c95dcf8bfd9ff0"
+  },
+  "snapshot/src/xuanyi_npc/evaluation/agent_benchmark.py": {
+    "bytes": 22328,
+    "sha256": "c26d0000fc812739184dd8cb9f955bd5102ed04e38d1001cb0d1603ad7d633ce"
+  },
+  "snapshot/src/xuanyi_npc/evaluation/agent_task_benchmark.py": {
+    "bytes": 47623,
+    "sha256": "4042ba4d3e9fac1860eb486dc32d9e9ebbb50c4569cf930266862b8e110bd064"
+  },
+  "snapshot/src/xuanyi_npc/evaluation/cooperative_memory.py": {
+    "bytes": 7934,
+    "sha256": "16a64248cb1766caf215f9c0fac109818b344b127ed650f95b7f8e2150ba3161"
+  },
+  "snapshot/src/xuanyi_npc/evaluation/costing.py": {
+    "bytes": 3516,
+    "sha256": "19c091c40b9862968442ab1c1700af79553ff21720bc9c5d025ec2aab53a6259"
+  },
+  "snapshot/src/xuanyi_npc/evaluation/cross_session_memory_exposure.py": {
+    "bytes": 12813,
+    "sha256": "7ab1d1c3ccc014afdb9c4948c90ab3cf9e17bc18b9566629b0c98d96f916804f"
+  },
+  "snapshot/src/xuanyi_npc/evaluation/fixtures/v21/campaign/cross_episode_rules.json": {
+    "bytes": 1026,
+    "sha256": "e57812a871cca48d51669059af5366e2e75ac0de5c3a76c3ef1ad7bafa3f5b2a"
+  },
+  "snapshot/src/xuanyi_npc/evaluation/fixtures/v21/cases/c01_crossed_bell_testimony.json": {
+    "bytes": 4080,
+    "sha256": "6b25eb00ab0a22dd91975b3bdcd3cd9ec37744a875cea7692cd1b669d8747a91"
+  },
+  "snapshot/src/xuanyi_npc/evaluation/fixtures/v21/cases/c02_red_ink_decoy.json": {
+    "bytes": 3848,
+    "sha256": "9d5fffbdbb55c4d61bace988a93dd6bdeb8ca255b0975c44439bfa2f27ca46aa"
+  },
+  "snapshot/src/xuanyi_npc/evaluation/fixtures/v21/cases/c09_three_lock_cistern.json": {
+    "bytes": 3642,
+    "sha256": "5fe0857841a51533d608738bcb6d263b5aaff045b99bd8152661863d0c674593"
+  },
+  "snapshot/src/xuanyi_npc/evaluation/fixtures/v21/cases/c10_ink_gate_sequence.json": {
+    "bytes": 3672,
+    "sha256": "9de1ccb9dce57269580dfe6518219bf263f3eb76b4a17ca2c371037018823edd"
+  },
+  "snapshot/src/xuanyi_npc/evaluation/memory_contracts.py": {
+    "bytes": 19214,
+    "sha256": "95536b6fcf74a46b9c4907c0966c57acaa51398954cf3063fcb1ec736e961a76"
+  },
+  "snapshot/src/xuanyi_npc/evaluation/real_agent_memory_exposure_pilot.py": {
+    "bytes": 6041,
+    "sha256": "2b67243538221b86f38a167f84e986d2f631864eb2af925cbec4ab938f6a4829"
+  },
+  "snapshot/src/xuanyi_npc/evaluation/real_agent_reflection_ofat_pilot.py": {
+    "bytes": 6962,
+    "sha256": "95fc672db073340e48aaf476169ac655d7c3a559c57688db883792f04f864f6b"
+  },
+  "snapshot/src/xuanyi_npc/evaluation/reflection.py": {
+    "bytes": 3868,
+    "sha256": "95b8480312a0fa1043c6685ae3ec6311a35952815e960b3509ba64dc1c8a9209"
+  },
+  "snapshot/src/xuanyi_npc/evaluation/reflection_ofat.py": {
+    "bytes": 13133,
+    "sha256": "c1a71c81eda4e489b74e1216c42b08b2f84a14d7d84703fff8cddaf52015aba5"
+  },
+  "snapshot/src/xuanyi_npc/evaluation/request_ledger.py": {
+    "bytes": 4151,
+    "sha256": "85eb84847f3bfaebc5d32f874006b73fc7f6b07ef53cbd7b00f59d39960db92e"
+  },
+  "snapshot/src/xuanyi_npc/evaluation/semantic_holdout_contracts.py": {
+    "bytes": 25422,
+    "sha256": "24a9cbb3a04a76060025ed585afb546875c35dbe9807cc347d15827baae91328"
+  },
+  "snapshot/src/xuanyi_npc/evaluation/semantic_holdout_runner.py": {
+    "bytes": 54026,
+    "sha256": "693c5a3e53981bbac625800bb69874807f70c8adf850c89be38b362aa093cca4"
+  },
+  "snapshot/src/xuanyi_npc/evaluation/semantic_memory_contracts.py": {
+    "bytes": 19326,
+    "sha256": "47e4cc01fc8cda28b7cf846abbc1faf6ecd6cf97736ac6967f6f0cd196936e7b"
+  },
+  "snapshot/src/xuanyi_npc/evaluation/v21_architecture_runner.py": {
+    "bytes": 6848,
+    "sha256": "c9d3c9f3fc6810faa3a9577adb1b51269caab682278ae1f8b1330e1ff2c2b162"
+  },
+  "snapshot/src/xuanyi_npc/evaluation/v21_execute.py": {
+    "bytes": 3365,
+    "sha256": "9954a4c6c7dd8ceff081fe37c6541cc7ed3ed657a73412da8b43215ece021724"
+  },
+  "snapshot/src/xuanyi_npc/evaluation/v21_freeze.py": {
+    "bytes": 5220,
+    "sha256": "9f7c6772eddd3398aabdbfa6a397277e7bdec89c44f94c11339acc085283de6c"
+  },
+  "snapshot/src/xuanyi_npc/evaluation/v21_offline_substitute.py": {
+    "bytes": 5965,
+    "sha256": "8ba8676ba13edc85cbd219b8aaa3f7fdb12857019fa224996b02513040e8fdad"
+  },
+  "snapshot/src/xuanyi_npc/evaluation/v21_pool_control.py": {
+    "bytes": 1862,
+    "sha256": "9bc853bd8cfa7b93b735d84345ecfa29ed8c43ac34a27550e922e4bb718875a8"
+  },
+  "snapshot/src/xuanyi_npc/evaluation/v21_preflight.py": {
+    "bytes": 5044,
+    "sha256": "f8525cb7d9a3c1a8bba7b0087098ac824c290bfee3d2501b543f7072da65ac38"
+  },
+  "snapshot/src/xuanyi_npc/evaluation/v21_report.py": {
+    "bytes": 6277,
+    "sha256": "acfc28dab5e1ef86275792b6c0b1bf19fbae0fcb684e6a59189382c9af220f51"
+  },
+  "snapshot/src/xuanyi_npc/evaluation/v21_scenarios.py": {
+    "bytes": 1161,
+    "sha256": "00d473a3c232e778594252df6c77a31a6ae6170e16339d4a123835c32d84407d"
+  },
+  "snapshot/src/xuanyi_npc/evaluation/v21_schedule.py": {
+    "bytes": 4401,
+    "sha256": "bf9dee74367b8cafae3f1be11eb9a1b34cd97ddd82311000400b4677667f4855"
+  },
+  "snapshot/src/xuanyi_npc/evaluation/v21_usage_correction.py": {
+    "bytes": 4201,
+    "sha256": "67dfa376894514b33f80ab8d0c95aeabea1146fd4dcbac966c2a22c6b90ed505"
+  },
+  "snapshot/src/xuanyi_npc/evaluation/v2_contracts.py": {
+    "bytes": 5535,
+    "sha256": "2d9246023ca702d4616d53ef4a1e9d491e479494dac6981085e1f7c0b1d83c34"
+  },
+  "snapshot/src/xuanyi_npc/evaluation/v2_diagnosis_contract_audit.py": {
+    "bytes": 6154,
+    "sha256": "545526f87faef7dd43f5313f078be52a6cedf25582e971423f544aaa64aa9de6"
+  },
+  "snapshot/src/xuanyi_npc/evaluation/v2_graders.py": {
+    "bytes": 9619,
+    "sha256": "8670def725084f2e36d8c06f459b46845a8fa94ba1961d8beb8fdc47c37d740c"
+  },
+  "snapshot/src/xuanyi_npc/evaluation/v2_memory_pairs.py": {
+    "bytes": 26454,
+    "sha256": "d7857718fe8993ddf48a72a496102e2d8c9eb8aa191a600635ef98d6df7623b3"
+  },
+  "snapshot/src/xuanyi_npc/evaluation/v2_regression_preflight.py": {
+    "bytes": 4302,
+    "sha256": "2d3441622e85703de0650ba06d830228568cd6d0253eacd8fcee59fdb31e0d64"
+  },
+  "snapshot/src/xuanyi_npc/evaluation/v2_report.py": {
+    "bytes": 7398,
+    "sha256": "3f37bed5e057ff9acd2b757479ab77ce39362a7b632f562d04b2fbbf4c52d0c0"
+  },
+  "snapshot/src/xuanyi_npc/evaluation/v2_runner.py": {
+    "bytes": 49781,
+    "sha256": "ba30964b8b2540d887d8da455d60c3c6705b67823567fadeb3edfa3129dcbb77"
+  },
+  "snapshot/src/xuanyi_npc/evaluation/v2_scenarios.py": {
+    "bytes": 4945,
+    "sha256": "95376030faa88a713ac5e4ce368b9e461287e87114c2880a15b3f4cf0047aacd"
+  },
+  "snapshot/src/xuanyi_npc/evaluation/v2_stall_audit.py": {
+    "bytes": 11243,
+    "sha256": "6a927ce70a736c4b693028cf6fd5e143bde0fa1e5843424f45c41af0312d1037"
+  },
+  "snapshot/src/xuanyi_npc/evaluation/v2_stall_probe.py": {
+    "bytes": 20499,
+    "sha256": "e496860ccd142998b4cdb5264770694dcf9d45a9393fdbd9559a255f43e405f5"
+  },
+  "snapshot/src/xuanyi_npc/mcp_server/__init__.py": {
+    "bytes": 160,
+    "sha256": "5dd254dea2d05478027f9cae30924d10371aa0008d9802e4b8af361322547601"
+  },
+  "snapshot/src/xuanyi_npc/mcp_server/contracts.py": {
+    "bytes": 696,
+    "sha256": "8488508bf6c0d0b67db3a64e5ef6ccc6a40aa7c60ce57bc43692ffb7ed23ce2d"
+  },
+  "snapshot/src/xuanyi_npc/mcp_server/server.py": {
+    "bytes": 4483,
+    "sha256": "4162439ec12bed1cd464929140ebe63a54008b535e1fd13f06c5a16d93982dbf"
+  },
+  "snapshot/src/xuanyi_npc/mcp_server/stdio.py": {
+    "bytes": 3986,
+    "sha256": "011cad17a03ff9c0860a0071931e45c80a9c3a449edcc13491476521d7302b22"
+  },
+  "snapshot/src/xuanyi_npc/memory/__init__.py": {
+    "bytes": 6478,
+    "sha256": "1eaacae1e1413fa5c1626bd49d283f02de8f17bad0fa0bd4eb26417f5541918e"
+  },
+  "snapshot/src/xuanyi_npc/memory/canonical.py": {
+    "bytes": 3860,
+    "sha256": "255f5bfe0bb6913f03a2cfd1da8702abf2ed9f8b44a60dd94a72c36b5c6ec8bb"
+  },
+  "snapshot/src/xuanyi_npc/memory/contracts.py": {
+    "bytes": 14100,
+    "sha256": "111f6027a96e2270dec9af940524d1174a146674f24fd3b6ea0aeba85ce7f6b2"
+  },
+  "snapshot/src/xuanyi_npc/memory/embeddings.py": {
+    "bytes": 18098,
+    "sha256": "094613a50c3812586241d9815f1ebab64d97b2c1bde2750e542e178d017f5300"
+  },
+  "snapshot/src/xuanyi_npc/memory/errors.py": {
+    "bytes": 2646,
+    "sha256": "ec3a9e4e499ad067f388ee606ade9f1981e6b45df7633a9fbebe1e5a28ed56de"
+  },
+  "snapshot/src/xuanyi_npc/memory/local_bge.py": {
+    "bytes": 14628,
+    "sha256": "31f37fbdb1dd8d43fcc94c271e07601c53f48e02599f1f23e89440f4cc915bdf"
+  },
+  "snapshot/src/xuanyi_npc/memory/projection.py": {
+    "bytes": 21390,
+    "sha256": "8c132a295d2edcd968962453a519b17f8268594a75b6f3ef6f26c425060a10c1"
+  },
+  "snapshot/src/xuanyi_npc/memory/representations.py": {
+    "bytes": 6033,
+    "sha256": "9c6f4ba6364707705fcf1899eb0c795615c94bce7bced82216cb079c59e1d1d4"
+  },
+  "snapshot/src/xuanyi_npc/resources/__init__.py": {
+    "bytes": 80,
+    "sha256": "0a6837081e4bc9699ce27e4b7779807ab4eefd364112e14857459d9e5b8545fd"
+  },
+  "snapshot/src/xuanyi_npc/resources/campaign/cross_episode_rules_v1.json": {
+    "bytes": 2970,
+    "sha256": "26ef276421c0a495c64f3d1c2dd4d6ecf370ac57c08071862b60d4088bc432ae"
+  },
+  "snapshot/src/xuanyi_npc/resources/campaign/cross_episode_rules_v2.json": {
+    "bytes": 3294,
+    "sha256": "0f3497532aac037837736b8f5810f4fc71daf9f2896a9252aff8c810ad13553f"
+  },
+  "snapshot/src/xuanyi_npc/resources/cases/gray_hearth_inn.json": {
+    "bytes": 8213,
+    "sha256": "0dda51d4dfc0a73406e2847aa47d64746c62a568b6bc0c5f4e9d1f68bb6e85fa"
+  },
+  "snapshot/src/xuanyi_npc/resources/cases/lantern_alley_conflicting_testimony.json": {
+    "bytes": 6665,
+    "sha256": "ccae84e846a88b9d36499fcabdbd62af9c66b2100c0ddb943a0a5b8fe751c036"
+  },
+  "snapshot/src/xuanyi_npc/resources/cases/mist_ferry_borrowed_lantern.json": {
+    "bytes": 6495,
+    "sha256": "2c0e7ee880f12a1a42b5fef5d0c3501a53002c5b2cfbcce471c2a3513661d25f"
+  },
+  "snapshot/src/xuanyi_npc/resources/cases/moon_well_echo.json": {
+    "bytes": 8317,
+    "sha256": "6ca01cd1f054f0fdad7672aa27dce4c443e5d1079f85f88f06678678aaf1ea50"
+  },
+  "snapshot/src/xuanyi_npc/resources/cases/old_paper_umbrella.json": {
+    "bytes": 7859,
+    "sha256": "0ac2bcdb4c8668b7a03cb4ef98fb4befad47ad81580cd04f381f68b1ad4a0d08"
+  },
+  "snapshot/src/xuanyi_npc/resources/cases/returning_contract_nameless_shrine.json": {
+    "bytes": 8033,
+    "sha256": "50f7179468849f7bec71c05459aa9733f04d7adffb50f2e337666356d5c1cbe7"
+  },
+  "snapshot/src/xuanyi_npc/resources/clinic/case_guides_v1.json": {
+    "bytes": 13719,
+    "sha256": "5ea714b10acb01a2bed139169b422408bb438676e52fce92493d4eb9e855d713"
+  },
+  "snapshot/src/xuanyi_npc/resources/clinic/clinic.css": {
+    "bytes": 857,
+    "sha256": "081f840a06f30a11c034274d661fcccdf19b4522d4b39b1a4675aabd7167c2db"
+  },
+  "snapshot/src/xuanyi_npc/resources/clinic/clinic.js": {
+    "bytes": 165,
+    "sha256": "3f376ba66d08b87ae76c23e430a99e520e336b3682830ed0c806afe60e680a51"
+  },
+  "snapshot/src/xuanyi_npc/resources/pilot/deepseek_flash_price_snapshot_2026-09-18.json": {
+    "bytes": 795,
+    "sha256": "fea89d8e2e8022aefa6bde17f45b2f7a2143a031bebf1d82b185d5fe441fb419"
+  },
+  "snapshot/src/xuanyi_npc/resources/pilot/deepseek_v4_flash_pilot_policy_2026-08-07.json": {
+    "bytes": 823,
+    "sha256": "dac41c16ca0d471d044ad047f9bedec3e63090eda79076d792cd58fc747317d8"
+  },
+  "snapshot/src/xuanyi_npc/resources/runtime.py": {
+    "bytes": 5079,
+    "sha256": "af271e851afbd57c3b9e183fae5219a9d35ab88d7cd972306c7db081c0a0730f"
+  },
+  "snapshot/src/xuanyi_npc/storage/__init__.py": {
+    "bytes": 451,
+    "sha256": "28457b52f49685bab357ad7ddfef91d496949ce8148b563747f9bfd988f2a6d8"
+  },
+  "snapshot/src/xuanyi_npc/storage/json_store.py": {
+    "bytes": 9604,
+    "sha256": "b7639f9fedb887d274c35d6d5c4ee6cacf220501e7061ea19b761d9faa75d2f9"
+  },
+  "snapshot/src/xuanyi_npc/storage/sqlite_memory.py": {
+    "bytes": 65181,
+    "sha256": "d35833c2db6ceb93baa5270ee4fb6224ae24a72df108a050cefc6e93d20f3a22"
+  },
+  "snapshot/tests/context_baseline_support.py": {
+    "bytes": 8153,
+    "sha256": "35dfcc2d703968c4a908b0386b71fc39811d946c4e43e3679001c2e3276b581d"
+  },
+  "workspace_status.txt": {
+    "bytes": 22153,
+    "sha256": "05aa854a3133e3e79c7723ec942251c4cd8134d25520a0ab23a70f120d01bc23"
+  }
+}

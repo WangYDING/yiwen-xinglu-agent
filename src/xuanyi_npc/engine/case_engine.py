@@ -164,10 +164,10 @@ class CaseEngine:
 
         if newly_discovered:
             descriptions = "；".join(
-                case.clues[clue_id].description
+                case.clues[clue_id].description.rstrip("。！？；，,.!?; ")
                 for clue_id in sorted(newly_discovered)
             )
-            message = f"调查完成。新发现：{descriptions}"
+            message = f"调查完成。新发现：{descriptions}。"
         else:
             message = "调查完成，但没有发现新的线索。"
         return EngineResult(session=updated_session, events=(event,), message=message)

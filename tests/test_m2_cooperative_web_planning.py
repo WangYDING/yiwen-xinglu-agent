@@ -87,7 +87,16 @@ def planning_state(player_id, opened, outcome: PlanEvaluationOutcome):
     )
 
 
-def rendered_page(tmp_path: Path, outcome: PlanEvaluationOutcome):
+def rendered_page(
+    tmp_path: Path,
+    outcome: PlanEvaluationOutcome,
+    *,
+    disposition: str = "partial_accept",
+    explanation: str = "与公开调查项 question_innkeeper 完全吻合。",
+    npc_reply: str = "我会先核对公开证据。",
+    action: str = "观察患者",
+    feedback: str = "发现一条公开线索。",
+):
     clinic = build_clinic(tmp_path)
     player = clinic.create_player("规划展示玩家").player_summary.player_id
     opened = clinic.start_case(player, "old_paper_umbrella")
@@ -96,9 +105,10 @@ def rendered_page(tmp_path: Path, outcome: PlanEvaluationOutcome):
     server, thread = serve(clinic)
     query = urlencode({
         "player_id": player, "case_id": opened.case_id, "session_id": opened.session_id,
-        "npc_reply": "我会先核对公开证据。", "suggestion_disposition": "partial_accept",
-        "suggestion_explanation": "接受可验证部分。", "npc_tool_public": "观察患者",
-        "npc_rationale": "依据公开病例状态。", "environment_feedback": "发现一条公开线索。",
+        "player_text": "请先核对公开证据。",
+        "npc_reply": npc_reply, "suggestion_disposition": disposition,
+        "suggestion_explanation": explanation, "npc_tool_public": action,
+        "npc_rationale": "依据公开病例状态。", "environment_feedback": feedback,
         "runtime_kind": "test_double", "debug_tool_name": "observe_patient",
         "goal_changed": "1", "plan_changed": "1", "contribution_id": "turn_1",
     })
@@ -113,15 +123,23 @@ def rendered_page(tmp_path: Path, outcome: PlanEvaluationOutcome):
 def test_cooperative_page_shows_public_goal_plan_active_step_and_m1_result(tmp_path: Path) -> None:
     page, clinic, opened = rendered_page(tmp_path, PlanEvaluationOutcome.KEEP_PLAN)
 
-    assert "NPC 当前思路" in page
+    assert "搭档的调查计划" in page
     assert "确认灶火异常的公开来源" in page
-    assert "收集证据" in page and "进行中" in page
     assert page.count('class="plan-step') == 3
     assert "✓ 已完成" in page and "→ 当前" in page and "○ 待进行" in page
-    assert "NPC 当前准备：</strong>检查灶台附近异常痕迹" in page
-    assert "NPC 根据你的建议调整了调查计划" in page
-    assert "建议评价" in page and "NPC 回应" in page
-    assert "采取行动" in page and "行动依据" in page and "环境反馈" in page
+    assert "下一步：</strong>检查灶台附近异常痕迹" in page
+    assert "搭档已根据你的建议更新调查计划" in page
+    assert 'class="turn-message turn-message-player"' in page
+    assert 'class="turn-message turn-message-partner"' in page
+    assert "请先核对公开证据" in page
+    assert "对你的建议" not in page and "调查搭档" in page
+    assert 'class="turn-assessment-data" hidden' in page
+    assert 'aria-label="查看搭档的判断"' in page
+    assert "采取行动" in page and "发现新线索" in page
+    assert "行动依据" not in page.split("<details>", 1)[0]
+    assert "question_innkeeper" not in page.split("<details>", 1)[0]
+    assert "与调查方向“观察患者”完全吻合" in page
+    assert "公开调查项" not in page.split("<details>", 1)[0]
 
     case = clinic.base_catalog.get(opened.case_id)
     session = clinic.store.load_case_session(opened.session_id)
@@ -130,28 +148,51 @@ def test_cooperative_page_shows_public_goal_plan_active_step_and_m1_result(tmp_p
     assert "raw prompt" not in page.lower() and "chain-of-thought" not in page.lower()
 
 
-@pytest.mark.parametrize(
-    ("outcome", "visible"),
-    [
-        (PlanEvaluationOutcome.KEEP_PLAN, "继续计划"),
-        (PlanEvaluationOutcome.REVISE_PLAN, "计划调整"),
-        (PlanEvaluationOutcome.COMPLETE_GOAL, "当前目标已完成"),
-    ],
-)
-def test_plan_evaluation_has_player_friendly_status(tmp_path: Path, outcome, visible) -> None:
-    page, _, _ = rendered_page(tmp_path, outcome)
-    assert visible in page
-    assert "new_evidence_changes_direction" not in page.split("<details>", 1)[0]
+def test_only_completed_goal_adds_visible_plan_status(tmp_path: Path) -> None:
+    keep_page, _, _ = rendered_page(tmp_path / "keep", PlanEvaluationOutcome.KEEP_PLAN)
+    revise_page, _, _ = rendered_page(tmp_path / "revise", PlanEvaluationOutcome.REVISE_PLAN)
+    complete_page, _, _ = rendered_page(tmp_path / "complete", PlanEvaluationOutcome.COMPLETE_GOAL)
+
+    assert "计划状态" not in keep_page.split("<details>", 1)[0]
+    assert "计划状态" not in revise_page.split("<details>", 1)[0]
+    assert "当前调查目标已经完成" in complete_page
+    assert "new_evidence_changes_direction" not in revise_page.split("<details>", 1)[0]
 
 
-def test_obsolete_step_is_not_presented_as_current_and_debug_is_folded(tmp_path: Path) -> None:
+def test_rejected_free_target_uses_natural_player_facing_copy(tmp_path: Path) -> None:
+    page, _, _ = rendered_page(
+        tmp_path,
+        PlanEvaluationOutcome.KEEP_PLAN,
+        disposition="reject",
+        explanation=(
+            "你建议检查大门，但当前公开调查动作只覆盖旧灶、店主和掌勺人，"
+            "没有针对大门的可用调查入口；大门也不在已公开的异常线索范围内。"
+        ),
+        npc_reply="我先检查旧灶表面的公开痕迹。",
+        action="检查柴薪、灶砖、契槽和火膛表面的公开痕迹。",
+        feedback="调查完成。新发现：第一条线索。；第二条线索。",
+    )
+    public_page = page.split("<details>", 1)[0]
+
+    assert "搭档改为调查" in public_page
+    assert "目前能够调查的方向包括旧灶、店主和掌勺人" in public_page
+    assert "暂时没有直接调查大门的办法" in public_page
+    assert "现有线索暂未指向大门" in public_page
+    assert "现场痕迹" in public_page
+    assert "公开调查动作" not in public_page
+    assert "可用调查入口" not in public_page
+    assert "公开痕迹" not in public_page
+    assert "第一条线索；第二条线索。" in public_page
+    assert "。；" not in public_page
+
+
+def test_obsolete_step_is_not_presented_as_current_and_debug_is_hidden(tmp_path: Path) -> None:
     page, _, _ = rendered_page(tmp_path, PlanEvaluationOutcome.REVISE_PLAN)
 
     assert "↷ 已调整：</strong>检查灶台附近异常痕迹" in page
-    assert "NPC 当前准备" not in page
-    assert "<details><summary>开发信息</summary>" in page
-    assert "goal ID：goal_web" in page
-    assert "plan revision：2" in page
-    assert "evaluation reason：new_evidence_changes_direction" in page
-    assert "runtime：test_double" in page
-    assert "<details open" not in page
+    assert "下一步：" not in page
+    assert "开发信息" not in page
+    assert "goal ID：goal_web" not in page
+    assert "plan revision：2" not in page
+    assert "evaluation reason：new_evidence_changes_direction" not in page
+    assert "runtime：test_double" not in page

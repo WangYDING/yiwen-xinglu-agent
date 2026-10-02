@@ -1,0 +1,10 @@
+{
+  "command": [
+    "E:\\yiwen-xinglu-agent\\yiwen-npc\\.venv\\Scripts\\python.exe",
+    "snapshot/rebuild_requests.py"
+  ],
+  "provider_payload_count": 5,
+  "request_count": 5,
+  "result": "exact_structural_match",
+  "working_directory": "snapshot"
+}

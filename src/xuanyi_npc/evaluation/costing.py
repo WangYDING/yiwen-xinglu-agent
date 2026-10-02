@@ -13,6 +13,9 @@ from xuanyi_npc.resources.runtime import read_runtime_text
 DEFAULT_DEEPSEEK_PRICING_RESOURCE = (
     "pilot/deepseek_v4_flash_pilot_policy_2026-08-07.json"
 )
+CURRENT_DEEPSEEK_PRICING_RESOURCE = (
+    "pilot/deepseek_flash_price_snapshot_2026-09-18.json"
+)
 
 
 class DeepSeekPilotPricing(DomainModel):
@@ -22,7 +25,7 @@ class DeepSeekPilotPricing(DomainModel):
 
     snapshot_id: Identifier
     provider: Literal["deepseek"]
-    model: Literal["deepseek-v4-flash"]
+    model: Literal["deepseek-v4-flash", "deepseek-flash"]
     effective_date: date
     source_title: NonEmptyText
     source_url: NonEmptyText
@@ -67,9 +70,16 @@ class DeepSeekPilotPricing(DomainModel):
 
 def load_deepseek_pilot_pricing(
     path: Path | str | None = None,
+    *,
+    model: str | None = None,
 ) -> DeepSeekPilotPricing:
+    resource = (
+        CURRENT_DEEPSEEK_PRICING_RESOURCE
+        if model == "deepseek-flash"
+        else DEFAULT_DEEPSEEK_PRICING_RESOURCE
+    )
     payload = (
-        read_runtime_text(DEFAULT_DEEPSEEK_PRICING_RESOURCE)
+        read_runtime_text(resource)
         if path is None
         else Path(path).read_text(encoding="utf-8")
     )

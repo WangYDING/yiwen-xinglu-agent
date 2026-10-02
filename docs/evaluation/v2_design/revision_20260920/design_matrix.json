@@ -1,0 +1,374 @@
+{
+  "schema_version": "v2.1_design_r1",
+  "status": "DESIGN_ONLY_NOT_EXECUTABLE",
+  "paid_execution_enabled": false,
+  "budget_cny": null,
+  "purpose": "Design inventory, not accepted input for existing V2 runners.",
+  "frozen": false,
+  "model_fingerprint": null,
+  "price_snapshot": null,
+  "fixture_hashes": null,
+  "deadline_seconds": null,
+  "per_episode_budget_cny": null,
+  "default_max_turns": 16,
+  "default_repeats": 3,
+  "max_repairs_per_request": 1,
+  "conditions": {
+    "A0": {
+      "status": "NOT_IMPLEMENTED",
+      "description": "Model selects current action; no explicit future plan; shared production authority/action/commit enforcement",
+      "memory": false,
+      "reflection": false
+    },
+    "A1": {
+      "status": "EXISTING_AGENT_REQUIRES_NEW_TASK_WIRING",
+      "description": "Current Goal/Plan plus Decision",
+      "memory": false,
+      "reflection": false
+    },
+    "M0": {
+      "base_agent": "A1",
+      "history_saved": true,
+      "retrieval": false,
+      "source_reflection": false,
+      "target_reflection": false
+    },
+    "M1": {
+      "base_agent": "A1",
+      "history_saved": true,
+      "retrieval": true,
+      "source_reflection": false,
+      "target_reflection": false
+    },
+    "M2": {
+      "base_agent": "A1",
+      "history_saved": true,
+      "retrieval": true,
+      "source_reflection": true,
+      "target_reflection": false
+    }
+  },
+  "tracks": [
+    {
+      "id": "G",
+      "required": true,
+      "status": "REQUIRES_NEW_MANIFEST",
+      "task_ids": [
+        "T01",
+        "T07",
+        "T09",
+        "T16",
+        "T17",
+        "T23"
+      ],
+      "conditions": [
+        "A1"
+      ],
+      "repeats": 3,
+      "target_episodes": 18,
+      "split": "development_exposed",
+      "alternative": {
+        "task_ids": [
+          "T01",
+          "T02",
+          "T03",
+          "T04",
+          "T05",
+          "T06",
+          "T07",
+          "T08",
+          "T09",
+          "T10",
+          "T11",
+          "T12",
+          "T13",
+          "T14",
+          "T15",
+          "T16",
+          "T17",
+          "T18",
+          "T19",
+          "T20",
+          "T21",
+          "T22",
+          "T23",
+          "T24"
+        ],
+        "target_episodes": 72,
+        "replaces_default": true
+      }
+    },
+    {
+      "id": "C",
+      "required": true,
+      "status": "SPEC_ONLY",
+      "conditions": [
+        "A0",
+        "A1"
+      ],
+      "repeats": 3,
+      "target_episodes": 72,
+      "families": [
+        {
+          "family_id": "evidence_conflict",
+          "tasks": [
+            {
+              "id": "C01",
+              "goal_contract": "resolve_case",
+              "fixture_status": "NOT_IMPLEMENTED",
+              "split": "prospective_candidate_pending_exposure_audit"
+            },
+            {
+              "id": "C02",
+              "goal_contract": "resolve_case",
+              "fixture_status": "NOT_IMPLEMENTED",
+              "split": "prospective_candidate_pending_exposure_audit"
+            }
+          ]
+        },
+        {
+          "family_id": "clarification_missing_information",
+          "tasks": [
+            {
+              "id": "C03",
+              "goal_contract": "clarify_and_resolve",
+              "fixture_status": "NOT_IMPLEMENTED",
+              "split": "prospective_candidate_pending_exposure_audit"
+            },
+            {
+              "id": "C04",
+              "goal_contract": "request_information_or_stop",
+              "fixture_status": "NOT_IMPLEMENTED",
+              "split": "prospective_candidate_pending_exposure_audit"
+            }
+          ]
+        },
+        {
+          "family_id": "authorization_collaboration",
+          "tasks": [
+            {
+              "id": "C05",
+              "goal_contract": "reject_repropose_confirm_resolve",
+              "fixture_status": "NOT_IMPLEMENTED",
+              "split": "prospective_candidate_pending_exposure_audit"
+            },
+            {
+              "id": "C06",
+              "goal_contract": "respect_permanent_withdrawal",
+              "fixture_status": "NOT_IMPLEMENTED",
+              "split": "prospective_candidate_pending_exposure_audit"
+            }
+          ]
+        },
+        {
+          "family_id": "goal_constraint_change",
+          "tasks": [
+            {
+              "id": "C07",
+              "goal_contract": "consult_only",
+              "fixture_status": "NOT_IMPLEMENTED",
+              "split": "prospective_candidate_pending_exposure_audit"
+            },
+            {
+              "id": "C08",
+              "goal_contract": "adapt_and_resolve",
+              "fixture_status": "NOT_IMPLEMENTED",
+              "split": "prospective_candidate_pending_exposure_audit"
+            }
+          ]
+        },
+        {
+          "family_id": "dependencies_state_change",
+          "tasks": [
+            {
+              "id": "C09",
+              "goal_contract": "satisfy_dependencies_resolve",
+              "fixture_status": "NOT_IMPLEMENTED",
+              "split": "prospective_candidate_pending_exposure_audit"
+            },
+            {
+              "id": "C10",
+              "goal_contract": "invalidate_repropose_resolve",
+              "fixture_status": "NOT_IMPLEMENTED",
+              "split": "prospective_candidate_pending_exposure_audit"
+            }
+          ]
+        },
+        {
+          "family_id": "explanation_boundaries",
+          "tasks": [
+            {
+              "id": "C11",
+              "goal_contract": "resolve_and_explain",
+              "fixture_status": "NOT_IMPLEMENTED",
+              "split": "prospective_candidate_pending_exposure_audit"
+            },
+            {
+              "id": "C12",
+              "goal_contract": "explain_unsupported_request",
+              "fixture_status": "NOT_IMPLEMENTED",
+              "split": "prospective_candidate_pending_exposure_audit"
+            }
+          ]
+        }
+      ],
+      "independent_family_count": 6
+    },
+    {
+      "id": "M",
+      "required": true,
+      "status": "SPEC_ONLY",
+      "conditions": [
+        "M0",
+        "M1",
+        "M2"
+      ],
+      "repeats": 3,
+      "target_episodes": 54,
+      "tasks": [
+        {
+          "id": "MV01",
+          "legacy_coverage": "M01",
+          "fixture_status": "NOT_IMPLEMENTED"
+        },
+        {
+          "id": "MV02",
+          "legacy_coverage": "M02",
+          "fixture_status": "NOT_IMPLEMENTED"
+        },
+        {
+          "id": "MV03",
+          "legacy_coverage": "M03",
+          "fixture_status": "NOT_IMPLEMENTED"
+        },
+        {
+          "id": "MV04",
+          "legacy_coverage": "M04",
+          "fixture_status": "NOT_IMPLEMENTED"
+        },
+        {
+          "id": "MV05",
+          "legacy_coverage": "M05",
+          "fixture_status": "NOT_IMPLEMENTED"
+        },
+        {
+          "id": "MV06",
+          "legacy_coverage": "M06",
+          "fixture_status": "NOT_IMPLEMENTED"
+        }
+      ],
+      "distinct_source_fixtures": 6,
+      "source_history": "fixture_prepared_public_execution",
+      "source_model_episodes": 0,
+      "source_reflection_trials_max": 18
+    },
+    {
+      "id": "R",
+      "required": true,
+      "status": "SPEC_ONLY_AWAITING_REVIEWER",
+      "task_ids": [
+        "RQ01",
+        "RQ02",
+        "RQ03",
+        "RQ04",
+        "RQ05",
+        "RQ06"
+      ],
+      "repeats": 3,
+      "generation_trials": 18,
+      "target_episodes": 0,
+      "review_all_outputs": true,
+      "reviewer": null
+    },
+    {
+      "id": "S",
+      "required": true,
+      "status": "SPEC_ONLY",
+      "task_ids": [
+        "S01",
+        "S02",
+        "S03"
+      ],
+      "conditions": [
+        "benign",
+        "attack"
+      ],
+      "agent": "A1",
+      "repeats": 3,
+      "target_episodes": 18,
+      "memory_policy": "S02 only: controlled source memory through production projection/retrieval; S01/S03 off",
+      "reflection": false
+    },
+    {
+      "id": "E",
+      "required": true,
+      "status": "REUSE_AND_COMPLETE_COMPONENT_EVIDENCE",
+      "task_ids": [
+        "E01",
+        "E02",
+        "E03",
+        "E04",
+        "E05",
+        "E06",
+        "E07",
+        "E08",
+        "E09",
+        "E10",
+        "E11",
+        "E12"
+      ],
+      "target_episodes": 0,
+      "case_specific_subtests": true,
+      "known_gaps": {
+        "E06": "NOT_READY",
+        "E07": "NOT_READY",
+        "E09": "PARTIAL",
+        "E12": "REAL_MODEL_ATTACK_UNKNOWN"
+      }
+    }
+  ],
+  "counts": {
+    "default_target_episodes": 162,
+    "expanded_regression_target_episodes": 216,
+    "independent_r_generation_trials": 18,
+    "m_source_reflection_trials_max": 18,
+    "note": "Trial counts are not API call counts. No model-generated source episode in default design."
+  },
+  "budget_pools": [
+    {
+      "id": "GC",
+      "hard_limit_cny": null
+    },
+    {
+      "id": "M",
+      "hard_limit_cny": null
+    },
+    {
+      "id": "R",
+      "hard_limit_cny": null
+    },
+    {
+      "id": "S",
+      "hard_limit_cny": null
+    }
+  ],
+  "budget_transfer_allowed": false,
+  "required_before_execution": [
+    "A0 shared safety equivalence",
+    "task-specific graders",
+    "public-only user drivers",
+    "fixture reachability and oracle isolation",
+    "confirmation-task exposure audit",
+    "paired order and all manifest hashes",
+    "numeric request token, episode time/cost, pool budget limits",
+    "reviewer assignment",
+    "actual new-design preflight",
+    "separate paid authorization"
+  ],
+  "sources": [
+    "https://arxiv.org/abs/2406.12045",
+    "https://arxiv.org/abs/2506.07982",
+    "https://arxiv.org/abs/2407.01502",
+    "https://arxiv.org/abs/2406.13352"
+  ]
+}

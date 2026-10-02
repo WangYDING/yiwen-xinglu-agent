@@ -1,0 +1,463 @@
+{
+  "schema_version": "v2.1_slim_frozen_plan_v1",
+  "status": "FROZEN_AWAITING_PAID_AUTHORIZATION",
+  "experiment_id": "v2_1_slim_first_round_20260920_01",
+  "created_date": "2026-09-20",
+  "git_commit": "7a95fe2ffed67ccb20c6653b8a8fc117bbdca882",
+  "model": {
+    "provider": "deepseek",
+    "name": "deepseek-flash",
+    "temperature": 0.0,
+    "max_output_tokens": 2048,
+    "max_repairs_per_request": 1,
+    "max_turns": 16
+  },
+  "tracks": {
+    "G": {
+      "episodes": 18,
+      "conditions": [
+        "A1"
+      ]
+    },
+    "C": {
+      "episodes": 24,
+      "conditions": [
+        "A0",
+        "A1"
+      ]
+    },
+    "M": {
+      "episodes": 12,
+      "conditions": [
+        "M0",
+        "M1"
+      ],
+      "reflection": false
+    }
+  },
+  "planned_target_episodes": 54,
+  "budget": {
+    "currency": "CNY",
+    "non_transferable": true,
+    "expected": {
+      "G": 3.3,
+      "C": 3.7,
+      "M": 2.5,
+      "total": 9.5
+    },
+    "hard_caps": {
+      "G": 4.5,
+      "C": 6.0,
+      "M": 4.0,
+      "total": 14.5
+    },
+    "price_snapshot": "fea89d8e2e8022aefa6bde17f45b2f7a2143a031bebf1d82b185d5fe441fb419"
+  },
+  "catalog_hash": "52137de753162d8f15f937e07a19c45d0a0ed8a4d52286237fe8cc8f932f310f",
+  "runtime_hashes": {
+    "src/xuanyi_npc/agents/game_npc.py": "dc08894dd603bf2c509518115840e9e0700b70df949ce23687ea817c4bba44b7",
+    "src/xuanyi_npc/agents/simple_action.py": "55117cc418c2552ec4df892b8248c24e8eacff3e9d39cb8b94ead488bcd91cc2",
+    "src/xuanyi_npc/application/cooperative_runtime.py": "e143bf2347dedf96cda420d7988eb15d9c972d34e09124a0140d0b887a4d01ca",
+    "src/xuanyi_npc/application/action_contract.py": "fb3dd032c8248732ffd13842a976c84e6037cd0f20a0c51e907863d5609496cf",
+    "src/xuanyi_npc/application/npc_authority.py": "16a750a3c77e3b9562b22316ca763ba9185ba476147c67e8d80a7b6797ba7f6f",
+    "src/xuanyi_npc/evaluation/v2_runner.py": "af8ddf99ed1eb96667945dac1dafc6bd11a9588e51fabd6145691a0ee213ff19",
+    "src/xuanyi_npc/evaluation/v2_memory_pairs.py": "9082296639bec57deadbcd8d83a039e11aab59bf2e0d2b47220c20f427ff24f7",
+    "src/xuanyi_npc/evaluation/v21_architecture_runner.py": "2759773cd10da1d2cb800c1548002851cb63d9f25f9b0fc003449d93394f5f4d",
+    "src/xuanyi_npc/evaluation/v21_execute.py": "6b5b8fcaf6f6492cc81810cd60b2483ef4c82fe5db49a978a07f52154f36e375",
+    "src/xuanyi_npc/evaluation/v21_preflight.py": "9b5a375bb6c5bd99645041eba41e53dfc1d52e2babccb1d9aecc8b0beae6b90c",
+    "src/xuanyi_npc/evaluation/v21_report.py": "acfc28dab5e1ef86275792b6c0b1bf19fbae0fcb684e6a59189382c9af220f51",
+    "src/xuanyi_npc/evaluation/v2_graders.py": "8670def725084f2e36d8c06f459b46845a8fa94ba1961d8beb8fdc47c37d740c",
+    "docs/evaluation/v2_design/revision_20260920/slim_first_round_catalog.json": "52137de753162d8f15f937e07a19c45d0a0ed8a4d52286237fe8cc8f932f310f",
+    "src/xuanyi_npc/resources/pilot/deepseek_flash_price_snapshot_2026-09-18.json": "fea89d8e2e8022aefa6bde17f45b2f7a2143a031bebf1d82b185d5fe441fb419",
+    "src/xuanyi_npc/evaluation/fixtures/v21/cases/c01_crossed_bell_testimony.json": "6b25eb00ab0a22dd91975b3bdcd3cd9ec37744a875cea7692cd1b669d8747a91",
+    "src/xuanyi_npc/evaluation/fixtures/v21/cases/c02_red_ink_decoy.json": "9d5fffbdbb55c4d61bace988a93dd6bdeb8ca255b0975c44439bfa2f27ca46aa",
+    "src/xuanyi_npc/evaluation/fixtures/v21/cases/c09_three_lock_cistern.json": "5fe0857841a51533d608738bcb6d263b5aaff045b99bd8152661863d0c674593",
+    "src/xuanyi_npc/evaluation/fixtures/v21/cases/c10_ink_gate_sequence.json": "9de1ccb9dce57269580dfe6518219bf263f3eb76b4a17ca2c371037018823edd"
+  },
+  "execution_order": [
+    {
+      "track": "G",
+      "task_id": "T23",
+      "condition": "A1",
+      "repeat": 2
+    },
+    {
+      "track": "G",
+      "task_id": "T16",
+      "condition": "A1",
+      "repeat": 1
+    },
+    {
+      "track": "G",
+      "task_id": "T17",
+      "condition": "A1",
+      "repeat": 1
+    },
+    {
+      "track": "G",
+      "task_id": "T16",
+      "condition": "A1",
+      "repeat": 2
+    },
+    {
+      "track": "G",
+      "task_id": "T01",
+      "condition": "A1",
+      "repeat": 3
+    },
+    {
+      "track": "G",
+      "task_id": "T23",
+      "condition": "A1",
+      "repeat": 3
+    },
+    {
+      "track": "G",
+      "task_id": "T01",
+      "condition": "A1",
+      "repeat": 2
+    },
+    {
+      "track": "G",
+      "task_id": "T01",
+      "condition": "A1",
+      "repeat": 1
+    },
+    {
+      "track": "G",
+      "task_id": "T16",
+      "condition": "A1",
+      "repeat": 3
+    },
+    {
+      "track": "G",
+      "task_id": "T09",
+      "condition": "A1",
+      "repeat": 2
+    },
+    {
+      "track": "G",
+      "task_id": "T07",
+      "condition": "A1",
+      "repeat": 1
+    },
+    {
+      "track": "G",
+      "task_id": "T07",
+      "condition": "A1",
+      "repeat": 3
+    },
+    {
+      "track": "G",
+      "task_id": "T09",
+      "condition": "A1",
+      "repeat": 1
+    },
+    {
+      "track": "G",
+      "task_id": "T17",
+      "condition": "A1",
+      "repeat": 2
+    },
+    {
+      "track": "G",
+      "task_id": "T23",
+      "condition": "A1",
+      "repeat": 1
+    },
+    {
+      "track": "G",
+      "task_id": "T17",
+      "condition": "A1",
+      "repeat": 3
+    },
+    {
+      "track": "G",
+      "task_id": "T07",
+      "condition": "A1",
+      "repeat": 2
+    },
+    {
+      "track": "G",
+      "task_id": "T09",
+      "condition": "A1",
+      "repeat": 3
+    },
+    {
+      "track": "C",
+      "task_id": "C01",
+      "condition": "A0",
+      "repeat": 1,
+      "pair_id": "C01_r01"
+    },
+    {
+      "track": "C",
+      "task_id": "C01",
+      "condition": "A1",
+      "repeat": 1,
+      "pair_id": "C01_r01"
+    },
+    {
+      "track": "C",
+      "task_id": "C10",
+      "condition": "A1",
+      "repeat": 3,
+      "pair_id": "C10_r03"
+    },
+    {
+      "track": "C",
+      "task_id": "C10",
+      "condition": "A0",
+      "repeat": 3,
+      "pair_id": "C10_r03"
+    },
+    {
+      "track": "C",
+      "task_id": "C02",
+      "condition": "A0",
+      "repeat": 3,
+      "pair_id": "C02_r03"
+    },
+    {
+      "track": "C",
+      "task_id": "C02",
+      "condition": "A1",
+      "repeat": 3,
+      "pair_id": "C02_r03"
+    },
+    {
+      "track": "C",
+      "task_id": "C01",
+      "condition": "A1",
+      "repeat": 2,
+      "pair_id": "C01_r02"
+    },
+    {
+      "track": "C",
+      "task_id": "C01",
+      "condition": "A0",
+      "repeat": 2,
+      "pair_id": "C01_r02"
+    },
+    {
+      "track": "C",
+      "task_id": "C09",
+      "condition": "A1",
+      "repeat": 3,
+      "pair_id": "C09_r03"
+    },
+    {
+      "track": "C",
+      "task_id": "C09",
+      "condition": "A0",
+      "repeat": 3,
+      "pair_id": "C09_r03"
+    },
+    {
+      "track": "C",
+      "task_id": "C02",
+      "condition": "A0",
+      "repeat": 1,
+      "pair_id": "C02_r01"
+    },
+    {
+      "track": "C",
+      "task_id": "C02",
+      "condition": "A1",
+      "repeat": 1,
+      "pair_id": "C02_r01"
+    },
+    {
+      "track": "C",
+      "task_id": "C09",
+      "condition": "A0",
+      "repeat": 1,
+      "pair_id": "C09_r01"
+    },
+    {
+      "track": "C",
+      "task_id": "C09",
+      "condition": "A1",
+      "repeat": 1,
+      "pair_id": "C09_r01"
+    },
+    {
+      "track": "C",
+      "task_id": "C09",
+      "condition": "A1",
+      "repeat": 2,
+      "pair_id": "C09_r02"
+    },
+    {
+      "track": "C",
+      "task_id": "C09",
+      "condition": "A0",
+      "repeat": 2,
+      "pair_id": "C09_r02"
+    },
+    {
+      "track": "C",
+      "task_id": "C01",
+      "condition": "A0",
+      "repeat": 3,
+      "pair_id": "C01_r03"
+    },
+    {
+      "track": "C",
+      "task_id": "C01",
+      "condition": "A1",
+      "repeat": 3,
+      "pair_id": "C01_r03"
+    },
+    {
+      "track": "C",
+      "task_id": "C02",
+      "condition": "A0",
+      "repeat": 2,
+      "pair_id": "C02_r02"
+    },
+    {
+      "track": "C",
+      "task_id": "C02",
+      "condition": "A1",
+      "repeat": 2,
+      "pair_id": "C02_r02"
+    },
+    {
+      "track": "C",
+      "task_id": "C10",
+      "condition": "A1",
+      "repeat": 2,
+      "pair_id": "C10_r02"
+    },
+    {
+      "track": "C",
+      "task_id": "C10",
+      "condition": "A0",
+      "repeat": 2,
+      "pair_id": "C10_r02"
+    },
+    {
+      "track": "C",
+      "task_id": "C10",
+      "condition": "A0",
+      "repeat": 1,
+      "pair_id": "C10_r01"
+    },
+    {
+      "track": "C",
+      "task_id": "C10",
+      "condition": "A1",
+      "repeat": 1,
+      "pair_id": "C10_r01"
+    },
+    {
+      "track": "M",
+      "task_id": "MV01",
+      "condition": "M0",
+      "repeat": 1,
+      "pair_id": "MV01_r01"
+    },
+    {
+      "track": "M",
+      "task_id": "MV01",
+      "condition": "M1",
+      "repeat": 1,
+      "pair_id": "MV01_r01"
+    },
+    {
+      "track": "M",
+      "task_id": "MV06",
+      "condition": "M1",
+      "repeat": 3,
+      "pair_id": "MV06_r03"
+    },
+    {
+      "track": "M",
+      "task_id": "MV06",
+      "condition": "M0",
+      "repeat": 3,
+      "pair_id": "MV06_r03"
+    },
+    {
+      "track": "M",
+      "task_id": "MV06",
+      "condition": "M0",
+      "repeat": 1,
+      "pair_id": "MV06_r01"
+    },
+    {
+      "track": "M",
+      "task_id": "MV06",
+      "condition": "M1",
+      "repeat": 1,
+      "pair_id": "MV06_r01"
+    },
+    {
+      "track": "M",
+      "task_id": "MV01",
+      "condition": "M1",
+      "repeat": 2,
+      "pair_id": "MV01_r02"
+    },
+    {
+      "track": "M",
+      "task_id": "MV01",
+      "condition": "M0",
+      "repeat": 2,
+      "pair_id": "MV01_r02"
+    },
+    {
+      "track": "M",
+      "task_id": "MV01",
+      "condition": "M1",
+      "repeat": 3,
+      "pair_id": "MV01_r03"
+    },
+    {
+      "track": "M",
+      "task_id": "MV01",
+      "condition": "M0",
+      "repeat": 3,
+      "pair_id": "MV01_r03"
+    },
+    {
+      "track": "M",
+      "task_id": "MV06",
+      "condition": "M1",
+      "repeat": 2,
+      "pair_id": "MV06_r02"
+    },
+    {
+      "track": "M",
+      "task_id": "MV06",
+      "condition": "M0",
+      "repeat": 2,
+      "pair_id": "MV06_r02"
+    }
+  ],
+  "stop_rules": [
+    "runtime_hash_drift",
+    "permission_or_commit_gate_failure",
+    "trace_or_usage_gap",
+    "pool_budget_halt"
+  ],
+  "retry_policy": "no_selective_reruns",
+  "paid_execution_authorized": false,
+  "commands": {
+    "G": "python -m xuanyi_npc.evaluation.v21_execute --plan docs/evaluation/v2_design/revision_20260920/frozen_slim_plan_20260920.json --track G --confirm-paid-agent",
+    "C": "python -m xuanyi_npc.evaluation.v21_execute --plan docs/evaluation/v2_design/revision_20260920/frozen_slim_plan_20260920.json --track C --confirm-paid-agent",
+    "M": "python -m xuanyi_npc.evaluation.v21_execute --plan docs/evaluation/v2_design/revision_20260920/frozen_slim_plan_20260920.json --track M --confirm-paid-agent"
+  },
+  "catalog_summary": {
+    "scope": "54 target episodes: G18+C24+M12",
+    "excluded": [
+      "full_162_episode_design",
+      "independent_reflection",
+      "real_attacks",
+      "concurrency",
+      "restart_recovery"
+    ],
+    "interpretation": "exploratory_only"
+  }
+}

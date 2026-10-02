@@ -1,5 +1,7 @@
 # Agent Evaluation
 
+[Evaluation 模块主文档](../architecture/EVALUATION_SYSTEM_DESIGN.md)是当前评测架构、冻结身份、执行保障、版本轴和结论口径的首选入口。本目录保留各轨道的设计、紧凑结果说明与历史证据。
+
 ## CE-2A context behavior pilot
 
 - [上下文工程模块主文档](../architecture/CONTEXT_ENGINEERING_DESIGN.md)：当前模块状态与证据边界的首选入口。
@@ -11,7 +13,7 @@
 
 ## V2 evaluation and revised design
 
-See [V2.1 revised design](v2_design/revision_20260920/README.md) for the current design direction: regression, capability and architecture comparisons, memory/reflection benefit, and engineering/interaction safety. The complete design remains design-only; its corrected [54-episode slim first-round V2 package](v2_design/revision_20260920/SLIM_FIRST_ROUND_FREEZE_V2.md) is implemented, frozen, and awaiting a new explicit paid authorization. The [original V2 design](v2_design/README.md), its completed historical runs, subsequent corrections, and results below remain available; they are not new V2.1 results.
+See [V2.1 revised design](v2_design/revision_20260920/README.md) for regression, capability and architecture comparisons, memory/reflection benefit, and engineering/interaction safety. The complete 162-episode design remains design-only. Its corrected [54-episode slim first-round V2 package](v2_design/revision_20260920/SLIM_FIRST_ROUND_FREEZE_V2.md) and the later C/M recovery have already produced partial real-model results; they are separate experiment identities and must not be merged into one total score. The [original V2 design](v2_design/README.md), completed historical runs and subsequent corrections remain available as history.
 
 ## Philosophy
 
@@ -25,7 +27,7 @@ A benchmark is not one metric. It is the frozen combination of:
 
 Each condition has its own manifest and aggregate. Runs with different manifests are not mixed.
 
-## Current baseline
+## E6 historical production-equivalent baseline
 
 The E6 production-equivalent baseline used 3 frozen cases × 3 independent repeats:
 

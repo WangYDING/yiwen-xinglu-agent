@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import time
+import threading
 from collections import ChainMap
 from collections.abc import Callable, Mapping
 from decimal import Decimal
@@ -28,18 +29,11 @@ from xuanyi_npc.evaluation.costing import (
     estimate_model_usage_cost,
     load_deepseek_pilot_pricing,
 )
+from .token_budget import ModelContextProfile, prepare_request
 from .model_usage import ModelUsage
 
 from .llm import ChatRole, LLMAdapterError, LLMRequest, LLMResponse
 
-
-AGENT_ACTION_JSON_EXAMPLE = {
-    "action_id": "agent_step_001",
-    "action_type": "respond",
-    "dialogue": "只依据可见信息给出下一步建议。",
-    "tool_call": None,
-    "confidence": 0.5,
-}
 
 DEEPSEEK_ENV_NAMES = (
     "DEEPSEEK_API_KEY",
@@ -47,6 +41,8 @@ DEEPSEEK_ENV_NAMES = (
     "DEEPSEEK_MODEL",
     "DEEPSEEK_TIMEOUT_SECONDS",
     "DEEPSEEK_MAX_OUTPUT_TOKENS",
+    "DEEPSEEK_CONTEXT_WINDOW",
+    "DEEPSEEK_CONTEXT_SAFETY_MARGIN",
     "XUANYI_PILOT_MAX_COST_CNY",
 )
 
@@ -228,9 +224,11 @@ class DeepSeekAdapterConfig(DomainModel):
 
     api_key: SecretStr = Field(min_length=1)
     base_url: NonEmptyText = "https://api.deepseek.com"
-    model: Literal["deepseek-v4-flash"] = "deepseek-v4-flash"
+    model: Literal["deepseek-v4-flash", "deepseek-flash"] = "deepseek-v4-flash"
     timeout_seconds: Annotated[float, Field(gt=0, le=180)] = 180.0
     max_output_tokens: Annotated[int, Field(ge=1, le=384_000)] = 512
+    context_window: Annotated[int, Field(ge=1)] = 65_536
+    context_safety_margin: Annotated[int, Field(ge=0)] = 1024
     pilot_max_cost_cny: Annotated[Decimal, Field(gt=0)] = Decimal("1.00")
 
     @field_validator("base_url")
@@ -275,6 +273,8 @@ class DeepSeekAdapterConfig(DomainModel):
                     "https://api.deepseek.com",
                 ),
                 model=source.get("DEEPSEEK_MODEL", "deepseek-v4-flash"),
+                context_window=int(source.get("DEEPSEEK_CONTEXT_WINDOW", "65536")),
+                context_safety_margin=int(source.get("DEEPSEEK_CONTEXT_SAFETY_MARGIN", "1024")),
                 timeout_seconds=timeout_seconds,
                 max_output_tokens=max_output_tokens,
                 pilot_max_cost_cny=pilot_max_cost_cny,
@@ -357,7 +357,10 @@ class DeepSeekChatAdapter:
         monotonic: Callable[[], float] = time.perf_counter,
     ) -> None:
         self.config = config
-        self.pricing = pricing or load_deepseek_pilot_pricing()
+        self._context_budget = threading.local()
+        self.pricing = pricing or load_deepseek_pilot_pricing(
+            model=self.config.model
+        )
         if self.pricing.model != self.config.model:
             raise DeepSeekConfigurationError(
                 "pricing snapshot model does not match configured model"
@@ -420,8 +423,21 @@ class DeepSeekChatAdapter:
             )
         return discovery
 
+    def last_context_budget(self):
+        return getattr(self._context_budget, "trace", None)
+
     def complete(self, request: LLMRequest) -> LLMResponse:
-        request_payload = self._chat_payload(request)
+        self._context_budget.trace = None
+        try:
+            prepared = prepare_request(request, self._chat_payload, ModelContextProfile(
+                context_window=self.config.context_window,
+                safety_margin=self.config.context_safety_margin,
+            ))
+        except LLMAdapterError as error:
+            self._context_budget.trace = getattr(error, "budget_trace", None)
+            raise
+        self._context_budget.trace = prepared.trace
+        request_payload = prepared.payload
         reservation = self._reservation_for_payload(request_payload)
         self.request_budget.reserve(reservation)
         usage_settled = False
@@ -495,6 +511,8 @@ class DeepSeekChatAdapter:
                 )
                 raise error from None
         except Exception as exc:
+            if isinstance(exc, LLMAdapterError):
+                exc.budget_trace = prepared.trace
             if isinstance(exc, DeepSeekTimeoutError):
                 exc.latency_ms = max(
                     0.0,
@@ -537,6 +555,16 @@ class DeepSeekChatAdapter:
     ) -> DeepSeekRequestReservation:
         """Calculate the reservation for the exact payload that will be sent."""
 
+        payload_max_output_tokens = request_payload.get("max_tokens")
+        if (
+            not isinstance(payload_max_output_tokens, int)
+            or isinstance(payload_max_output_tokens, bool)
+            or payload_max_output_tokens < 1
+        ):
+            raise DeepSeekConfigurationError(
+                "provider payload is missing a valid max_tokens bound"
+            )
+
         serialized = json.dumps(
             request_payload,
             ensure_ascii=False,
@@ -549,12 +577,12 @@ class DeepSeekChatAdapter:
         maximum_cost = estimate_model_usage_cost(
             cache_hit_input_tokens=0,
             cache_miss_input_tokens=input_token_upper_bound,
-            output_tokens=self.config.max_output_tokens,
+            output_tokens=payload_max_output_tokens,
             pricing=self.pricing,
         )
         return DeepSeekRequestReservation(
             input_token_upper_bound=input_token_upper_bound,
-            output_token_upper_bound=self.config.max_output_tokens,
+            output_token_upper_bound=payload_max_output_tokens,
             maximum_cost_cny=maximum_cost,
         )
 
@@ -570,11 +598,9 @@ class DeepSeekChatAdapter:
 
         json_instruction = (
             "\n你必须只输出一个 JSON 对象，不得使用 Markdown 代码块。"
-            "输出必须符合下列 AgentAction JSON Schema；示例只展示结构，"
-            "action_id 必须使用当前上下文指定值。\n"
-            f"JSON Schema: {json.dumps(request.response_schema, ensure_ascii=False)}\n"
-            "AgentAction JSON 示例: "
-            f"{json.dumps(AGENT_ACTION_JSON_EXAMPLE, ensure_ascii=False)}"
+            "输出必须符合下列本次请求的完整 JSON Schema；不得用局部 AgentAction 对象替代顶层对象。"
+            "如果 schema 中含 action_id，必须使用当前上下文指定值。\n"
+            f"Requested JSON Schema: {json.dumps(request.response_schema, ensure_ascii=False)}"
         )
         if messages and messages[0]["role"] == ChatRole.SYSTEM.value:
             messages[0] = {

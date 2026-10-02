@@ -27,6 +27,7 @@ from xuanyi_npc.agents import (
     LLMRequest,
 )
 from xuanyi_npc.domain import AgentAction
+from xuanyi_npc.agents.context import GameNPCPlanningRequest
 
 
 PLACEHOLDER_CREDENTIAL = "unit-test-placeholder"
@@ -62,6 +63,18 @@ def llm_request(*, include_tool_feedback: bool = False) -> LLMRequest:
         messages=tuple(messages),
         response_schema=AgentAction.model_json_schema(),
     )
+
+
+def test_reservation_uses_request_specific_a1_output_limit() -> None:
+    adapter = DeepSeekChatAdapter(adapter_config())
+    base = llm_request()
+    planning = GameNPCPlanningRequest(
+        messages=base.messages, response_schema=base.response_schema,
+    )
+    reservation = adapter.conservative_request_reservation(planning)
+    assert adapter.config.max_output_tokens == 512
+    assert reservation.output_token_upper_bound == 2048
+    adapter.close()
 
 
 def action_content() -> str:
@@ -149,6 +162,13 @@ def test_environment_configuration_loads_project_dotenv(
     assert config.timeout_seconds == 45.0
     assert config.pilot_max_cost_cny == Decimal("0.75")
     assert PLACEHOLDER_CREDENTIAL not in repr(config)
+
+
+def test_current_flash_model_loads_matching_pricing_snapshot() -> None:
+    adapter = DeepSeekChatAdapter(adapter_config(model="deepseek-flash"))
+
+    assert adapter.pricing.model == "deepseek-flash"
+    adapter.close()
 
 
 def test_process_environment_overrides_project_dotenv(
@@ -252,8 +272,9 @@ def test_chat_request_and_usage_follow_deepseek_contract() -> None:
         assert body["temperature"] == 0
         assert body["max_tokens"] == 512
         assert "tools" not in body
-        assert "JSON Schema" in body["messages"][0]["content"]
-        assert "AgentAction JSON" in body["messages"][0]["content"]
+        assert "Requested JSON Schema" in body["messages"][0]["content"]
+        assert "不得用局部 AgentAction 对象替代顶层对象" in body["messages"][0]["content"]
+        assert "AgentAction JSON 示例" not in body["messages"][0]["content"]
         assert all(message["role"] != "tool" for message in body["messages"])
         serialized = json.dumps(body, ensure_ascii=False)
         for hidden in (

@@ -176,6 +176,44 @@ def test_empty_diagnosis_step_is_repaired_before_runtime_alignment(case_definiti
     assert result.plan_update.draft.steps[0].public_target_id == diagnosis_a
 
 
+def test_observed_v2_failure_shape_identifies_resulting_active_step_in_repair_feedback(
+    case_definition, qualified_player_state
+) -> None:
+    """Regression for the 41 batch failures: diagnosis was placed after analysis."""
+    value = _diagnosis_input(case_definition, qualified_player_state)
+    valid, diagnosis_a, _ = _proposal(value)
+    diagnosis_step, discussion_step = valid.plan_update.draft.steps
+    invalid = valid.model_copy(update={
+        "plan_update": valid.plan_update.model_copy(update={
+            "draft": valid.plan_update.draft.model_copy(update={
+                "steps": (discussion_step, diagnosis_step),
+            }),
+        }),
+    })
+    fake = ScriptedFakeLLM([invalid.model_dump_json(), valid.model_dump_json()])
+
+    result = GameNPCAgent(fake).propose_turn(value)
+
+    assert result.plan_update.draft.steps[0].suggested_tool is ToolName.SUBMIT_DIAGNOSIS
+    assert result.plan_update.draft.steps[0].public_target_id == diagnosis_a
+    repair_feedback = fake.requests[1].messages[-1].content
+    assert "resulting active diagnosis PlanStep" in repair_feedback
+    assert "draft.steps[0]" in repair_feedback
+
+
+def test_diagnosis_prompt_explicitly_allows_public_target_and_aligns_first_draft_step(
+    case_definition, qualified_player_state
+) -> None:
+    value = _diagnosis_input(case_definition, qualified_player_state)
+
+    request = GameNPCAgent(ScriptedFakeLLM([]))._planning_request(value)
+    prompt = "\n".join(message.content for message in request.messages)
+
+    assert "公开 public_target_id 不是权威对象 ID" in prompt
+    assert "draft.steps[0] 就是本轮结果中的 active PlanStep" in prompt
+    assert "不能先放 analyze_evidence/discuss_with_player" in prompt
+
+
 def test_wrong_diagnosis_target_is_rejected(case_definition, qualified_player_state) -> None:
     value = _diagnosis_input(case_definition, qualified_player_state)
     base, diagnosis_a, diagnosis_b = _proposal(value)
